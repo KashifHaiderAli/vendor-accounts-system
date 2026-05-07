@@ -102,6 +102,7 @@ class CompanyTab(ttk.Frame):
                         self.company_id,
                     ),
                 )
+                branch_id = self._ensure_head_office_branch(connection, self.company_id, now)
                 settings = connection.execute(
                     "SELECT id FROM company_settings WHERE company_id = ? ORDER BY id LIMIT 1",
                     (self.company_id,),
@@ -124,7 +125,6 @@ class CompanyTab(ttk.Frame):
                         ),
                     )
                 else:
-                    _, branch_id = self.controller.default_company_and_branch()
                     connection.execute(
                         """
                         INSERT INTO company_settings (
@@ -150,3 +150,61 @@ class CompanyTab(ttk.Frame):
             self.logger.error(str(exc))
             messagebox.showerror("Company Setup", str(exc))
 
+    def _ensure_head_office_branch(self, connection, company_id: int, now: str) -> int:
+        head_office = connection.execute(
+            """
+            SELECT id, branch_code, branch_name
+            FROM branches
+            WHERE is_head_office = 1 OR branch_code = 'HO'
+            ORDER BY is_head_office DESC, id
+            LIMIT 1
+            """
+        ).fetchone()
+        if head_office:
+            connection.execute(
+                """
+                UPDATE branches
+                SET company_id = ?, branch_code = ?, branch_name = ?, is_head_office = 1,
+                    is_active = 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    company_id,
+                    head_office["branch_code"] or "HO",
+                    head_office["branch_name"] or "Head Office",
+                    now,
+                    head_office["id"],
+                ),
+            )
+            connection.execute(
+                "UPDATE branches SET is_head_office = 0, updated_at = ? WHERE company_id = ? AND id <> ?",
+                (now, company_id, head_office["id"]),
+            )
+            return int(head_office["id"])
+
+        branch = connection.execute(
+            "SELECT id FROM branches WHERE company_id = ? ORDER BY id LIMIT 1",
+            (company_id,),
+        ).fetchone()
+        if branch:
+            connection.execute(
+                """
+                UPDATE branches
+                SET branch_code = COALESCE(NULLIF(branch_code, ''), 'HO'),
+                    branch_name = COALESCE(NULLIF(branch_name, ''), 'Head Office'),
+                    is_head_office = 1, is_active = 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (now, branch["id"]),
+            )
+            return int(branch["id"])
+
+        cursor = connection.execute(
+            """
+            INSERT INTO branches (
+                company_id, branch_code, branch_name, is_head_office, is_active, created_at, updated_at
+            ) VALUES (?, 'HO', 'Head Office', 1, 1, ?, ?)
+            """,
+            (company_id, now, now),
+        )
+        return int(cursor.lastrowid)

@@ -23,7 +23,32 @@ D:\Development\vendor-accounts-system\data\vendor_accounts.db
 
 The app lets you browse to another local folder before creating the database.
 
-## Default Admin User
+## Workflow
+
+1. Run the DB App.
+2. Login using DB App credentials:
+   - Username: `admin`
+   - Password: `infoline`
+3. Create the database.
+4. The placeholder company and Head Office branch are created automatically.
+5. The default web app admin user is created automatically:
+   - Username: `admin`
+   - Password: `mdnuniball`
+6. Edit company setup.
+7. Add extra branches if needed.
+8. Add users if needed.
+9. Generate a trial, annual, or lifetime license.
+
+## DB App Login
+
+The DB App login protects this desktop database utility only. It is separate from the future web app users table.
+
+- Username: `admin`
+- Password: `infoline`
+
+The app closes after 3 failed login attempts.
+
+## Default Web App Admin User
 
 - Username: `admin`
 - Password: `mdnuniball`

@@ -1,3 +1,6 @@
+DB_APP_USERNAME = "admin"
+DB_APP_PASSWORD = "infoline"
+
 ROLE_MASTER_ADMIN = "Master Admin"
 ROLE_ACCOUNTANT = "Accountant"
 ROLE_ASSISTANT_ACCOUNTANT = "Assistant Accountant"

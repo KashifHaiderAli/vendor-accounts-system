@@ -203,8 +203,6 @@ class BranchesTab(ttk.Frame):
             company_id, _ = self.controller.default_company_and_branch()
             with self.controller.connect() as connection:
                 row = connection.execute("SELECT * FROM branches WHERE id = ?", (self.selected_branch_id,)).fetchone()
-                if row["is_head_office"] and row["is_active"]:
-                    raise ValueError("Head Office branch cannot be deactivated.")
                 new_active = 0 if row["is_active"] else 1
                 if new_active == 0:
                     active_count = connection.execute(
@@ -223,4 +221,3 @@ class BranchesTab(ttk.Frame):
         except Exception as exc:
             self.logger.error(str(exc))
             messagebox.showerror("Branches", str(exc))
-
