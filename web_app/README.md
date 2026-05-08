@@ -248,6 +248,28 @@ Phase 9 adds supplier purchase recording under `/purchases/supplier-purchases/`:
 - Cancelling a purchase keeps the record, marks it Cancelled, and creates a reversal journal entry
 - Supplier payments and purchase returns remain future modules
 
+## Phase 10 Delivery Challan Module
+
+Phase 10 adds Delivery Challans under `/sales/delivery-challans/`:
+
+- Create delivery challans directly, from a customer confirmation, or from a quotation
+- Delivery challans do not post accounting entries
+- Delivery challans do not include rates, taxes, or amounts
+- Quotation and confirmation item rows can be copied into the challan
+- Unregistered quotation parties are supported through the stored quotation customer snapshot
+- Print-friendly A4 delivery challan with receiver signature/stamp area
+- Signed copy path support through `/upload-signed-copy/`
+- Cancelled challans are retained for audit history
+- Invoice creation remains a future phase
+
+Development smoke data can be generated with:
+
+```powershell
+python manage.py seed_smoke_test_data
+```
+
+The command is idempotent and creates `SMK` / `Smoke` sample records for masters, quotations, confirmations, supplier purchases, and delivery challans without deleting existing data. It is intended for local development and testing only.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.

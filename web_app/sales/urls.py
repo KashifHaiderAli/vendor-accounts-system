@@ -24,4 +24,13 @@ urlpatterns = [
     path("confirmations/<int:confirmation_id>/edit/", views.confirmation_form, name="confirmation_edit"),
     path("confirmations/<int:confirmation_id>/cancel/", views.cancel_confirmation, name="confirmation_cancel"),
     path("confirmations/<int:confirmation_id>/print/", views.print_confirmation, name="confirmation_print"),
+    path("delivery-challans/", views.delivery_challans_list, name="delivery_challans"),
+    path("delivery-challans/new/", views.delivery_challan_form, name="delivery_challan_new"),
+    path("delivery-challans/from-confirmation/<int:confirmation_id>/", views.delivery_challan_form, name="delivery_challan_from_confirmation"),
+    path("delivery-challans/from-quotation/<int:quotation_id>/", views.delivery_challan_form, name="delivery_challan_from_quotation"),
+    path("delivery-challans/<int:challan_id>/", views.delivery_challan_detail, name="delivery_challan_detail"),
+    path("delivery-challans/<int:challan_id>/edit/", views.delivery_challan_form, name="delivery_challan_edit"),
+    path("delivery-challans/<int:challan_id>/cancel/", views.cancel_delivery_challan, name="delivery_challan_cancel"),
+    path("delivery-challans/<int:challan_id>/print/", views.print_delivery_challan, name="delivery_challan_print"),
+    path("delivery-challans/<int:challan_id>/upload-signed-copy/", views.upload_signed_challan, name="delivery_challan_upload_signed"),
 ]

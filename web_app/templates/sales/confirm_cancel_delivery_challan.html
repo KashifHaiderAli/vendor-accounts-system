@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Cancel</span><h2>Cancel Delivery Challan</h2><p>{{ challan.dc_no }} · {{ challan.party_name|default:"Party" }}</p></div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header"><div><h3>Confirm Cancellation</h3><p>This marks the challan as Cancelled. It will not delete header or item lines.</p></div><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="app-card-body"><p>Are you sure you want to cancel delivery challan <strong>{{ challan.dc_no }}</strong>?</p></div>
+    <form class="app-card-body border-top form-actions" method="post">
+        {% csrf_token %}
+        <button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i> Yes, Cancel Challan</button>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_detail' challan.id %}">Keep Challan</a>
+    </form>
+</section>
+{% endblock %}

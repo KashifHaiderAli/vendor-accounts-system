@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ challan.dc_no }} - Delivery Challan</title>
+    <style>
+        body { font-family: Arial, sans-serif; color:#111827; margin:32px; }
+        .header { display:flex; justify-content:space-between; border-bottom:2px solid #111827; padding-bottom:16px; margin-bottom:24px; }
+        h1 { margin:0 0 6px; font-size:24px; } h2 { text-align:center; margin:20px 0; letter-spacing:.04em; }
+        table { width:100%; border-collapse:collapse; margin:14px 0 22px; }
+        th,td { border:1px solid #d1d5db; padding:8px 10px; vertical-align:top; }
+        th { background:#f3f4f6; text-align:left; } .text-end { text-align:right; }
+        .signature { margin-top:56px; display:flex; justify-content:space-between; gap:40px; }
+        .signature div { flex:1; border-top:1px solid #111827; padding-top:8px; text-align:center; }
+        .stamp { height:90px; border:1px dashed #9ca3af; display:flex; align-items:center; justify-content:center; color:#6b7280; margin-top:24px; }
+        @media print { body { margin:18mm; } .no-print { display:none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom:16px;"><button onclick="window.print()">Print</button></div>
+    <div class="header">
+        <div><h1>{{ company.company_name|default:"Company" }}</h1><div>{{ branch.branch_name|default:"" }}</div><div>{{ company.address|default:"" }}</div><div>{{ company.phone|default:"" }}{% if company.email %} · {{ company.email }}{% endif %}</div></div>
+        <div><strong>Prepared By:</strong> {{ challan.created_by_name|default:"-" }}<br><strong>Print Date:</strong> {{ print_date }}</div>
+    </div>
+    <h2>DELIVERY CHALLAN</h2>
+    <table>
+        <tr><th>DC No</th><td>{{ challan.dc_no }}</td><th>DC Date</th><td>{{ challan.dc_date }}</td></tr>
+        <tr><th>Customer / Party</th><td>{{ challan.party_name|default:"-" }}</td><th>Status</th><td>{{ challan.status|default:"Draft" }}</td></tr>
+        <tr><th>Address</th><td colspan="3">{{ challan.party_address|default:"-" }}</td></tr>
+        <tr><th>Confirmation</th><td>{{ challan.confirmation_no|default:"-" }}</td><th>Quotation</th><td>{{ challan.quotation_no|default:"-" }}</td></tr>
+        <tr><th>PO Number</th><td>{{ challan.po_number|default:"-" }}</td><th>Delivered By</th><td>{{ challan.delivered_by|default:"-" }}</td></tr>
+    </table>
+    <table>
+        <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th></tr></thead>
+        <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <p><strong>Remarks:</strong><br>{{ challan.remarks|default:"-"|linebreaksbr }}</p>
+    <div class="stamp">Receiver Signature / Stamp</div>
+    <div class="signature"><div>Delivered By</div><div>Received By: {{ challan.received_by|default:"" }}</div></div>
+</body>
+</html>

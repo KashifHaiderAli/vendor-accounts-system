@@ -8,13 +8,13 @@ from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from settings_module.services import log_user_activity
 
-from . import services
+from . import delivery_services, services
 
 
 SALES_CARDS = [
     ("Quotations", "quotations", "sales:quotations", "bi-file-earmark-text", "Prepare customer quotations with itemized totals."),
     ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations", "bi-clipboard-check", "Record customer POs, calls, messages, and direct confirmations."),
-    ("Delivery Challans", "delivery_challans", "sales:index", "bi-truck", "Future delivery documentation."),
+    ("Delivery Challans", "delivery_challans", "sales:delivery_challans", "bi-truck", "Issue no-amount delivery documents."),
     ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index", "bi-receipt", "Future invoice workflow."),
     ("Sales Returns", "sales_returns", "sales:index", "bi-arrow-counterclockwise", "Future return workflow."),
     ("Customer Receipts", "customer_receipts", "sales:index", "bi-cash-coin", "Future receipt workflow."),
@@ -278,6 +278,7 @@ def confirmations_list(request):
             "can_add": user_has_permission(request, "customer_confirmations", "add"),
             "can_edit": user_has_permission(request, "customer_confirmations", "edit"),
             "can_cancel": can_cancel_confirmation(request),
+            "can_delivery": user_has_permission(request, "delivery_challans", "add"),
         },
     )
 
@@ -376,6 +377,7 @@ def confirmation_detail(request, confirmation_id):
             "confirmation": confirmation,
             "can_edit": user_has_permission(request, "customer_confirmations", "edit") and confirmation.get("status") != "Cancelled",
             "can_cancel": can_cancel_confirmation(request) and confirmation.get("status") != "Cancelled",
+            "can_delivery": user_has_permission(request, "delivery_challans", "add") and confirmation.get("status") != "Cancelled",
         },
     )
 
@@ -419,6 +421,225 @@ def print_confirmation(request, confirmation_id):
     return render(request, "sales/confirmation_print.html", services.get_confirmation_print_context(company_id, branch_id, confirmation_id))
 
 
+@permission_required_custom("delivery_challans", "view")
+def delivery_challans_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = delivery_services.list_challans(company_id, branch_id, search, status, date_from, date_to, page)
+    return render(
+        request,
+        "sales/delivery_challans_list.html",
+        {
+            "page_title": "Delivery Challans",
+            "rows": rows,
+            "search": search,
+            "status": status,
+            "date_from": date_from,
+            "date_to": date_to,
+            "pagination": pagination,
+            "statuses": delivery_services.DC_STATUSES,
+            "can_add": user_has_permission(request, "delivery_challans", "add"),
+            "can_edit": user_has_permission(request, "delivery_challans", "edit"),
+            "can_cancel": can_cancel_delivery(request),
+        },
+    )
+
+
+@login_required_custom
+def delivery_challan_form(request, challan_id=None, confirmation_id=None, quotation_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = challan_id is not None
+    if not user_has_permission(request, "delivery_challans", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+
+    challan = delivery_services.get_challan(company_id, branch_id, challan_id) if is_edit else None
+    if is_edit and not challan:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    if is_edit and challan.get("status") in {"Cancelled", "Invoiced"}:
+        messages.error(request, "Cancelled or invoiced delivery challans cannot be edited.")
+        return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+
+    signed_only = bool(challan and challan.get("status") == "Signed Received")
+    confirmation = delivery_services.get_confirmation(company_id, branch_id, confirmation_id) if confirmation_id else None
+    quotation = delivery_services.get_quotation(company_id, branch_id, quotation_id) if quotation_id else None
+    if confirmation_id and not confirmation:
+        messages.error(request, "Customer confirmation was not found.")
+        return redirect("sales:confirmations")
+    if quotation_id and not quotation:
+        messages.error(request, "Quotation was not found.")
+        return redirect("sales:quotations")
+
+    form_data = challan_form_data(challan) if is_edit else delivery_services.default_form_data(company_id, branch_id, quotation, confirmation)
+    errors = {}
+
+    if request.method == "POST":
+        if signed_only:
+            form_data.update(
+                {
+                    "signed_copy_path": request.POST.get("signed_copy_path", ""),
+                    "received_by": request.POST.get("received_by", ""),
+                    "remarks": request.POST.get("remarks", ""),
+                }
+            )
+            errors, form_data = delivery_services.validate_and_clean(form_data, company_id, branch_id, challan_id, signed_only=True)
+            if not errors:
+                delivery_services.save_challan(company_id, branch_id, request.session.get("user_id"), form_data, challan_id, signed_only=True)
+                log_user_activity(request, "UPDATE", "Delivery Challans", "delivery_challans", challan_id, f"Updated signed copy for challan {challan['dc_no']}.")
+                messages.success(request, "Signed copy details updated successfully.")
+                return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+            messages.error(request, "Please correct the highlighted errors.")
+        else:
+            form_data = delivery_services.parse_post(request.POST)
+            errors, form_data = delivery_services.validate_and_clean(form_data, company_id, branch_id, challan_id)
+            if not errors:
+                try:
+                    saved_id = delivery_services.save_challan(company_id, branch_id, request.session.get("user_id"), form_data, challan_id)
+                    log_user_activity(
+                        request,
+                        "UPDATE" if is_edit else "CREATE",
+                        "Delivery Challans",
+                        "delivery_challans",
+                        saved_id,
+                        f"{'Updated' if is_edit else 'Created'} delivery challan {form_data['dc_no']}.",
+                    )
+                    messages.success(request, f"Delivery challan {'updated' if is_edit else 'created'} successfully.")
+                    return redirect("sales:delivery_challan_detail", challan_id=saved_id)
+                except DatabaseError:
+                    messages.error(request, "Unable to save delivery challan. Please retry.")
+            else:
+                messages.error(request, "Please correct the highlighted errors.")
+
+    return render(
+        request,
+        "sales/delivery_challan_form.html",
+        {
+            "page_title": "Edit Delivery Challan" if is_edit else "New Delivery Challan",
+            "form_data": form_data,
+            "form_items": form_data.get("items", []),
+            "errors": errors,
+            "error_summary": collect_errors(errors),
+            "is_edit": is_edit,
+            "signed_only": signed_only,
+            "customers": delivery_services.get_customers(company_id, branch_id),
+            "items": delivery_services.get_items(company_id, branch_id),
+            "confirmations": delivery_services.get_confirmations(company_id, branch_id),
+            "quotations": delivery_services.get_quotations(company_id, branch_id),
+            "statuses": delivery_services.DC_STATUSES,
+        },
+    )
+
+
+@permission_required_custom("delivery_challans", "view")
+def delivery_challan_detail(request, challan_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    challan = delivery_services.get_challan(company_id, branch_id, challan_id)
+    if not challan:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    return render(
+        request,
+        "sales/delivery_challan_detail.html",
+        {
+            "page_title": challan["dc_no"],
+            "challan": challan,
+            "items": delivery_services.get_challan_items(challan_id),
+            "can_edit": user_has_permission(request, "delivery_challans", "edit") and challan.get("status") in {"Draft", "Printed", "Signed Received"},
+            "can_cancel": can_cancel_delivery(request) and challan.get("status") not in {"Cancelled", "Invoiced"},
+        },
+    )
+
+
+@login_required_custom
+def cancel_delivery_challan(request, challan_id):
+    if not can_cancel_delivery(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    challan = delivery_services.get_challan(company_id, branch_id, challan_id)
+    if not challan:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    if request.method == "POST":
+        try:
+            delivery_services.cancel_challan(request, challan)
+            messages.success(request, "Delivery challan cancelled successfully.")
+            return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+        except (DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to cancel delivery challan.")
+            return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+    return render(request, "sales/confirm_cancel_delivery_challan.html", {"page_title": "Cancel Delivery Challan", "challan": challan})
+
+
+@login_required_custom
+def print_delivery_challan(request, challan_id):
+    if not (user_has_permission(request, "delivery_challans", "print") or user_has_permission(request, "delivery_challans", "view")):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    challan = delivery_services.get_challan(company_id, branch_id, challan_id)
+    if not challan:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    delivery_services.mark_printed(request, challan)
+    return render(request, "sales/delivery_challan_print.html", delivery_services.get_print_context(company_id, branch_id, challan_id))
+
+
+@login_required_custom
+def upload_signed_challan(request, challan_id):
+    if not user_has_permission(request, "delivery_challans", "edit"):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    challan = delivery_services.get_challan(company_id, branch_id, challan_id)
+    if not challan:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    if challan.get("status") in {"Cancelled", "Invoiced"}:
+        messages.error(request, "Signed copy cannot be updated for cancelled or invoiced challans.")
+        return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+    form_data = {
+        "signed_copy_path": challan.get("signed_copy_path") or "",
+        "received_by": challan.get("received_by") or "",
+        "remarks": challan.get("remarks") or "",
+    }
+    errors = {}
+    if request.method == "POST":
+        form_data = {
+            "signed_copy_path": request.POST.get("signed_copy_path", ""),
+            "received_by": request.POST.get("received_by", ""),
+            "remarks": request.POST.get("remarks", ""),
+        }
+        errors, form_data = delivery_services.validate_and_clean(form_data, company_id, branch_id, challan_id, signed_only=True)
+        if not errors:
+            delivery_services.save_challan(company_id, branch_id, request.session.get("user_id"), form_data, challan_id, signed_only=True)
+            log_user_activity(request, "UPDATE", "Delivery Challans", "delivery_challans", challan_id, f"Updated signed copy for challan {challan['dc_no']}.")
+            messages.success(request, "Signed copy updated successfully.")
+            return redirect("sales:delivery_challan_detail", challan_id=challan_id)
+        messages.error(request, "Please correct the highlighted errors.")
+    return render(
+        request,
+        "sales/upload_signed_challan.html",
+        {"page_title": "Upload Signed Copy", "challan": challan, "form_data": form_data, "errors": errors},
+    )
+
+
 def render_print_response(request, quotation_id, action_label):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -446,6 +667,10 @@ def can_cancel(request):
 
 def can_cancel_confirmation(request):
     return user_has_permission(request, "customer_confirmations", "delete") or user_has_permission(request, "customer_confirmations", "edit")
+
+
+def can_cancel_delivery(request):
+    return user_has_permission(request, "delivery_challans", "delete") or user_has_permission(request, "delivery_challans", "edit")
 
 
 def form_data_from_quotation(company_id, branch_id, quotation):
@@ -488,6 +713,24 @@ def confirmation_form_data(confirmation):
         "status": confirmation.get("status") or "Open",
         "remarks": confirmation.get("remarks") or "",
     }
+
+
+def challan_form_data(challan):
+    data = dict(challan)
+    for key in ["customer_id", "confirmation_id", "quotation_id", "po_number", "delivered_by", "received_by", "signed_copy_path", "remarks"]:
+        data[key] = data.get(key) or ""
+    data["items"] = [
+        {
+            "item_service_id": item.get("item_service_id") or "",
+            "description": item.get("description") or "",
+            "quantity": item.get("quantity") or "0",
+            "errors": {},
+        }
+        for item in delivery_services.get_challan_items(challan["id"])
+    ]
+    if not data["items"]:
+        data["items"] = [delivery_services.empty_item_row()]
+    return data
 
 
 def collect_errors(errors):

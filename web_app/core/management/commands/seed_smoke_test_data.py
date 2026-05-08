@@ -1,0 +1,334 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from django.core.management.base import BaseCommand
+from django.db import connection
+
+from accounts_module.accounting_utils import ensure_default_chart_of_accounts
+from authentication.auth_utils import dictfetchone
+from masters.master_utils import create_linked_account
+from purchases import services as purchase_services
+from sales import delivery_services, services as sales_services
+from settings_module.services import now_text
+
+
+@dataclass
+class Counter:
+    created: int = 0
+    skipped: int = 0
+
+
+@dataclass
+class SmokeStats:
+    buckets: dict[str, Counter] = field(default_factory=dict)
+
+    def add(self, bucket, created):
+        counter = self.buckets.setdefault(bucket, Counter())
+        if created:
+            counter.created += 1
+        else:
+            counter.skipped += 1
+
+
+class Command(BaseCommand):
+    help = "Create idempotent development smoke test data for completed modules."
+
+    def handle(self, *args, **options):
+        stats = SmokeStats()
+        company = self.first_row("SELECT * FROM companies WHERE is_active = 1 ORDER BY id LIMIT 1")
+        branch = self.first_row("SELECT * FROM branches WHERE company_id = %s AND is_active = 1 ORDER BY id LIMIT 1", [company["id"]]) if company else None
+        user = self.first_row("SELECT * FROM users WHERE is_master_user = 1 AND is_active = 1 ORDER BY id LIMIT 1")
+        if not company or not branch or not user:
+            self.stdout.write(self.style.ERROR("FAIL: active company, branch, and master admin user are required."))
+            return
+
+        company_id = company["id"]
+        branch_id = branch["id"]
+        user_id = user["id"]
+        ensure_default_chart_of_accounts(company_id, branch_id)
+        self.ensure_numbering_settings(company_id, branch_id)
+
+        terms_15 = self.ensure_payment_term(company_id, branch_id, user_id, "Smoke 15 Days", 15, stats)
+        self.ensure_payment_term(company_id, branch_id, user_id, "Smoke Cash", 0, stats)
+
+        customer_1 = self.ensure_customer(company_id, branch_id, user_id, "SMK-CUS001", "Smoke Customer One Pvt Ltd", terms_15, stats)
+        self.ensure_customer(company_id, branch_id, user_id, "SMK-CUS002", "Smoke Walk-in Corporate Client", terms_15, stats)
+        supplier_1 = self.ensure_supplier(company_id, branch_id, user_id, "SMK-SUP001", "Smoke Supplier One", stats)
+        self.ensure_supplier(company_id, branch_id, user_id, "SMK-SUP002", "Smoke Supplier Two", stats)
+
+        item_1 = self.ensure_item(company_id, branch_id, user_id, "SMK-ITM001", "Smoke Router Product", "product", "1500", "2200", "5", stats)
+        item_2 = self.ensure_item(company_id, branch_id, user_id, "SMK-ITM002", "Smoke Switch Product", "product", "2500", "3400", "5", stats)
+        self.ensure_item(company_id, branch_id, user_id, "SMK-SRV001", "Smoke Configuration Service", "service", "500", "1000", "0", stats)
+
+        self.ensure_cash_bank(company_id, branch_id, user_id, "Smoke Cash Account", "cash", stats)
+        self.ensure_cash_bank(company_id, branch_id, user_id, "Smoke Bank Account", "bank", stats)
+        self.ensure_expense_head(company_id, branch_id, user_id, "SMK-EXP001", "Smoke Office Expense", stats)
+
+        quotation = self.ensure_smoke_quotation(company_id, branch_id, user_id, customer_1, [item_1, item_2], stats)
+        self.ensure_unregistered_quotation(company_id, branch_id, user_id, [item_1], stats)
+        confirmation_po = self.ensure_po_confirmation(company_id, branch_id, user_id, quotation, stats)
+        self.ensure_phone_confirmation(company_id, branch_id, user_id, customer_1, stats)
+        self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, item_1, confirmation_po, stats)
+        self.ensure_delivery_challan(company_id, branch_id, user_id, confirmation_po, stats)
+
+        for bucket, counter in stats.buckets.items():
+            self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
+        self.stdout.write(self.style.SUCCESS("PASS: smoke test data ready"))
+
+    def first_row(self, sql, params=None):
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params or [])
+            return dictfetchone(cursor)
+
+    def ensure_numbering_settings(self, company_id, branch_id):
+        if self.first_row("SELECT id FROM numbering_settings WHERE company_id = %s AND branch_id = %s LIMIT 1", [company_id, branch_id]):
+            return
+        timestamp = now_text()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO numbering_settings (
+                    company_id, branch_id, customer_prefix, supplier_prefix, item_prefix,
+                    quotation_prefix, confirmation_prefix, delivery_challan_prefix, invoice_prefix,
+                    sales_return_prefix, cash_memo_prefix, receipt_prefix, purchase_prefix,
+                    purchase_return_prefix, supplier_payment_prefix, service_contract_prefix,
+                    expense_voucher_prefix, use_year_in_number, number_padding, created_at, updated_at
+                )
+                VALUES (%s, %s, 'CUS', 'SUP', 'ITM', 'QTN', 'CONF', 'DC', 'INV',
+                        'SR', 'CM', 'RCPT', 'PUR', 'PR', 'SPAY', 'SC', 'EXP', 1, 4, %s, %s)
+                """,
+                [company_id, branch_id, timestamp, timestamp],
+            )
+
+    def ensure_payment_term(self, company_id, branch_id, user_id, name, days, stats):
+        existing = self.first_row(
+            "SELECT id FROM payment_terms WHERE company_id = %s AND branch_id = %s AND lower(name) = lower(%s) LIMIT 1",
+            [company_id, branch_id, name],
+        )
+        if existing:
+            stats.add("payment_terms", False)
+            return existing["id"]
+        timestamp = now_text()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO payment_terms (company_id, branch_id, name, days, description, is_active, created_by_id, updated_by_id, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, 1, %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, name, days, "Smoke test payment term.", user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("payment_terms", True)
+        return record_id
+
+    def ensure_customer(self, company_id, branch_id, user_id, code, name, terms_id, stats):
+        existing = self.first_row("SELECT id FROM customers WHERE company_id = %s AND branch_id = %s AND customer_code = %s LIMIT 1", [company_id, branch_id, code])
+        if existing:
+            stats.add("customers", False)
+            return existing["id"]
+        timestamp = now_text()
+        account_id = create_linked_account(company_id, branch_id, f"AR-{code}", name, "Assets", "Accounts Receivable")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO customers (
+                    company_id, branch_id, customer_code, company_name, contact_person, phone, mobile, email, address,
+                    payment_terms_id, credit_limit, opening_balance, opening_balance_type, account_id, is_active,
+                    remarks, created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, 'Smoke Contact', '021 34567890', '+92 300 1234567', %s, 'Smoke customer address',
+                        %s, 50000, 0, 'Debit', %s, 1, 'Smoke test customer.', %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, code, name, f"{code.lower()}@example.com", terms_id, account_id, user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("customers", True)
+        return record_id
+
+    def ensure_supplier(self, company_id, branch_id, user_id, code, name, stats):
+        existing = self.first_row("SELECT id FROM suppliers WHERE company_id = %s AND branch_id = %s AND supplier_code = %s LIMIT 1", [company_id, branch_id, code])
+        if existing:
+            stats.add("suppliers", False)
+            return existing["id"]
+        timestamp = now_text()
+        account_id = create_linked_account(company_id, branch_id, f"AP-{code}", name, "Liability", "Accounts Payable")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO suppliers (
+                    company_id, branch_id, supplier_code, supplier_name, contact_person, phone, mobile, email, address,
+                    opening_balance, opening_balance_type, account_id, is_active, remarks, created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, 'Smoke Supplier Contact', '021 34567890', '+92 300 1234567', %s, 'Smoke supplier address',
+                        0, 'Credit', %s, 1, 'Smoke test supplier.', %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, code, name, f"{code.lower()}@example.com", account_id, user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("suppliers", True)
+        return record_id
+
+    def ensure_item(self, company_id, branch_id, user_id, code, name, item_type, purchase_rate, sale_rate, tax_rate, stats):
+        existing = self.first_row("SELECT id FROM item_services WHERE company_id = %s AND branch_id = %s AND item_code = %s LIMIT 1", [company_id, branch_id, code])
+        if existing:
+            stats.add("items", False)
+            return existing["id"]
+        timestamp = now_text()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO item_services (
+                    company_id, branch_id, item_code, item_name, item_type, category,
+                    default_purchase_rate, default_sale_rate, default_tax_rate,
+                    warranty_or_service_description, is_active, remarks, created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, 'Smoke', %s, %s, %s, 'Smoke test item/service.', 1, 'Smoke item.', %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, code, name, item_type, purchase_rate, sale_rate, tax_rate, user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("items", True)
+        return record_id
+
+    def ensure_cash_bank(self, company_id, branch_id, user_id, name, account_type, stats):
+        existing = self.first_row("SELECT id FROM cash_bank_accounts WHERE company_id = %s AND branch_id = %s AND lower(account_name) = lower(%s) LIMIT 1", [company_id, branch_id, name])
+        if existing:
+            stats.add("cash_bank", False)
+            return existing["id"]
+        parent = "Cash" if account_type == "cash" else "Bank"
+        code = "CASH-SMK" if account_type == "cash" else "BANK-SMK"
+        account_id = create_linked_account(company_id, branch_id, code, name, "Assets", parent)
+        timestamp = now_text()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO cash_bank_accounts (
+                    company_id, branch_id, account_name, account_type, bank_name, account_number, opening_balance,
+                    account_id, is_active, remarks, created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, 'SMOKE-001', 0, %s, 1, 'Smoke cash/bank.', %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, name, account_type, "Smoke Bank" if account_type == "bank" else "", account_id, user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("cash_bank", True)
+        return record_id
+
+    def ensure_expense_head(self, company_id, branch_id, user_id, code, name, stats):
+        existing = self.first_row("SELECT id FROM expense_heads WHERE company_id = %s AND branch_id = %s AND expense_code = %s LIMIT 1", [company_id, branch_id, code])
+        if existing:
+            stats.add("expense_heads", False)
+            return existing["id"]
+        account_id = create_linked_account(company_id, branch_id, f"EXP-{code}", name, "Expense", "Office Expenses")
+        timestamp = now_text()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO expense_heads (
+                    company_id, branch_id, expense_code, expense_name, category, account_id, is_active,
+                    remarks, created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, 'Smoke', %s, 1, 'Smoke expense head.', %s, %s, %s, %s)
+                """,
+                [company_id, branch_id, code, name, account_id, user_id, user_id, timestamp, timestamp],
+            )
+            record_id = cursor.lastrowid
+        stats.add("expense_heads", True)
+        return record_id
+
+    def ensure_smoke_quotation(self, company_id, branch_id, user_id, customer_id, item_ids, stats):
+        existing = self.first_row("SELECT id FROM quotations WHERE company_id = %s AND branch_id = %s AND subject = 'Smoke Existing Customer Quotation' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("quotations", False)
+            return existing["id"]
+        data = sales_services.default_form_data(company_id, branch_id)
+        data.update({"customer_mode": "existing", "customer_id": customer_id, "subject": "Smoke Existing Customer Quotation", "status": "Printed"})
+        data["items"] = [
+            {"item_service_id": item_ids[0], "description": "Smoke Router Product", "quantity": "2", "rate": "2200", "discount_percent": "0", "discount_amount": "0", "tax_percent": "5"},
+            {"item_service_id": item_ids[1], "description": "Smoke Switch Product", "quantity": "1", "rate": "3400", "discount_percent": "0", "discount_amount": "0", "tax_percent": "5"},
+        ]
+        errors, cleaned = sales_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke quotation validation failed: {errors}")
+        record_id = sales_services.save_quotation(company_id, branch_id, user_id, cleaned)
+        stats.add("quotations", True)
+        return record_id
+
+    def ensure_unregistered_quotation(self, company_id, branch_id, user_id, item_ids, stats):
+        existing = self.first_row("SELECT id FROM quotations WHERE company_id = %s AND branch_id = %s AND subject = 'Smoke Unregistered Party Quotation' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("quotations", False)
+            return existing["id"]
+        data = sales_services.default_form_data(company_id, branch_id)
+        data.update({"customer_mode": "new", "customer_name": "Smoke Unregistered Party", "customer_mobile": "+92 300 7654321", "subject": "Smoke Unregistered Party Quotation", "status": "Draft"})
+        data["items"] = [{"item_service_id": item_ids[0], "description": "Smoke Router Product", "quantity": "1", "rate": "2200", "discount_percent": "0", "discount_amount": "0", "tax_percent": "5"}]
+        errors, cleaned = sales_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke unregistered quotation validation failed: {errors}")
+        record_id = sales_services.save_quotation(company_id, branch_id, user_id, cleaned)
+        stats.add("quotations", True)
+        return record_id
+
+    def ensure_po_confirmation(self, company_id, branch_id, user_id, quotation_id, stats):
+        existing = self.first_row("SELECT id FROM customer_confirmations WHERE company_id = %s AND branch_id = %s AND quotation_id = %s AND status <> 'Cancelled' LIMIT 1", [company_id, branch_id, quotation_id])
+        if existing:
+            stats.add("confirmations", False)
+            return existing["id"]
+        quotation = sales_services.get_quotation(company_id, branch_id, quotation_id)
+        data = sales_services.default_confirmation_form_data(company_id, branch_id, quotation)
+        data.update({"confirmation_type": "PO", "po_number": "SMK-PO-001", "po_date": today_text(), "confirmation_note": "Smoke PO confirmation."})
+        errors, cleaned, _ = sales_services.validate_confirmation_data(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke PO confirmation validation failed: {errors}")
+        record_id = sales_services.save_confirmation(company_id, branch_id, user_id, cleaned)
+        stats.add("confirmations", True)
+        return record_id
+
+    def ensure_phone_confirmation(self, company_id, branch_id, user_id, customer_id, stats):
+        existing = self.first_row("SELECT id FROM customer_confirmations WHERE company_id = %s AND branch_id = %s AND confirmation_note = 'Smoke phone confirmation.' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("confirmations", False)
+            return existing["id"]
+        data = sales_services.default_confirmation_form_data(company_id, branch_id)
+        data.update({"customer_id": customer_id, "confirmation_type": "Phone", "po_number": "", "confirmation_note": "Smoke phone confirmation.", "total_amount": "1500"})
+        errors, cleaned, _ = sales_services.validate_confirmation_data(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke phone confirmation validation failed: {errors}")
+        record_id = sales_services.save_confirmation(company_id, branch_id, user_id, cleaned)
+        stats.add("confirmations", True)
+        return record_id
+
+    def ensure_supplier_purchase(self, company_id, branch_id, user_id, supplier_id, item_id, confirmation_id, stats):
+        existing = self.first_row("SELECT id FROM supplier_purchases WHERE company_id = %s AND branch_id = %s AND supplier_bill_no = 'SMK-BILL-001' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("purchases", False)
+            return existing["id"]
+        data = purchase_services.default_form_data(company_id, branch_id)
+        data.update({"supplier_id": supplier_id, "supplier_bill_no": "SMK-BILL-001", "supplier_bill_date": today_text(), "confirmation_id": confirmation_id, "remarks": "Smoke supplier purchase."})
+        data["items"] = [{"item_service_id": item_id, "description": "Smoke Router Product", "quantity": "2", "purchase_rate": "1500", "tax_percent": "5"}]
+        errors, cleaned = purchase_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke supplier purchase validation failed: {errors}")
+        record_id = purchase_services.save_purchase(company_id, branch_id, user_id, cleaned)
+        stats.add("purchases", True)
+        return record_id
+
+    def ensure_delivery_challan(self, company_id, branch_id, user_id, confirmation_id, stats):
+        existing = self.first_row("SELECT id FROM delivery_challans WHERE company_id = %s AND branch_id = %s AND confirmation_id = %s LIMIT 1", [company_id, branch_id, confirmation_id])
+        if existing:
+            stats.add("delivery_challans", False)
+            return existing["id"]
+        confirmation = delivery_services.get_confirmation(company_id, branch_id, confirmation_id)
+        data = delivery_services.default_form_data(company_id, branch_id, confirmation=confirmation)
+        data.update({"delivered_by": "Smoke Delivery Person", "remarks": "Smoke delivery challan."})
+        errors, cleaned = delivery_services.validate_and_clean(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke delivery challan validation failed: {errors}")
+        record_id = delivery_services.save_challan(company_id, branch_id, user_id, cleaned)
+        stats.add("delivery_challans", True)
+        return record_id
+
+
+def today_text():
+    return sales_services.today_iso()

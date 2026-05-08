@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Delivery Challan</span><h2>{{ challan.dc_no }}</h2><p>{{ challan.party_name|default:"Party" }} · {{ challan.dc_date }}</p></div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'sales:delivery_challans' %}"><i class="bi bi-arrow-left"></i> Back</a>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_print' challan.id %}"><i class="bi bi-printer"></i> Print</a>
+        {% if can_edit %}<a class="btn btn-light" href="{% url 'sales:delivery_challan_upload_signed' challan.id %}"><i class="bi bi-file-earmark-check"></i> Signed Copy</a>{% endif %}
+        {% if can_edit %}<a class="btn btn-primary" href="{% url 'sales:delivery_challan_edit' challan.id %}"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header"><div><h3>Challan Summary</h3><p>Status: <span class="soft-badge">{{ challan.status|default:"Draft" }}</span></p></div><i class="bi bi-truck"></i></div>
+    <div class="app-card-body">
+        <div class="detail-grid">
+            <div><span>DC Date</span><strong>{{ challan.dc_date }}</strong></div>
+            <div><span>Customer / Party</span><strong>{{ challan.party_name|default:"-" }}</strong></div>
+            <div><span>Confirmation</span><strong>{% if challan.confirmation_id %}<a href="{% url 'sales:confirmation_detail' challan.confirmation_id %}">{{ challan.confirmation_no }}</a>{% else %}-{% endif %}</strong></div>
+            <div><span>Quotation</span><strong>{% if challan.quotation_id %}<a href="{% url 'sales:quotation_detail' challan.quotation_id %}">{{ challan.quotation_no }}</a>{% else %}-{% endif %}</strong></div>
+            <div><span>PO Number</span><strong>{{ challan.po_number|default:"-" }}</strong></div>
+            <div><span>Signed Copy</span><strong>{{ challan.signed_copy_path|default:"-" }}</strong></div>
+        </div>
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header"><div><h3>Items Delivered</h3><p>No rates, tax, or amount on delivery challan.</p></div></div>
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Quantity</th></tr></thead>
+            <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+</section>
+
+<section class="section-grid">
+    <div class="app-card"><div class="app-card-header"><div><h3>Delivery Details</h3></div></div><div class="app-card-body"><div class="detail-grid"><div><span>Delivered By</span><strong>{{ challan.delivered_by|default:"-" }}</strong></div><div><span>Received By</span><strong>{{ challan.received_by|default:"-" }}</strong></div></div></div></div>
+    <div class="app-card"><div class="app-card-header"><div><h3>Remarks</h3></div></div><div class="app-card-body"><p class="mb-0">{{ challan.remarks|default:"-"|linebreaksbr }}</p></div></div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-body form-actions">
+        <button class="btn btn-light" type="button" disabled><i class="bi bi-receipt"></i> Create Invoice</button>
+        {% if can_cancel %}<a class="btn btn-outline-danger" href="{% url 'sales:delivery_challan_cancel' challan.id %}"><i class="bi bi-x-circle"></i> Cancel Delivery Challan</a>{% endif %}
+    </div>
+</section>
+{% endblock %}

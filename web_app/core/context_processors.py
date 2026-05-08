@@ -25,7 +25,7 @@ SIDEBAR_GROUPS = [
         "items": [
             ("Quotations", "quotations", "sales:quotations"),
             ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations"),
-            ("Delivery Challans", "delivery_challans", "sales:index"),
+            ("Delivery Challans", "delivery_challans", "sales:delivery_challans"),
             ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index"),
             ("Sales Returns", "sales_returns", "sales:index"),
             ("Customer Receipts", "customer_receipts", "sales:index"),
