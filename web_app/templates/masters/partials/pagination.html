@@ -1,0 +1,11 @@
+{% if pagination.total_pages > 1 %}
+<nav class="pagination-bar" aria-label="Pagination">
+    {% if pagination.has_previous %}
+    <a class="btn btn-light btn-sm" href="?q={{ search }}&status={{ status }}&page={{ pagination.previous_page }}">Previous</a>
+    {% endif %}
+    <span class="soft-badge">Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+    {% if pagination.has_next %}
+    <a class="btn btn-light btn-sm" href="?q={{ search }}&status={{ status }}&page={{ pagination.next_page }}">Next</a>
+    {% endif %}
+</nav>
+{% endif %}

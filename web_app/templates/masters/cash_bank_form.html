@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Masters</span><h2>{{ page_title }}</h2><p>Cash and bank records automatically create linked asset accounts.</p></div></section>
+<form method="post" class="app-card settings-form-card">{% csrf_token %}<input type="hidden" name="account_id" value="{{ form_data.account_id|default:'' }}">
+<div class="app-card-header"><div><h3>Cash / Bank Details</h3><p>Bank name is recommended for bank accounts.</p></div><i class="bi bi-bank"></i></div>
+<div class="app-card-body"><div class="form-grid two-col">
+<div><label class="form-label">Account Name</label><input class="form-control {% if errors.account_name %}is-invalid{% endif %}" name="account_name" value="{{ form_data.account_name|default:'' }}" required>{% if errors.account_name %}<div class="invalid-feedback">{{ errors.account_name }}</div>{% endif %}</div>
+<div><label class="form-label">Account Type</label><select class="form-select {% if errors.account_type %}is-invalid{% endif %}" name="account_type"><option {% if form_data.account_type == "Cash" %}selected{% endif %}>Cash</option><option {% if form_data.account_type == "Bank" %}selected{% endif %}>Bank</option></select>{% if errors.account_type %}<div class="invalid-feedback">{{ errors.account_type }}</div>{% endif %}</div>
+<div><label class="form-label">Bank Name</label><input class="form-control" name="bank_name" value="{{ form_data.bank_name|default:'' }}"></div>
+<div><label class="form-label">Account Number</label><input class="form-control" name="account_number" value="{{ form_data.account_number|default:'' }}"></div>
+<div><label class="form-label">Branch</label><input class="form-control" name="branch" value="{{ form_data.branch|default:'' }}"></div>
+<div><label class="form-label">IBAN</label><input class="form-control" name="iban" value="{{ form_data.iban|default:'' }}"></div>
+<div><label class="form-label">Opening Balance</label><input class="form-control {% if errors.opening_balance %}is-invalid{% endif %}" name="opening_balance" type="number" step="0.01" min="0" value="{{ form_data.opening_balance|default:0 }}">{% if errors.opening_balance %}<div class="invalid-feedback">{{ errors.opening_balance }}</div>{% endif %}</div>
+<div class="form-check form-switch settings-switches"><input class="form-check-input" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}><label class="form-check-label">Active</label></div>
+<div class="full-span"><label class="form-label">Remarks</label><textarea class="form-control" name="remarks" rows="2">{{ form_data.remarks|default:'' }}</textarea></div>
+</div><div class="form-actions"><a class="btn btn-light" href="{% url 'masters:cash_bank' %}">Cancel</a><button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Cash / Bank</button></div></div></form>
+{% endblock %}

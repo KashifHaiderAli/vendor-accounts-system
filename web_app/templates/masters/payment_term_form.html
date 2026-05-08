@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Masters</span><h2>{{ page_title }}</h2><p>Payment terms are reusable on customer records.</p></div></section>
+<form method="post" class="app-card settings-form-card">{% csrf_token %}
+<div class="app-card-header"><div><h3>Payment Term Details</h3><p>Name must be unique in this branch.</p></div><i class="bi bi-calendar-check"></i></div>
+<div class="app-card-body"><div class="form-grid two-col">
+<div><label class="form-label">Name</label><input class="form-control {% if errors.name %}is-invalid{% endif %}" name="name" value="{{ form_data.name|default:'' }}" required>{% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}</div>
+<div><label class="form-label">Days</label><input class="form-control {% if errors.days %}is-invalid{% endif %}" name="days" type="number" min="0" value="{{ form_data.days|default:0 }}">{% if errors.days %}<div class="invalid-feedback">{{ errors.days }}</div>{% endif %}</div>
+<div class="full-span"><label class="form-label">Description</label><textarea class="form-control" name="description" rows="2">{{ form_data.description|default:'' }}</textarea></div>
+<div class="form-check form-switch settings-switches"><input class="form-check-input" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}><label class="form-check-label">Active</label></div>
+</div><div class="form-actions"><a class="btn btn-light" href="{% url 'masters:payment_terms' %}">Cancel</a><button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Payment Term</button></div></div></form>
+{% endblock %}

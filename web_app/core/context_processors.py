@@ -11,12 +11,12 @@ SIDEBAR_GROUPS = [
         "label": "Masters",
         "icon": "bi-collection",
         "items": [
-            ("Customers", "customers", "masters:index"),
-            ("Suppliers", "suppliers", "masters:index"),
-            ("Items / Services", "item_services", "masters:index"),
-            ("Cash / Bank Accounts", "cash_bank_accounts", "masters:index"),
-            ("Expense Heads", "expense_heads", "masters:index"),
-            ("Payment Terms", "payment_terms", "masters:index"),
+            ("Customers", "customers", "masters:customers"),
+            ("Suppliers", "suppliers", "masters:suppliers"),
+            ("Items / Services", "item_services", "masters:items"),
+            ("Cash / Bank Accounts", "cash_bank_accounts", "masters:cash_bank"),
+            ("Expense Heads", "expense_heads", "masters:expense_heads"),
+            ("Payment Terms", "payment_terms", "masters:payment_terms"),
         ],
     },
     {

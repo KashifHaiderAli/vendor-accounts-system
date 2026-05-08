@@ -118,8 +118,25 @@ Branch management enforces the current company from the logged-in session, uniqu
 
 Settings updates write to the existing `companies`, `company_settings`, `branches`, `numbering_settings`, and `tax_settings` tables. User actions are logged into `user_activity_log`.
 
+## Phase 5 Master Data Screens
+
+Phase 5 adds branch-level master data screens using existing DB App-created tables:
+
+- Customers: `/masters/customers/`
+- Suppliers: `/masters/suppliers/`
+- Items / Services: `/masters/items/`
+- Cash / Bank Accounts: `/masters/cash-bank/`
+- Expense Heads: `/masters/expense-heads/`
+- Payment Terms: `/masters/payment-terms/`
+
+All master lists support search, active/inactive/all filters, pagination, permission-based actions, and activate/deactivate behavior. Records are filtered by the logged-in `company_id` and `current_branch_id`; master records are not hard-deleted.
+
+Customers, suppliers, cash/bank accounts, and expense heads automatically create linked records in the existing `accounts` table. The linked account name is updated when the master name changes. No inventory management, stock quantity, or serial number tracking is included in this phase.
+
+Master data actions are logged into `user_activity_log`.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.

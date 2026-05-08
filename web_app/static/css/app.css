@@ -863,6 +863,34 @@ button.quick-action-btn:disabled {
     padding: 0;
 }
 
+.master-menu-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    color: var(--text-main);
+    text-decoration: none;
+}
+
+.master-menu-card h3 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 760;
+}
+
+.master-menu-card p {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
 .empty-state {
     border: 1px dashed rgba(100, 116, 139, 0.34);
     border-radius: var(--radius-md);

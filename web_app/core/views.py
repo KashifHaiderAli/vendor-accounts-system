@@ -55,11 +55,11 @@ def dashboard(request):
         },
     ]
     quick_actions = [
-        {"label": "New Quotation", "icon": "bi-file-earmark-plus", "url": "/sales/"},
-        {"label": "New Invoice", "icon": "bi-receipt-cutoff", "url": "/sales/"},
-        {"label": "New Receipt", "icon": "bi-cash-coin", "url": "/sales/"},
-        {"label": "New Purchase", "icon": "bi-cart-plus", "url": "/purchases/"},
-        {"label": "Backup", "icon": "bi-cloud-arrow-up", "url": "/backup/"},
+        {"label": "New Customer", "icon": "bi-person-plus", "url": "/masters/customers/new/"},
+        {"label": "New Supplier", "icon": "bi-truck", "url": "/masters/suppliers/new/"},
+        {"label": "New Item / Service", "icon": "bi-box-seam", "url": "/masters/items/new/"},
+        {"label": "New Cash / Bank", "icon": "bi-bank", "url": "/masters/cash-bank/new/"},
+        {"label": "New Payment Term", "icon": "bi-calendar-plus", "url": "/masters/payment-terms/new/"},
     ]
     activity_items = [
         "Dashboard shell is ready for live accounting data.",
