@@ -18,16 +18,17 @@
         </div>
         <i class="bi bi-diagram-3"></i>
     </div>
+    {% include "masters/partials/form_errors.html" %}
     <div class="app-card-body">
         <div class="form-grid two-col">
             <div>
                 <label class="form-label" for="branch_code">Branch Code</label>
-                <input class="form-control {% if errors.branch_code %}is-invalid{% endif %}" id="branch_code" name="branch_code" value="{{ form_data.branch_code|default:'' }}" required>
+                <input class="form-control {% if errors.branch_code %}is-invalid{% endif %}" id="branch_code" name="branch_code" value="{{ form_data.branch_code|default:'' }}" maxlength="50" required>
                 {% if errors.branch_code %}<div class="invalid-feedback">{{ errors.branch_code }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="branch_name">Branch Name</label>
-                <input class="form-control {% if errors.branch_name %}is-invalid{% endif %}" id="branch_name" name="branch_name" value="{{ form_data.branch_name|default:'' }}" required>
+                <input class="form-control {% if errors.branch_name %}is-invalid{% endif %}" id="branch_name" name="branch_name" value="{{ form_data.branch_name|default:'' }}" maxlength="150" required>
                 {% if errors.branch_name %}<div class="invalid-feedback">{{ errors.branch_name }}</div>{% endif %}
             </div>
             <div class="full-span">
@@ -36,15 +37,17 @@
             </div>
             <div>
                 <label class="form-label" for="phone">Phone</label>
-                <input class="form-control" id="phone" name="phone" value="{{ form_data.phone|default:'' }}">
+                <input class="form-control {% if errors.phone %}is-invalid{% endif %}" id="phone" name="phone" type="tel" pattern="[0-9+\-\s()]{7,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.phone|default:'' }}">
+                {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="mobile">Mobile</label>
-                <input class="form-control" id="mobile" name="mobile" value="{{ form_data.mobile|default:'' }}">
+                <input class="form-control {% if errors.mobile %}is-invalid{% endif %}" id="mobile" name="mobile" type="tel" pattern="[0-9+\-\s()]{10,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.mobile|default:'' }}">
+                {% if errors.mobile %}<div class="invalid-feedback">{{ errors.mobile }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="email">Email</label>
-                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" value="{{ form_data.email|default:'' }}">
+                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" type="email" maxlength="254" value="{{ form_data.email|default:'' }}">
                 {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
             </div>
             <div class="settings-switches">

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
-
 from django.contrib import messages
 from django.db import DatabaseError
 from django.shortcuts import redirect, render
 
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core import validators as form_validators
 
 from .services import (
     COMPANY_FIELDS,
@@ -69,7 +68,7 @@ def company_settings_view(request):
             field: request.POST.get(field, "").strip()
             for field in COMPANY_SETTINGS_FIELDS
         }
-        errors = validate_company_form(company_data)
+        errors = validate_company_form(company_data, settings_data)
         form_data = {**company_data, **settings_data}
 
         if not errors:
@@ -101,6 +100,7 @@ def company_settings_view(request):
             "page_title": "Company Settings",
             "form_data": form_data,
             "errors": errors,
+            "error_summary": form_validators.collect_form_errors(errors),
         },
     )
 
@@ -201,6 +201,7 @@ def branch_form_view(request, branch_id=None):
             "page_title": "Edit Branch" if is_edit else "New Branch",
             "form_data": form_data,
             "errors": errors,
+            "error_summary": form_validators.collect_form_errors(errors),
             "is_edit": is_edit,
         },
     )
@@ -314,6 +315,7 @@ def numbering_settings_view(request):
             "page_title": "Numbering Settings",
             "form_data": form_data,
             "errors": errors,
+            "error_summary": form_validators.collect_form_errors(errors),
             "numbering_sections": NUMBERING_SECTIONS,
         },
     )
@@ -366,6 +368,7 @@ def tax_settings_view(request):
             "page_title": "Tax Settings",
             "form_data": form_data,
             "errors": errors,
+            "error_summary": form_validators.collect_form_errors(errors),
         },
     )
 
@@ -374,27 +377,79 @@ def _can(request, permission_code, action):
     return user_has_permission(request, permission_code, action)
 
 
-def validate_company_form(data):
+def validate_company_form(data, settings_data):
     errors = {}
-    if not data.get("company_name"):
-        errors["company_name"] = "Company name is required."
-    email = data.get("email")
-    if email and ("@" not in email or "." not in email.split("@")[-1]):
-        errors["email"] = "Enter a valid email address."
+    text_limits = {
+        "company_name": 200,
+        "legal_name": 200,
+        "phone": 30,
+        "mobile": 30,
+        "email": 254,
+        "website": 200,
+        "ntn": 100,
+        "strn": 100,
+        "logo_path": 500,
+    }
+    for field, max_length in text_limits.items():
+        data[field], error = form_validators.clean_text(
+            data.get(field),
+            max_length=max_length,
+            required=field == "company_name",
+            field_name=field_label(field),
+        )
+        if error:
+            errors[field] = error
+    data["phone"], error = form_validators.validate_phone(data.get("phone"), "Phone")
+    if error:
+        errors["phone"] = error
+    data["mobile"], error = form_validators.validate_mobile(data.get("mobile"), "Mobile")
+    if error:
+        errors["mobile"] = error
+    data["email"], error = form_validators.validate_email(data.get("email"), "Email")
+    if error:
+        errors["email"] = error
+    data["website"], error = form_validators.validate_website(data.get("website"), "Website")
+    if error:
+        errors["website"] = error
+    settings_data["authorized_person_name"], error = form_validators.clean_text(
+        settings_data.get("authorized_person_name"),
+        max_length=150,
+        field_name="Authorized Person Name",
+    )
+    if error:
+        errors["authorized_person_name"] = error
     return errors
 
 
 def validate_branch_form(company_id, data, branch_id=None):
     errors = {}
-    if not data.get("branch_code"):
-        errors["branch_code"] = "Branch code is required."
-    if not data.get("branch_name"):
-        errors["branch_name"] = "Branch name is required."
+    text_limits = {
+        "branch_code": 50,
+        "branch_name": 150,
+        "phone": 30,
+        "mobile": 30,
+        "email": 254,
+    }
+    for field, max_length in text_limits.items():
+        data[field], error = form_validators.clean_text(
+            data.get(field),
+            max_length=max_length,
+            required=field in {"branch_code", "branch_name"},
+            field_name=field_label(field),
+        )
+        if error:
+            errors[field] = error
     if data.get("branch_code") and branch_code_exists(company_id, data["branch_code"], branch_id):
         errors["branch_code"] = "Branch code must be unique within this company."
-    email = data.get("email")
-    if email and ("@" not in email or "." not in email.split("@")[-1]):
-        errors["email"] = "Enter a valid email address."
+    data["phone"], error = form_validators.validate_phone(data.get("phone"), "Phone")
+    if error:
+        errors["phone"] = error
+    data["mobile"], error = form_validators.validate_mobile(data.get("mobile"), "Mobile")
+    if error:
+        errors["mobile"] = error
+    data["email"], error = form_validators.validate_email(data.get("email"), "Email")
+    if error:
+        errors["email"] = error
     return errors
 
 
@@ -403,30 +458,65 @@ def validate_numbering_form(data):
     for field in NUMBERING_FIELDS:
         if field in {"use_year_in_number", "number_padding"}:
             continue
-        if not data.get(field):
-            errors[field] = "Prefix is required."
-    try:
-        padding = int(data.get("number_padding", ""))
-        if padding < 3 or padding > 8:
-            errors["number_padding"] = "Padding must be between 3 and 8."
-    except ValueError:
-        errors["number_padding"] = "Padding must be a number."
+        data[field], error = form_validators.clean_text(
+            data.get(field),
+            max_length=20,
+            required=True,
+            field_name=field_label(field),
+        )
+        if error:
+            errors[field] = error
+    padding, error = form_validators.validate_integer(
+        data.get("number_padding"),
+        "Number Padding",
+        min_value=3,
+        max_value=8,
+        required=True,
+    )
+    if error:
+        errors["number_padding"] = error
+    else:
+        data["number_padding"] = padding
     return errors
 
 
 def validate_tax_form(data):
     errors = {}
     for field in ["default_sales_tax_percent", "default_input_tax_percent"]:
-        try:
-            value = Decimal(str(data.get(field, "")))
-            if value < 0 or value > 100:
-                errors[field] = "Tax percentage must be between 0 and 100."
+        value, error = form_validators.validate_percentage(data.get(field), field_label(field))
+        if error:
+            errors[field] = error
+        else:
             data[field] = value
-        except (InvalidOperation, TypeError):
-            errors[field] = "Enter a valid tax percentage."
     if data.get("default_tax_applicable") and not data.get("tax_invoice_label"):
         errors["tax_invoice_label"] = "Tax invoice label is required when tax is applicable."
+    data["tax_invoice_label"], error = form_validators.clean_text(
+        data.get("tax_invoice_label"),
+        max_length=100,
+        required=bool(data.get("default_tax_applicable")),
+        field_name="Tax Invoice Label",
+    )
+    if error:
+        errors["tax_invoice_label"] = error
     return errors
+
+
+def field_label(field_name):
+    labels = {
+        "company_name": "Company Name",
+        "legal_name": "Legal Name",
+        "logo_path": "Logo Path",
+        "authorized_person_name": "Authorized Person Name",
+        "branch_code": "Branch Code",
+        "branch_name": "Branch Name",
+        "number_padding": "Number Padding",
+        "default_sales_tax_percent": "Default Sales Tax Percent",
+        "default_input_tax_percent": "Default Input Tax Percent",
+        "tax_invoice_label": "Tax Invoice Label",
+    }
+    if field_name.endswith("_prefix"):
+        return field_name.replace("_", " ").title()
+    return labels.get(field_name, field_name.replace("_", " ").title())
 
 
 NUMBERING_SECTIONS = [

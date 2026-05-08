@@ -179,6 +179,19 @@ python manage.py test_master_validations
 
 The command checks the reusable validation helpers and duplicate detection without creating database records.
 
+## Phase 6.6 Strong Field Validation
+
+Phase 6.6 adds stricter backend and frontend validation across the existing settings and master forms:
+
+- Phone and mobile format checks
+- Email and website validation
+- Money, decimal, percentage, integer, and date validators
+- Max-length checks for important text fields
+- Stronger frontend input attributes for contact, money, percentage, and integer fields
+- Continued backend enforcement even if browser validation is bypassed
+
+Manual validation scenarios are documented in `docs/validation_checklist.md`.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.

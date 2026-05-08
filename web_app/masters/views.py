@@ -560,6 +560,13 @@ def parse_form_data(request, key):
 def validate_form_data(config, key, data, company_id, branch_id, record_id=None):
     errors = {}
     warnings = []
+    for field, max_length in field_limits(key).items():
+        if field in data:
+            cleaned, error = form_validators.clean_text(data.get(field), max_length=max_length, field_name=field_label(field))
+            data[field] = cleaned
+            if error:
+                errors[field] = error
+
     code_field = config.get("code_field")
     name_field = config.get("name_field")
     if code_field:
@@ -584,21 +591,29 @@ def validate_form_data(config, key, data, company_id, branch_id, record_id=None)
         if duplicate_error:
             errors[unique_field] = duplicate_error
 
-    if data.get("email"):
-        email_error = form_validators.validate_email(data["email"])
+    if "phone" in data:
+        data["phone"], phone_error = form_validators.validate_phone(data.get("phone"), "Phone")
+        if phone_error:
+            errors["phone"] = phone_error
+    if "mobile" in data:
+        data["mobile"], mobile_error = form_validators.validate_mobile(data.get("mobile"), "Mobile")
+        if mobile_error:
+            errors["mobile"] = mobile_error
+    if "email" in data:
+        data["email"], email_error = form_validators.validate_email(data.get("email"), "Email")
         if email_error:
             errors["email"] = email_error
 
     for field in ["credit_limit", "opening_balance", "default_purchase_rate", "default_sale_rate"]:
         if field in data:
-            amount, error = form_validators.validate_decimal(data[field], field_label(field), min_value=0)
+            amount, error = form_validators.validate_money(data[field], field_label(field), allow_negative=False)
             if error:
                 errors[field] = error
             else:
                 data[field] = str(amount)
 
     if "default_tax_rate" in data:
-        amount, error = form_validators.validate_decimal(data["default_tax_rate"], "Tax Rate", min_value=0, max_value=100)
+        amount, error = form_validators.validate_percentage(data["default_tax_rate"], "Tax Rate")
         if error:
             errors["default_tax_rate"] = error
         else:
@@ -655,6 +670,52 @@ def field_label(field_name):
         "default_sale_rate": "Default Sale Rate",
     }
     return labels.get(field_name, field_name.replace("_", " ").title())
+
+
+def field_limits(key):
+    limits = {
+        "customers": {
+            "customer_code": 50,
+            "company_name": 200,
+            "contact_person": 150,
+            "phone": 30,
+            "mobile": 30,
+            "email": 254,
+            "ntn": 100,
+            "strn": 100,
+        },
+        "suppliers": {
+            "supplier_code": 50,
+            "supplier_name": 200,
+            "contact_person": 150,
+            "phone": 30,
+            "mobile": 30,
+            "email": 254,
+            "ntn": 100,
+            "strn": 100,
+        },
+        "items": {
+            "item_code": 50,
+            "item_name": 200,
+            "category": 100,
+        },
+        "cash_bank": {
+            "account_name": 150,
+            "bank_name": 150,
+            "account_number": 100,
+            "branch": 150,
+            "iban": 100,
+        },
+        "expense_heads": {
+            "expense_code": 50,
+            "expense_name": 150,
+            "category": 100,
+        },
+        "payment_terms": {
+            "name": 100,
+        },
+    }
+    return limits.get(key, {})
 
 
 def save_new_record(config, key, company_id, branch_id, request, data):

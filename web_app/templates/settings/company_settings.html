@@ -18,16 +18,18 @@
         </div>
         <i class="bi bi-building-gear"></i>
     </div>
+    {% include "masters/partials/form_errors.html" %}
     <div class="app-card-body">
         <div class="form-grid two-col">
             <div>
                 <label class="form-label" for="company_name">Company Name</label>
-                <input class="form-control {% if errors.company_name %}is-invalid{% endif %}" id="company_name" name="company_name" value="{{ form_data.company_name|default:'' }}" required>
+                <input class="form-control {% if errors.company_name %}is-invalid{% endif %}" id="company_name" name="company_name" value="{{ form_data.company_name|default:'' }}" maxlength="200" required>
                 {% if errors.company_name %}<div class="invalid-feedback">{{ errors.company_name }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="legal_name">Legal Name</label>
-                <input class="form-control" id="legal_name" name="legal_name" value="{{ form_data.legal_name|default:'' }}">
+                <input class="form-control {% if errors.legal_name %}is-invalid{% endif %}" id="legal_name" name="legal_name" value="{{ form_data.legal_name|default:'' }}" maxlength="200">
+                {% if errors.legal_name %}<div class="invalid-feedback">{{ errors.legal_name }}</div>{% endif %}
             </div>
             <div class="full-span">
                 <label class="form-label" for="address">Address</label>
@@ -35,32 +37,38 @@
             </div>
             <div>
                 <label class="form-label" for="phone">Phone</label>
-                <input class="form-control" id="phone" name="phone" value="{{ form_data.phone|default:'' }}">
+                <input class="form-control {% if errors.phone %}is-invalid{% endif %}" id="phone" name="phone" type="tel" pattern="[0-9+\-\s()]{7,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.phone|default:'' }}">
+                {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="mobile">Mobile</label>
-                <input class="form-control" id="mobile" name="mobile" value="{{ form_data.mobile|default:'' }}">
+                <input class="form-control {% if errors.mobile %}is-invalid{% endif %}" id="mobile" name="mobile" type="tel" pattern="[0-9+\-\s()]{10,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.mobile|default:'' }}">
+                {% if errors.mobile %}<div class="invalid-feedback">{{ errors.mobile }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="email">Email</label>
-                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" value="{{ form_data.email|default:'' }}">
+                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" type="email" maxlength="254" value="{{ form_data.email|default:'' }}">
                 {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="website">Website</label>
-                <input class="form-control" id="website" name="website" value="{{ form_data.website|default:'' }}">
+                <input class="form-control {% if errors.website %}is-invalid{% endif %}" id="website" name="website" maxlength="200" placeholder="www.example.com" value="{{ form_data.website|default:'' }}">
+                {% if errors.website %}<div class="invalid-feedback">{{ errors.website }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="ntn">NTN</label>
-                <input class="form-control" id="ntn" name="ntn" value="{{ form_data.ntn|default:'' }}">
+                <input class="form-control {% if errors.ntn %}is-invalid{% endif %}" id="ntn" name="ntn" maxlength="100" value="{{ form_data.ntn|default:'' }}">
+                {% if errors.ntn %}<div class="invalid-feedback">{{ errors.ntn }}</div>{% endif %}
             </div>
             <div>
                 <label class="form-label" for="strn">STRN</label>
-                <input class="form-control" id="strn" name="strn" value="{{ form_data.strn|default:'' }}">
+                <input class="form-control {% if errors.strn %}is-invalid{% endif %}" id="strn" name="strn" maxlength="100" value="{{ form_data.strn|default:'' }}">
+                {% if errors.strn %}<div class="invalid-feedback">{{ errors.strn }}</div>{% endif %}
             </div>
             <div class="full-span">
                 <label class="form-label" for="logo_path">Logo Path</label>
-                <input class="form-control" id="logo_path" name="logo_path" value="{{ form_data.logo_path|default:'' }}" placeholder="Future upload path">
+                <input class="form-control {% if errors.logo_path %}is-invalid{% endif %}" id="logo_path" name="logo_path" maxlength="500" value="{{ form_data.logo_path|default:'' }}" placeholder="Future upload path">
+                {% if errors.logo_path %}<div class="invalid-feedback">{{ errors.logo_path }}</div>{% endif %}
             </div>
             <div class="form-check form-switch">
                 <input class="form-check-input" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>
@@ -91,7 +99,8 @@
             </div>
             <div>
                 <label class="form-label" for="authorized_person_name">Authorized Person</label>
-                <input class="form-control" id="authorized_person_name" name="authorized_person_name" value="{{ form_data.authorized_person_name|default:'' }}">
+                <input class="form-control {% if errors.authorized_person_name %}is-invalid{% endif %}" id="authorized_person_name" name="authorized_person_name" maxlength="150" value="{{ form_data.authorized_person_name|default:'' }}">
+                {% if errors.authorized_person_name %}<div class="invalid-feedback">{{ errors.authorized_person_name }}</div>{% endif %}
             </div>
         </div>
         <div class="form-actions">

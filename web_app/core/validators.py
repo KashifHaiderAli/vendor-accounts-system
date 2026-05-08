@@ -1,6 +1,18 @@
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
+
+
+PHONE_ALLOWED_RE = re.compile(r"^[0-9+\-\s()]+$")
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+WEBSITE_RE = re.compile(
+    r"^(https?://)?(www\.)?[A-Za-z0-9][A-Za-z0-9-]*(\.[A-Za-z0-9][A-Za-z0-9-]*)+(/[^\s]*)?$"
+)
+DECIMAL_RE = re.compile(r"^-?\d+(\.\d+)?$")
+INTEGER_RE = re.compile(r"^-?\d+$")
+MONEY_DIGITS_RE = re.compile(r"^-?(\d{1,15})(\.\d{1,2})?$")
 
 
 def clean_text(value, max_length=None, required=False, field_name="Field"):
@@ -18,21 +30,64 @@ def validate_required(value, field_name):
     return None
 
 
-def validate_email(value, required=False):
+def validate_phone(value, field_name="Phone", required=False):
     cleaned = str(value or "").strip()
     if not cleaned:
-        return "Email is required." if required else None
-    if "@" not in cleaned:
-        return "Enter a valid email address."
-    domain = cleaned.rsplit("@", 1)[-1]
-    if "." not in domain or domain.startswith(".") or domain.endswith("."):
-        return "Enter a valid email address."
-    return None
+        return cleaned, f"{field_name} is required." if required else None
+    if len(cleaned) > 30:
+        return cleaned, f"{field_name} cannot be longer than 30 characters."
+    if not PHONE_ALLOWED_RE.match(cleaned):
+        return cleaned, f"{field_name} can contain only digits, +, -, spaces, and parentheses."
+    digits = re.sub(r"\D", "", cleaned)
+    if len(digits) < 7:
+        return cleaned, f"{field_name} must contain at least 7 digits."
+    return cleaned, None
 
 
-def validate_decimal(value, field_name, min_value=None, max_value=None, allow_zero=True):
+def validate_mobile(value, field_name="Mobile", required=False):
+    cleaned, error = validate_phone(value, field_name, required)
+    if error or not cleaned:
+        return cleaned, error
+    digits = re.sub(r"\D", "", cleaned)
+    if len(digits) < 10:
+        return cleaned, f"{field_name} must contain at least 10 digits."
+    return cleaned, None
+
+
+def validate_email(value, field_name="Email", required=False):
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return cleaned, f"{field_name} is required." if required else None
+    if len(cleaned) > 254:
+        return cleaned, f"{field_name} cannot be longer than 254 characters."
+    if any(char.isspace() for char in cleaned) or not EMAIL_RE.match(cleaned):
+        return cleaned, "Enter a valid email address."
+    return cleaned.lower(), None
+
+
+def validate_website(value, field_name="Website", required=False):
+    cleaned = str(value or "").strip()
+    if not cleaned:
+        return cleaned, f"{field_name} is required." if required else None
+    if len(cleaned) > 200:
+        return cleaned, f"{field_name} cannot be longer than 200 characters."
+    if any(char.isspace() for char in cleaned) or not WEBSITE_RE.match(cleaned):
+        return cleaned, f"Enter a valid {field_name.lower()}."
+    return cleaned, None
+
+
+def validate_decimal(value, field_name, min_value=None, max_value=None, allow_zero=True, required=False):
+    raw = str(value or "").strip()
+    if raw == "":
+        if required:
+            return None, f"{field_name} is required."
+        raw = "0"
+    if "," in raw:
+        return None, f"{field_name} must not contain commas."
+    if not DECIMAL_RE.match(raw):
+        return None, f"{field_name} must be a valid number."
     try:
-        amount = Decimal(str(value or "0"))
+        amount = Decimal(raw)
     except (InvalidOperation, TypeError):
         return None, f"{field_name} must be a valid number."
     if min_value is not None and amount < Decimal(str(min_value)):
@@ -48,9 +103,44 @@ def validate_decimal(value, field_name, min_value=None, max_value=None, allow_ze
     return amount, None
 
 
-def validate_integer(value, field_name, min_value=None, max_value=None):
+def validate_money(value, field_name, allow_negative=False, allow_zero=True, required=False):
+    raw = str(value or "").strip()
+    if raw == "":
+        if required:
+            return None, f"{field_name} is required."
+        raw = "0"
+    if "," in raw:
+        return None, f"{field_name} must not contain commas."
+    if not MONEY_DIGITS_RE.match(raw):
+        return None, f"{field_name} must be a valid amount with up to 2 decimal places."
     try:
-        number = int(str(value or "0"))
+        amount = Decimal(raw).quantize(Decimal("0.01"))
+    except (InvalidOperation, TypeError):
+        return None, f"{field_name} must be a valid amount."
+    if not allow_negative and amount < 0:
+        return None, f"{field_name} cannot be negative."
+    if not allow_zero and amount == 0:
+        return None, f"{field_name} must be greater than zero."
+    return amount, None
+
+
+def validate_percentage(value, field_name, required=False):
+    amount, error = validate_decimal(value, field_name, min_value=0, max_value=100, required=required)
+    if error:
+        return None, error
+    return amount, None
+
+
+def validate_integer(value, field_name, min_value=None, max_value=None, required=False):
+    raw = str(value or "").strip()
+    if raw == "":
+        if required:
+            return None, f"{field_name} is required."
+        raw = "0"
+    if not INTEGER_RE.match(raw):
+        return None, f"{field_name} must be a whole number."
+    try:
+        number = int(raw)
     except (TypeError, ValueError):
         return None, f"{field_name} must be a whole number."
     if min_value is not None and number < int(min_value):
@@ -64,8 +154,21 @@ def validate_integer(value, field_name, min_value=None, max_value=None):
     return number, None
 
 
-def validate_choice(value, allowed_values, field_name):
+def validate_date(value, field_name, required=False):
     cleaned = str(value or "").strip()
+    if not cleaned:
+        return None, f"{field_name} is required." if required else None
+    try:
+        parsed = datetime.strptime(cleaned, "%Y-%m-%d").date()
+    except ValueError:
+        return None, f"{field_name} must be a valid date in YYYY-MM-DD format."
+    return parsed, None
+
+
+def validate_choice(value, allowed_values, field_name, required=True):
+    cleaned = str(value or "").strip()
+    if not cleaned and not required:
+        return None
     allowed_lookup = {str(item).lower(): str(item) for item in allowed_values}
     if cleaned.lower() not in allowed_lookup:
         choices = ", ".join(str(item) for item in allowed_values)

@@ -12,6 +12,7 @@
 
 <form method="post" class="settings-stack">
     {% csrf_token %}
+    {% include "masters/partials/form_errors.html" %}
     {% for section_name, fields in numbering_sections %}
     <section class="app-card">
         <div class="app-card-header">
@@ -25,7 +26,7 @@
                 {% for field in fields %}
                 <div>
                     <label class="form-label" for="{{ field }}">{{ field|field_label }}</label>
-                    <input class="form-control {% if errors|get_item:field %}is-invalid{% endif %}" id="{{ field }}" name="{{ field }}" value="{{ form_data|get_item:field }}">
+                    <input class="form-control {% if errors|get_item:field %}is-invalid{% endif %}" id="{{ field }}" name="{{ field }}" maxlength="20" value="{{ form_data|get_item:field }}">
                     {% if errors|get_item:field %}<div class="invalid-feedback">{{ errors|get_item:field }}</div>{% endif %}
                 </div>
                 {% endfor %}
@@ -45,7 +46,7 @@
             <div class="form-grid two-col">
                 <div>
                     <label class="form-label" for="number_padding">Number Padding</label>
-                    <input class="form-control {% if errors.number_padding %}is-invalid{% endif %}" id="number_padding" name="number_padding" type="number" min="3" max="8" value="{{ form_data.number_padding|default:4 }}">
+                    <input class="form-control {% if errors.number_padding %}is-invalid{% endif %}" id="number_padding" name="number_padding" type="number" step="1" min="3" max="8" inputmode="numeric" value="{{ form_data.number_padding|default:4 }}">
                     {% if errors.number_padding %}<div class="invalid-feedback">{{ errors.number_padding }}</div>{% endif %}
                 </div>
                 <div class="form-check form-switch settings-switches">
