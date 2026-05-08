@@ -98,8 +98,28 @@ The web app reads roles, permissions, assigned branches, company details, and li
 
 Licenses must be generated from the DB App. If the license is missing, expired, inactive, or belongs to a different hardware fingerprint, the web app redirects to the license expired page and shows the current hardware fingerprint for renewal.
 
+## Phase 4 Settings Screens
+
+Phase 4 adds working settings screens that use the existing DB App-created tables with raw SQL helpers:
+
+- Company Settings: `/settings/company/`
+- Branch Management: `/settings/branches/`
+- Numbering Settings: `/settings/numbering/`
+- Tax Settings: `/settings/tax/`
+
+These pages require login, a valid license, and the matching role permissions:
+
+- `company_settings`: view/edit
+- `branches`: view/add/edit/delete permission family, with add/edit used by the current screens
+- `numbering_settings`: view/edit
+- `tax_settings`: view/edit
+
+Branch management enforces the current company from the logged-in session, unique branch codes per company, a single Head Office branch, and at least one active branch. Head Office branches cannot be deactivated. When a Master Admin creates a branch, that user is automatically granted branch access in `user_branches`.
+
+Settings updates write to the existing `companies`, `company_settings`, `branches`, `numbering_settings`, and `tax_settings` tables. User actions are logged into `user_activity_log`.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.

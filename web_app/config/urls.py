@@ -19,6 +19,7 @@ urlpatterns = [
     path("accounts/", include("accounts_module.urls")),
     path("reports/", include("reports.urls")),
     path("backup/", include("backup.urls")),
+    path("settings/", include("settings_module.urls")),
     path("license-expired/", licensing_views.expired, name="license_expired"),
     path("license/", include("licensing.urls")),
 ]

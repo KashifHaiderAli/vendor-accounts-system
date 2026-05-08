@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "reports",
     "backup",
     "licensing",
+    "settings_module",
 ]
 
 MIDDLEWARE = [

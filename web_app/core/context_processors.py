@@ -1,8 +1,9 @@
 from datetime import date
 
+from django.db import connection
 from django.urls import reverse
 
-from authentication.auth_utils import get_user_allowed_branches, user_has_permission
+from authentication.auth_utils import dictfetchone, get_user_allowed_branches, user_has_permission
 
 
 SIDEBAR_GROUPS = [
@@ -70,12 +71,12 @@ SIDEBAR_GROUPS = [
         "label": "Settings",
         "icon": "bi-sliders",
         "items": [
-            ("Company Settings", "company_settings", "masters:index"),
-            ("Branches", "branches", "masters:index"),
+            ("Company Settings", "company_settings", "settings_module:company"),
+            ("Branches", "branches", "settings_module:branches"),
             ("Users & Roles", "user_management", "masters:index"),
             ("Role Management", "role_management", "masters:index"),
-            ("Numbering Settings", "numbering_settings", "masters:index"),
-            ("Tax Settings", "tax_settings", "masters:index"),
+            ("Numbering Settings", "numbering_settings", "settings_module:numbering"),
+            ("Tax Settings", "tax_settings", "settings_module:tax"),
             ("Backup / Restore", "backup_restore", "backup:index"),
             ("License Status", "licensing", "licensing:index"),
         ],
@@ -91,6 +92,7 @@ def app_context(request):
     can_view_dashboard = False
 
     if is_authenticated:
+        refresh_session_company_branch(request)
         allowed_branches = get_user_allowed_branches(request.session.get("user_id"))
         can_view_dashboard = user_has_permission(request, "dashboard", "view")
         sidebar_groups = build_sidebar_groups(request)
@@ -143,3 +145,31 @@ def build_sidebar_groups(request):
                 }
             )
     return groups
+
+
+def refresh_session_company_branch(request):
+    company_id = request.session.get("company_id")
+    branch_id = request.session.get("current_branch_id")
+    if not company_id:
+        return
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT company_name FROM companies WHERE id = %s LIMIT 1",
+            [company_id],
+        )
+        company = dictfetchone(cursor)
+        if company:
+            request.session["company_name"] = company["company_name"]
+        if branch_id:
+            cursor.execute(
+                """
+                SELECT branch_name
+                FROM branches
+                WHERE company_id = %s AND id = %s
+                LIMIT 1
+                """,
+                [company_id, branch_id],
+            )
+            branch = dictfetchone(cursor)
+            if branch:
+                request.session["current_branch_name"] = branch["branch_name"]

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Company Settings</h2>
+        <p>Update company profile details and branch-specific document footers.</p>
+    </div>
+</section>
+
+<form method="post" class="app-card settings-form-card">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>Company Profile</h3>
+            <p>These details appear across invoices, reports, and future documents.</p>
+        </div>
+        <i class="bi bi-building-gear"></i>
+    </div>
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div>
+                <label class="form-label" for="company_name">Company Name</label>
+                <input class="form-control {% if errors.company_name %}is-invalid{% endif %}" id="company_name" name="company_name" value="{{ form_data.company_name|default:'' }}" required>
+                {% if errors.company_name %}<div class="invalid-feedback">{{ errors.company_name }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="legal_name">Legal Name</label>
+                <input class="form-control" id="legal_name" name="legal_name" value="{{ form_data.legal_name|default:'' }}">
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="address">Address</label>
+                <textarea class="form-control" id="address" name="address" rows="2">{{ form_data.address|default:'' }}</textarea>
+            </div>
+            <div>
+                <label class="form-label" for="phone">Phone</label>
+                <input class="form-control" id="phone" name="phone" value="{{ form_data.phone|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="mobile">Mobile</label>
+                <input class="form-control" id="mobile" name="mobile" value="{{ form_data.mobile|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="email">Email</label>
+                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" value="{{ form_data.email|default:'' }}">
+                {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="website">Website</label>
+                <input class="form-control" id="website" name="website" value="{{ form_data.website|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="ntn">NTN</label>
+                <input class="form-control" id="ntn" name="ntn" value="{{ form_data.ntn|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="strn">STRN</label>
+                <input class="form-control" id="strn" name="strn" value="{{ form_data.strn|default:'' }}">
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="logo_path">Logo Path</label>
+                <input class="form-control" id="logo_path" name="logo_path" value="{{ form_data.logo_path|default:'' }}" placeholder="Future upload path">
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>
+                <label class="form-check-label" for="is_active">Company active</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-card-header section-divider">
+        <div>
+            <h3>Document Settings</h3>
+            <p>Branch-specific text used for quotations and invoices.</p>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div class="full-span">
+                <label class="form-label" for="quotation_footer">Quotation Footer</label>
+                <textarea class="form-control" id="quotation_footer" name="quotation_footer" rows="2">{{ form_data.quotation_footer|default:'' }}</textarea>
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="invoice_footer">Invoice Footer</label>
+                <textarea class="form-control" id="invoice_footer" name="invoice_footer" rows="2">{{ form_data.invoice_footer|default:'' }}</textarea>
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="bank_details">Bank Details</label>
+                <textarea class="form-control" id="bank_details" name="bank_details" rows="3">{{ form_data.bank_details|default:'' }}</textarea>
+            </div>
+            <div>
+                <label class="form-label" for="authorized_person_name">Authorized Person</label>
+                <input class="form-control" id="authorized_person_name" name="authorized_person_name" value="{{ form_data.authorized_person_name|default:'' }}">
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'dashboard' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Settings</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

@@ -760,6 +760,109 @@ button.quick-action-btn:disabled {
     font-size: 0.92rem;
 }
 
+.settings-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.settings-form-card {
+    overflow: hidden;
+}
+
+.section-divider {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+}
+
+.form-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.form-grid.two-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid.three-col {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.full-span {
+    grid-column: 1 / -1;
+}
+
+.settings-switches {
+    display: grid;
+    gap: 10px;
+    align-content: center;
+    min-height: 44px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.filter-bar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 180px auto auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.app-table {
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.app-table th {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+.app-table td,
+.app-table th {
+    vertical-align: middle;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.status-pill.success {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.status-pill.muted {
+    background: var(--surface-muted);
+    color: var(--text-muted);
+}
+
+.table-actions {
+    white-space: nowrap;
+}
+
+.table-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+}
+
 .empty-state {
     border: 1px dashed rgba(100, 116, 139, 0.34);
     border-radius: var(--radius-md);
@@ -914,7 +1017,8 @@ th {
     }
 
     .stat-grid,
-    .insight-grid {
+    .insight-grid,
+    .form-grid.three-col {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -994,8 +1098,19 @@ th {
 
     .stat-grid,
     .insight-grid,
-    .quick-action-grid {
+    .quick-action-grid,
+    .form-grid.two-col,
+    .form-grid.three-col,
+    .filter-bar {
         grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .btn {
+        width: 100%;
     }
 
     .hero-status-card {

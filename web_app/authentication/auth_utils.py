@@ -77,6 +77,30 @@ def update_last_login(user_id: int) -> None:
 def get_user_allowed_branches(user_id):
     with connection.cursor() as cursor:
         cursor.execute(
+            "SELECT company_id, is_master_user FROM users WHERE id = %s LIMIT 1",
+            [user_id],
+        )
+        user = dictfetchone(cursor)
+        if not user:
+            return []
+        if int(user.get("is_master_user") or 0) == 1:
+            cursor.execute(
+                """
+                SELECT
+                    b.id,
+                    b.branch_name,
+                    b.branch_code,
+                    b.company_id,
+                    b.is_head_office AS is_default
+                FROM branches b
+                WHERE b.company_id = %s
+                  AND b.is_active = 1
+                ORDER BY b.is_head_office DESC, b.branch_name ASC
+                """,
+                [user["company_id"]],
+            )
+            return dictfetchall(cursor)
+        cursor.execute(
             """
             SELECT
                 b.id,

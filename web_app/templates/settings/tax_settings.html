@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Tax Settings</h2>
+        <p>Configure default tax behavior for the current company branch.</p>
+    </div>
+</section>
+
+<form method="post" class="app-card settings-form-card">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>Default Tax Rules</h3>
+            <p>These values will be used by future invoice and purchase screens.</p>
+        </div>
+        <i class="bi bi-percent"></i>
+    </div>
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div>
+                <label class="form-label" for="default_sales_tax_percent">Default Sales Tax %</label>
+                <input class="form-control {% if errors.default_sales_tax_percent %}is-invalid{% endif %}" id="default_sales_tax_percent" name="default_sales_tax_percent" type="number" step="0.01" min="0" max="100" value="{{ form_data.default_sales_tax_percent|default:0 }}">
+                {% if errors.default_sales_tax_percent %}<div class="invalid-feedback">{{ errors.default_sales_tax_percent }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="default_input_tax_percent">Default Input Tax %</label>
+                <input class="form-control {% if errors.default_input_tax_percent %}is-invalid{% endif %}" id="default_input_tax_percent" name="default_input_tax_percent" type="number" step="0.01" min="0" max="100" value="{{ form_data.default_input_tax_percent|default:0 }}">
+                {% if errors.default_input_tax_percent %}<div class="invalid-feedback">{{ errors.default_input_tax_percent }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="tax_invoice_label">Tax Invoice Label</label>
+                <input class="form-control {% if errors.tax_invoice_label %}is-invalid{% endif %}" id="tax_invoice_label" name="tax_invoice_label" value="{{ form_data.tax_invoice_label|default:'Tax Invoice' }}">
+                {% if errors.tax_invoice_label %}<div class="invalid-feedback">{{ errors.tax_invoice_label }}</div>{% endif %}
+            </div>
+            <div class="settings-switches">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" id="default_tax_applicable" name="default_tax_applicable" type="checkbox" {% if form_data.default_tax_applicable %}checked{% endif %}>
+                    <label class="form-check-label" for="default_tax_applicable">Tax applicable by default</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" id="show_ntn_on_invoice" name="show_ntn_on_invoice" type="checkbox" {% if form_data.show_ntn_on_invoice %}checked{% endif %}>
+                    <label class="form-check-label" for="show_ntn_on_invoice">Show NTN on invoice</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" id="show_strn_on_invoice" name="show_strn_on_invoice" type="checkbox" {% if form_data.show_strn_on_invoice %}checked{% endif %}>
+                    <label class="form-check-label" for="show_strn_on_invoice">Show STRN on invoice</label>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'dashboard' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Tax Settings</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
