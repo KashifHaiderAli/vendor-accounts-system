@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Quotations</span>
+        <h2>{{ page_title }}</h2>
+        <p>Quotations are customer-facing offers and do not post accounting entries.</p>
+    </div>
+</section>
+
+<form method="post" class="settings-stack quotation-form" id="quotationForm">
+    {% csrf_token %}
+    {% include "masters/partials/form_errors.html" %}
+
+    <section class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Quotation Header</h3>
+                <p>Customer, validity, tax option, and document status.</p>
+            </div>
+            <i class="bi bi-file-earmark-text"></i>
+        </div>
+        <div class="app-card-body">
+            <div class="form-grid three-col">
+                <div>
+                    <label class="form-label">Quotation No</label>
+                    <input class="form-control {% if errors.quotation_no %}is-invalid{% endif %}" name="quotation_no" maxlength="50" value="{{ form_data.quotation_no|default:'' }}" required>
+                    {% if errors.quotation_no %}<div class="invalid-feedback">{{ errors.quotation_no }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Quotation Date</label>
+                    <input class="form-control {% if errors.quotation_date %}is-invalid{% endif %}" name="quotation_date" type="date" value="{{ form_data.quotation_date|default:'' }}" required>
+                    {% if errors.quotation_date %}<div class="invalid-feedback">{{ errors.quotation_date }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Valid Till</label>
+                    <input class="form-control {% if errors.valid_till %}is-invalid{% endif %}" name="valid_till" type="date" value="{{ form_data.valid_till|default:'' }}">
+                    {% if errors.valid_till %}<div class="invalid-feedback">{{ errors.valid_till }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Customer Mode</label>
+                    <select class="form-select {% if errors.customer_mode %}is-invalid{% endif %}" name="customer_mode" id="customerMode">
+                        <option value="existing" {% if form_data.customer_mode != "new" %}selected{% endif %}>Existing Customer</option>
+                        <option value="new" {% if form_data.customer_mode == "new" %}selected{% endif %}>New / Walk-in / Unregistered</option>
+                    </select>
+                    {% if errors.customer_mode %}<div class="invalid-feedback">{{ errors.customer_mode }}</div>{% endif %}
+                </div>
+                <div class="customer-existing-field">
+                    <label class="form-label">Customer</label>
+                    <select class="form-select {% if errors.customer_id %}is-invalid{% endif %}" name="customer_id" id="customerSelect">
+                        <option value="">Select customer</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}" data-contact="{{ customer.contact_person|default:'' }}" data-terms="{{ customer.payment_terms_id|default:'' }}" data-name="{{ customer.company_name|default:'' }}" data-phone="{{ customer.phone|default:'' }}" data-mobile="{{ customer.mobile|default:'' }}" data-email="{{ customer.email|default:'' }}" data-address="{{ customer.address|default:'' }}" data-ntn="{{ customer.ntn|default:'' }}" data-strn="{{ customer.strn|default:'' }}" {% if customer.id|stringformat:"s" == form_data.customer_id|stringformat:"s" %}selected{% endif %}>{{ customer.company_name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.customer_id %}<div class="invalid-feedback">{{ errors.customer_id }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer Name</label>
+                    <input class="form-control {% if errors.customer_name %}is-invalid{% endif %}" name="customer_name" id="customerName" maxlength="200" value="{{ form_data.customer_name|default:'' }}">
+                    {% if errors.customer_name %}<div class="invalid-feedback">{{ errors.customer_name }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Contact Person</label>
+                    <input class="form-control {% if errors.contact_person %}is-invalid{% endif %}" name="contact_person" id="contactPerson" maxlength="150" value="{{ form_data.contact_person|default:'' }}">
+                    {% if errors.contact_person %}<div class="invalid-feedback">{{ errors.contact_person }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Validity Days</label>
+                    <input class="form-control {% if errors.validity_days %}is-invalid{% endif %}" name="validity_days" id="validityDays" type="number" step="1" min="0" inputmode="numeric" value="{{ form_data.validity_days|default:15 }}">
+                    {% if errors.validity_days %}<div class="invalid-feedback">{{ errors.validity_days }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Payment Terms</label>
+                    <select class="form-select {% if errors.payment_terms_id %}is-invalid{% endif %}" name="payment_terms_id" id="paymentTerms">
+                        <option value="">No terms</option>
+                        {% for term in payment_terms %}
+                        <option value="{{ term.id }}" {% if term.id|stringformat:"s" == form_data.payment_terms_id|stringformat:"s" %}selected{% endif %}>{{ term.name }} ({{ term.days }} days)</option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.payment_terms_id %}<div class="invalid-feedback">{{ errors.payment_terms_id }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Tax Option</label>
+                    <select class="form-select {% if errors.tax_option %}is-invalid{% endif %}" name="tax_option" id="taxOption">
+                        <option value="no_tax" {% if form_data.tax_option == "no_tax" %}selected{% endif %}>No Tax</option>
+                        <option value="tax_exclusive" {% if form_data.tax_option == "tax_exclusive" %}selected{% endif %}>Tax Exclusive</option>
+                        <option value="tax_inclusive" {% if form_data.tax_option == "tax_inclusive" %}selected{% endif %}>Tax Inclusive</option>
+                    </select>
+                    {% if errors.tax_option %}<div class="invalid-feedback">{{ errors.tax_option }}</div>{% endif %}
+                </div>
+                <div>
+                    <label class="form-label">Status</label>
+                    <select class="form-select {% if errors.status %}is-invalid{% endif %}" name="status">
+                        {% for option in statuses %}
+                        <option value="{{ option }}" {% if form_data.status == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.status %}<div class="invalid-feedback">{{ errors.status }}</div>{% endif %}
+                </div>
+                <div class="full-span">
+                    <label class="form-label">Subject</label>
+                    <input class="form-control {% if errors.subject %}is-invalid{% endif %}" name="subject" maxlength="255" value="{{ form_data.subject|default:'' }}">
+                    {% if errors.subject %}<div class="invalid-feedback">{{ errors.subject }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer Phone</label>
+                    <input class="form-control {% if errors.customer_phone %}is-invalid{% endif %}" name="customer_phone" id="customerPhone" type="tel" pattern="[0-9+\-\s()]{7,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.customer_phone|default:'' }}">
+                    {% if errors.customer_phone %}<div class="invalid-feedback">{{ errors.customer_phone }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer Mobile</label>
+                    <input class="form-control {% if errors.customer_mobile %}is-invalid{% endif %}" name="customer_mobile" id="customerMobile" type="tel" pattern="[0-9+\-\s()]{10,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.customer_mobile|default:'' }}">
+                    {% if errors.customer_mobile %}<div class="invalid-feedback">{{ errors.customer_mobile }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer Email</label>
+                    <input class="form-control {% if errors.customer_email %}is-invalid{% endif %}" name="customer_email" id="customerEmail" type="email" maxlength="254" value="{{ form_data.customer_email|default:'' }}">
+                    {% if errors.customer_email %}<div class="invalid-feedback">{{ errors.customer_email }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field full-span">
+                    <label class="form-label">Customer Address</label>
+                    <textarea class="form-control" name="customer_address" id="customerAddress" rows="2">{{ form_data.customer_address|default:'' }}</textarea>
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer NTN</label>
+                    <input class="form-control {% if errors.customer_ntn %}is-invalid{% endif %}" name="customer_ntn" id="customerNtn" maxlength="100" value="{{ form_data.customer_ntn|default:'' }}">
+                    {% if errors.customer_ntn %}<div class="invalid-feedback">{{ errors.customer_ntn }}</div>{% endif %}
+                </div>
+                <div class="customer-new-field">
+                    <label class="form-label">Customer STRN</label>
+                    <input class="form-control {% if errors.customer_strn %}is-invalid{% endif %}" name="customer_strn" id="customerStrn" maxlength="100" value="{{ form_data.customer_strn|default:'' }}">
+                    {% if errors.customer_strn %}<div class="invalid-feedback">{{ errors.customer_strn }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Items / Services</h3>
+                <p>Add quoted products or services. Totals are recalculated on save.</p>
+            </div>
+            <button class="btn btn-light" type="button" id="addQuotationRow"><i class="bi bi-plus-lg"></i> Add Row</button>
+        </div>
+        <div class="app-card-body table-responsive">
+            {% if errors.items %}<div class="alert alert-danger app-alert">{{ errors.items }}</div>{% endif %}
+            <table class="table app-table quotation-items-table align-middle">
+                <thead>
+                    <tr>
+                        <th style="min-width: 180px;">Item</th>
+                        <th style="min-width: 260px;">Description</th>
+                        <th>Qty</th>
+                        <th>Rate</th>
+                        <th>Disc %</th>
+                        <th>Disc Amt</th>
+                        <th>Tax %</th>
+                        <th>Tax Amt</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="quotationItemsBody">
+                    {% for row in form_items %}
+                    <tr class="quotation-item-row">
+                        <td>
+                            <select class="form-select form-select-sm item-select {% if row.errors.item_service_id %}is-invalid{% endif %}" name="item_service_id[]">
+                                <option value="">Manual</option>
+                                {% for item in items %}
+                                <option value="{{ item.id }}" data-description="{{ item.item_name }}{% if item.warranty_or_service_description %} - {{ item.warranty_or_service_description }}{% endif %}" data-rate="{{ item.default_sale_rate|default:0 }}" data-tax="{{ item.default_tax_rate|default:0 }}" {% if item.id|stringformat:"s" == row.item_service_id|stringformat:"s" %}selected{% endif %}>{{ item.item_name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if row.errors.item_service_id %}<div class="invalid-feedback d-block">{{ row.errors.item_service_id }}</div>{% endif %}
+                        </td>
+                        <td><textarea class="form-control form-control-sm {% if row.errors.description %}is-invalid{% endif %}" name="description[]" rows="2">{{ row.description|default:'' }}</textarea>{% if row.errors.description %}<div class="invalid-feedback">{{ row.errors.description }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm calc-field {% if row.errors.quantity %}is-invalid{% endif %}" name="quantity[]" type="number" step="0.01" min="0.01" inputmode="decimal" value="{{ row.quantity|default:'1.00' }}">{% if row.errors.quantity %}<div class="invalid-feedback">{{ row.errors.quantity }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm calc-field {% if row.errors.rate %}is-invalid{% endif %}" name="rate[]" type="number" step="0.01" min="0" inputmode="decimal" value="{{ row.rate|default:'0.00' }}">{% if row.errors.rate %}<div class="invalid-feedback">{{ row.errors.rate }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm calc-field {% if row.errors.discount_percent %}is-invalid{% endif %}" name="discount_percent[]" type="number" step="0.01" min="0" max="100" inputmode="decimal" value="{{ row.discount_percent|default:'0.00' }}">{% if row.errors.discount_percent %}<div class="invalid-feedback">{{ row.errors.discount_percent }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm calc-field {% if row.errors.discount_amount %}is-invalid{% endif %}" name="discount_amount[]" type="number" step="0.01" min="0" inputmode="decimal" value="{{ row.discount_amount|default:'0.00' }}">{% if row.errors.discount_amount %}<div class="invalid-feedback">{{ row.errors.discount_amount }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm calc-field {% if row.errors.tax_percent %}is-invalid{% endif %}" name="tax_percent[]" type="number" step="0.01" min="0" max="100" inputmode="decimal" value="{{ row.tax_percent|default:'0.00' }}">{% if row.errors.tax_percent %}<div class="invalid-feedback">{{ row.errors.tax_percent }}</div>{% endif %}</td>
+                        <td><input class="form-control form-control-sm" name="tax_amount_display[]" type="number" step="0.01" readonly value="{{ row.tax_amount|default:'0.00' }}"></td>
+                        <td><input class="form-control form-control-sm" name="line_total_display[]" type="number" step="0.01" readonly value="{{ row.line_total|default:'0.00' }}"></td>
+                        <td><button class="btn btn-sm btn-light remove-row" type="button"><i class="bi bi-trash"></i></button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="app-card-body border-top">
+            <div class="quotation-total-grid">
+                <div><span>Subtotal</span><strong id="subtotalDisplay">{{ form_data.subtotal|default:'0.00' }}</strong></div>
+                <div><span>Discount</span><strong id="discountDisplay">{{ form_data.discount_total|default:'0.00' }}</strong></div>
+                <div><span>Tax</span><strong id="taxDisplay">{{ form_data.tax_total|default:'0.00' }}</strong></div>
+                <div class="grand"><span>Grand Total</span><strong id="grandDisplay">{{ form_data.grand_total|default:'0.00' }}</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-card">
+        <div class="app-card-header"><div><h3>Terms & Notes</h3><p>Shown on print and PDF views.</p></div></div>
+        <div class="app-card-body">
+            <div class="form-grid two-col">
+                <div class="full-span"><label class="form-label">Terms & Conditions</label><textarea class="form-control" name="terms_conditions" rows="3">{{ form_data.terms_conditions|default:'' }}</textarea></div>
+                <div class="full-span"><label class="form-label">Remarks</label><textarea class="form-control" name="remarks" rows="2">{{ form_data.remarks|default:'' }}</textarea></div>
+            </div>
+            <div class="form-actions">
+                <a class="btn btn-light" href="{% url 'sales:quotations' %}">Cancel</a>
+                <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Quotation</button>
+            </div>
+        </div>
+    </section>
+</form>
+
+<template id="quotationRowTemplate">
+    <tr class="quotation-item-row">
+        <td><select class="form-select form-select-sm item-select" name="item_service_id[]"><option value="">Manual</option>{% for item in items %}<option value="{{ item.id }}" data-description="{{ item.item_name }}{% if item.warranty_or_service_description %} - {{ item.warranty_or_service_description }}{% endif %}" data-rate="{{ item.default_sale_rate|default:0 }}" data-tax="{{ item.default_tax_rate|default:0 }}">{{ item.item_name }}</option>{% endfor %}</select></td>
+        <td><textarea class="form-control form-control-sm" name="description[]" rows="2"></textarea></td>
+        <td><input class="form-control form-control-sm calc-field" name="quantity[]" type="number" step="0.01" min="0.01" inputmode="decimal" value="1.00"></td>
+        <td><input class="form-control form-control-sm calc-field" name="rate[]" type="number" step="0.01" min="0" inputmode="decimal" value="0.00"></td>
+        <td><input class="form-control form-control-sm calc-field" name="discount_percent[]" type="number" step="0.01" min="0" max="100" inputmode="decimal" value="0.00"></td>
+        <td><input class="form-control form-control-sm calc-field" name="discount_amount[]" type="number" step="0.01" min="0" inputmode="decimal" value="0.00"></td>
+        <td><input class="form-control form-control-sm calc-field" name="tax_percent[]" type="number" step="0.01" min="0" max="100" inputmode="decimal" value="0.00"></td>
+        <td><input class="form-control form-control-sm" name="tax_amount_display[]" type="number" step="0.01" readonly value="0.00"></td>
+        <td><input class="form-control form-control-sm" name="line_total_display[]" type="number" step="0.01" readonly value="0.00"></td>
+        <td><button class="btn btn-sm btn-light remove-row" type="button"><i class="bi bi-trash"></i></button></td>
+    </tr>
+</template>
+<script src="{% static 'js/quotation.js' %}"></script>
+{% endblock %}

@@ -192,6 +192,31 @@ Phase 6.6 adds stricter backend and frontend validation across the existing sett
 
 Manual validation scenarios are documented in `docs/validation_checklist.md`.
 
+## Phase 7 Quotation Module
+
+Phase 7 adds the customer quotation workflow under `/sales/quotations/`:
+
+- Quotation list with search, status/date filters, pagination, and permission-based actions
+- Quotations for either existing Customer Master records or new/unregistered walk-in parties
+- Existing customer details are copied into the quotation for historical print accuracy
+- Unregistered quotation parties can later be added to Customer Master from the quotation detail page
+- Create and edit forms with a lightweight dynamic item grid
+- Server-side validation and total recalculation for every quotation line
+- Detail, duplicate, cancel, print, and PDF-friendly HTML views
+- Quotation statuses: Draft, Printed, Converted, Cancelled, with Expired shown visually when valid-till has passed
+- Activity logging for create, update, duplicate, cancel, and print/PDF views
+- Convert to Customer Confirmation / PO route as a Phase 8 placeholder
+
+Quotations do not post journal entries and do not affect accounts. The `/pdf/` route currently returns the same clean print-friendly HTML response so it stays reliable on Windows without adding a native PDF dependency. A dedicated PDF engine can be added later if needed.
+
+Existing databases created before unregistered quotation-party support should be upgraded once:
+
+```powershell
+python manage.py upgrade_schema_quotation_customer_fields
+```
+
+New databases created by the DB App already include the quotation customer snapshot fields.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.

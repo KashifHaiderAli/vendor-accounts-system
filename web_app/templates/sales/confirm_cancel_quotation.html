@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Quotation</span>
+        <h2>Cancel Quotation</h2>
+        <p>{{ quotation.quotation_no }} · {{ quotation.display_customer_name }}</p>
+    </div>
+</section>
+
+<form class="app-card" method="post">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>Confirm Cancellation</h3>
+            <p>This will mark the quotation as Cancelled. It will not delete the record or item lines.</p>
+        </div>
+        <i class="bi bi-exclamation-triangle"></i>
+    </div>
+    <div class="app-card-body form-actions">
+        <a class="btn btn-light" href="{% url 'sales:quotation_detail' quotation.id %}">Keep Quotation</a>
+        <button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i> Cancel Quotation</button>
+    </div>
+</form>
+{% endblock %}

@@ -23,7 +23,7 @@ SIDEBAR_GROUPS = [
         "label": "Sales",
         "icon": "bi-receipt",
         "items": [
-            ("Quotations", "quotations", "sales:index"),
+            ("Quotations", "quotations", "sales:quotations"),
             ("Customer Confirmations / PO", "customer_confirmations", "sales:index"),
             ("Delivery Challans", "delivery_challans", "sales:index"),
             ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index"),

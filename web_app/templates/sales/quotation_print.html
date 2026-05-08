@@ -1,0 +1,115 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Quotation {{ quotation.quotation_no }}</title>
+    <style>
+        @page { size: A4 portrait; margin: 16mm; }
+        * { box-sizing: border-box; }
+        body { font-family: "Segoe UI", Arial, sans-serif; color: #172033; margin: 0; background: #fff; font-size: 12px; }
+        .print-page { max-width: 780px; margin: 0 auto; }
+        .print-header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #dbeafe; padding-bottom: 16px; margin-bottom: 18px; }
+        .company-block { display: flex; gap: 14px; align-items: flex-start; }
+        .company-logo { width: 72px; max-height: 72px; object-fit: contain; }
+        h1, h2, h3, p { margin: 0; }
+        .company-name { font-size: 22px; font-weight: 750; color: #0f4cbd; }
+        .muted { color: #64748b; }
+        .title-block { text-align: right; }
+        .title-block h1 { font-size: 28px; letter-spacing: 1px; color: #0f172a; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+        .panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+        .panel h3 { font-size: 13px; color: #0f4cbd; margin-bottom: 8px; }
+        .row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th { background: #f1f5f9; color: #334155; font-weight: 700; text-align: left; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; }
+        .text-end { text-align: right; }
+        .totals { margin-left: auto; width: 280px; margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+        .totals .row { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        .totals .row:last-child { border-bottom: 0; background: #eff6ff; font-weight: 800; }
+        .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-top: 24px; }
+        .signature { min-height: 90px; display: flex; align-items: flex-end; justify-content: center; border-top: 1px solid #94a3b8; margin-top: 52px; padding-top: 6px; }
+        .screen-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 16px auto; max-width: 780px; }
+        .screen-actions button, .screen-actions a { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; background: #fff; color: #172033; text-decoration: none; cursor: pointer; }
+        @media print { .screen-actions { display: none; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="screen-actions">
+        <a href="{% url 'sales:quotation_detail' quotation.id %}">Back</a>
+        <button type="button" onclick="window.print()">Print</button>
+    </div>
+    <main class="print-page">
+        <header class="print-header">
+            <div class="company-block">
+                {% if company.logo_path %}<img class="company-logo" src="{{ company.logo_path }}" alt="Company logo">{% endif %}
+                <div>
+                    <div class="company-name">{{ company.company_name }}</div>
+                    <p class="muted">{{ company.address|default:"" }}</p>
+                    <p class="muted">{{ company.phone|default:"" }}{% if company.email %} · {{ company.email }}{% endif %}</p>
+                    <p class="muted">{% if company.ntn %}NTN: {{ company.ntn }}{% endif %}{% if company.strn %} · STRN: {{ company.strn }}{% endif %}</p>
+                </div>
+            </div>
+            <div class="title-block">
+                <h1>QUOTATION</h1>
+                <p><strong>{{ quotation.quotation_no }}</strong></p>
+                <p class="muted">Status: {{ quotation.display_status }}</p>
+            </div>
+        </header>
+
+        <section class="info-grid">
+            <div class="panel">
+                <h3>Customer</h3>
+                <p><strong>{{ quotation.display_customer_name }}</strong></p>
+                <p class="muted">{{ quotation.display_customer_address|default:"" }}</p>
+                <p class="muted">{{ quotation.contact_person|default:"" }}</p>
+                <p class="muted">{{ quotation.display_customer_phone|default:"" }} {{ quotation.display_customer_mobile|default:"" }}</p>
+            </div>
+            <div class="panel">
+                <h3>Quotation Info</h3>
+                <div class="row"><span>Date</span><strong>{{ quotation.quotation_date }}</strong></div>
+                <div class="row"><span>Valid Till</span><strong>{{ quotation.valid_till|default:"-" }}</strong></div>
+                <div class="row"><span>Payment Terms</span><strong>{{ quotation.payment_terms_name|default:"-" }}</strong></div>
+                <div class="row"><span>Branch</span><strong>{{ branch.branch_name|default:"-" }}</strong></div>
+            </div>
+        </section>
+
+        {% if quotation.subject %}<p><strong>Subject:</strong> {{ quotation.subject }}</p>{% endif %}
+
+        <table>
+            <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Discount</th><th class="text-end">Tax</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.description }}</td>
+                    <td class="text-end">{{ item.quantity|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.rate|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.discount_amount|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.tax_amount|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <section class="totals">
+            <div class="row"><span>Subtotal</span><strong>{{ quotation.subtotal|floatformat:2 }}</strong></div>
+            <div class="row"><span>Discount</span><strong>{{ quotation.discount_total|floatformat:2 }}</strong></div>
+            <div class="row"><span>Tax</span><strong>{{ quotation.tax_total|floatformat:2 }}</strong></div>
+            <div class="row"><span>Grand Total</span><strong>{{ quotation.grand_total|floatformat:2 }}</strong></div>
+        </section>
+
+        <section class="footer-grid">
+            <div>
+                {% if quotation.terms_conditions %}<h3>Terms & Conditions</h3><p>{{ quotation.terms_conditions|linebreaksbr }}</p>{% endif %}
+                {% if company_settings.quotation_footer %}<p class="muted" style="margin-top: 14px;">{{ company_settings.quotation_footer|linebreaksbr }}</p>{% endif %}
+            </div>
+            <div>
+                <div class="signature">{{ company_settings.authorized_person_name|default:"Authorized Signature" }}</div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
