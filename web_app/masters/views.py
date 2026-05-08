@@ -1,29 +1,30 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, connection, transaction
 from django.shortcuts import redirect, render
 
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core import validators as form_validators
 from settings_module.services import log_user_activity
 
 from .master_utils import (
     clean_bool,
     clean_text,
     create_linked_account,
+    future_reference_exists,
     get_active_payment_terms,
     get_current_branch_id,
     get_current_company_id,
     get_record,
     insert_record,
+    linked_account_has_journal_entries,
     list_records,
+    payment_term_exists,
     set_record_active,
-    unique_value_exists,
     update_linked_account_name,
     update_record,
-    validate_decimal,
-    validate_email,
 )
 
 
@@ -254,11 +255,12 @@ def form_view(request, key, record_id=None):
 
     form_data = record or default_form_data(key)
     errors = {}
+    warnings = []
     payment_terms = get_active_payment_terms(company_id, branch_id) if key == "customers" else []
 
     if request.method == "POST":
         form_data = parse_form_data(request, key)
-        errors = validate_form_data(config, key, form_data, company_id, branch_id, record_id)
+        errors, warnings = validate_form_data(config, key, form_data, company_id, branch_id, record_id)
         if not errors:
             try:
                 with transaction.atomic():
@@ -284,11 +286,15 @@ def form_view(request, key, record_id=None):
                             f"Created {config['singular'].lower()}.",
                         )
                         messages.success(request, f"{config['singular']} created successfully.")
+                for warning in warnings:
+                    messages.warning(request, warning)
                 return redirect(list_url_name(key))
             except ValueError as exc:
                 messages.error(request, str(exc))
             except DatabaseError:
                 messages.error(request, f"Unable to save {config['singular'].lower()}. Please try again.")
+        else:
+            messages.error(request, "Please correct the highlighted errors.")
 
     return render(
         request,
@@ -298,6 +304,8 @@ def form_view(request, key, record_id=None):
             "config": config,
             "form_data": form_data,
             "errors": errors,
+            "error_summary": form_validators.collect_form_errors(errors),
+            "warnings": warnings,
             "is_edit": is_edit,
             "payment_terms": payment_terms,
         },
@@ -316,6 +324,11 @@ def toggle_active_view(request, key, record_id):
         messages.error(request, f"{config['singular']} record was not found.")
         return redirect(list_url_name(key))
     new_state = 0 if int(record.get("is_active") or 0) == 1 else 1
+    if new_state == 0:
+        block_reason = deactivation_block_reason(key, record)
+        if block_reason:
+            messages.error(request, block_reason)
+            return redirect(list_url_name(key))
     try:
         set_record_active(config, company_id, branch_id, request.session.get("user_id"), record_id, new_state)
         log_user_activity(
@@ -435,6 +448,14 @@ def list_url_name(key):
     return mapping[key]
 
 
+def deactivation_block_reason(key, record):
+    if key == "cash_bank" and linked_account_has_journal_entries(record.get("account_id")):
+        return "This cash/bank account has journal entries and cannot be deactivated."
+    if key in {"customers", "suppliers"} and future_reference_exists(key, record.get("id")):
+        return f"This {key[:-1]} has transaction references and cannot be deactivated."
+    return None
+
+
 def default_form_data(key):
     defaults = {"is_active": 1, "opening_balance": "0", "remarks": ""}
     if key == "customers":
@@ -538,49 +559,102 @@ def parse_form_data(request, key):
 
 def validate_form_data(config, key, data, company_id, branch_id, record_id=None):
     errors = {}
+    warnings = []
     code_field = config.get("code_field")
     name_field = config.get("name_field")
-    if code_field and not data.get(code_field):
-        errors[code_field] = "Code is required."
-    if name_field and not data.get(name_field):
-        errors[name_field] = "Name is required."
+    if code_field:
+        error = form_validators.validate_required(data.get(code_field), field_label(code_field))
+        if error:
+            errors[code_field] = error
+    if name_field:
+        error = form_validators.validate_required(data.get(name_field), field_label(name_field))
+        if error:
+            errors[name_field] = error
     unique_field = code_field or name_field
-    if unique_field and data.get(unique_field) and unique_value_exists(config, company_id, branch_id, unique_field, data[unique_field], record_id):
-        errors[unique_field] = "This value already exists for the current branch."
+    if unique_field and data.get(unique_field):
+        duplicate_error = form_validators.validate_unique_code(
+            connection,
+            config["table"],
+            unique_field,
+            data[unique_field],
+            company_id,
+            branch_id,
+            record_id,
+        )
+        if duplicate_error:
+            errors[unique_field] = duplicate_error
 
     if data.get("email"):
-        email_error = validate_email(data["email"])
+        email_error = form_validators.validate_email(data["email"])
         if email_error:
             errors["email"] = email_error
 
     for field in ["credit_limit", "opening_balance", "default_purchase_rate", "default_sale_rate"]:
         if field in data:
-            amount, error = validate_decimal(data[field], field.replace("_", " ").title(), minimum=0)
+            amount, error = form_validators.validate_decimal(data[field], field_label(field), min_value=0)
             if error:
                 errors[field] = error
             else:
                 data[field] = str(amount)
 
     if "default_tax_rate" in data:
-        amount, error = validate_decimal(data["default_tax_rate"], "Tax Rate", minimum=0, maximum=100)
+        amount, error = form_validators.validate_decimal(data["default_tax_rate"], "Tax Rate", min_value=0, max_value=100)
         if error:
             errors["default_tax_rate"] = error
         else:
             data["default_tax_rate"] = str(amount)
 
-    if key == "items" and str(data.get("item_type", "")).lower() not in {"product", "service"}:
-        errors["item_type"] = "Item type must be Product or Service."
-    if key == "cash_bank" and str(data.get("account_type", "")).lower() not in {"cash", "bank"}:
-        errors["account_type"] = "Account type must be Cash or Bank."
+    if key in {"customers", "suppliers"}:
+        choice_error = form_validators.validate_choice(data.get("opening_balance_type"), ["Debit", "Credit"], "Opening Balance Type")
+        if choice_error:
+            errors["opening_balance_type"] = choice_error
+
+    if key == "customers" and data.get("payment_terms_id") and not payment_term_exists(company_id, branch_id, data["payment_terms_id"]):
+        errors["payment_terms_id"] = "Selected payment terms were not found."
+
+    if key == "items":
+        choice_error = form_validators.validate_choice(data.get("item_type"), ["Product", "Service"], "Item Type")
+        if choice_error:
+            errors["item_type"] = choice_error
+        else:
+            data["item_type"] = data["item_type"].title()
+
+    if key == "cash_bank":
+        choice_error = form_validators.validate_choice(data.get("account_type"), ["Cash", "Bank"], "Account Type")
+        if choice_error:
+            errors["account_type"] = choice_error
+        else:
+            data["account_type"] = data["account_type"].title()
+        if str(data.get("account_type", "")).lower() == "bank" and not data.get("bank_name"):
+            warnings.append("Bank name is recommended for bank accounts.")
+
     if key == "payment_terms":
-        try:
-            days = int(data.get("days") or 0)
-            if days < 0:
-                errors["days"] = "Days cannot be negative."
+        days, error = form_validators.validate_integer(data.get("days"), "Days", min_value=0)
+        if error:
+            errors["days"] = error
+        else:
             data["days"] = days
-        except ValueError:
-            errors["days"] = "Days must be a whole number."
-    return errors
+    return errors, warnings
+
+
+def field_label(field_name):
+    labels = {
+        "customer_code": "Customer Code",
+        "company_name": "Company Name",
+        "supplier_code": "Supplier Code",
+        "supplier_name": "Supplier Name",
+        "item_code": "Item Code",
+        "item_name": "Item Name",
+        "account_name": "Account Name",
+        "expense_code": "Expense Code",
+        "expense_name": "Expense Name",
+        "name": "Name",
+        "credit_limit": "Credit Limit",
+        "opening_balance": "Opening Balance",
+        "default_purchase_rate": "Default Purchase Rate",
+        "default_sale_rate": "Default Sale Rate",
+    }
+    return labels.get(field_name, field_name.replace("_", " ").title())
 
 
 def save_new_record(config, key, company_id, branch_id, request, data):

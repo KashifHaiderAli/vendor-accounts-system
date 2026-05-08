@@ -132,6 +132,26 @@ def get_active_payment_terms(company_id, branch_id):
         return dictfetchall(cursor)
 
 
+def payment_term_exists(company_id, branch_id, payment_terms_id):
+    if not payment_terms_id:
+        return True
+    try:
+        term_id = int(payment_terms_id)
+    except (TypeError, ValueError):
+        return False
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id
+            FROM payment_terms
+            WHERE id = %s AND company_id = %s AND branch_id = %s
+            LIMIT 1
+            """,
+            [term_id, company_id, branch_id],
+        )
+        return cursor.fetchone() is not None
+
+
 def get_parent_account(company_id, branch_id, account_name):
     with connection.cursor() as cursor:
         cursor.execute(
@@ -171,7 +191,10 @@ def generate_account_code(company_id, branch_id, base_code):
 def create_linked_account(company_id, branch_id, account_code, account_name, account_type, parent_name):
     parent = get_parent_account(company_id, branch_id, parent_name)
     if not parent:
-        raise ValueError(f"Parent account '{parent_name}' is missing. Please create it from DB App first.")
+        raise ValueError(
+            f"Required parent account '{parent_name}' was not found. "
+            "Please ensure the Chart of Accounts is initialized before saving this record."
+        )
 
     timestamp = now_text()
     final_code = generate_account_code(company_id, branch_id, account_code)
@@ -196,7 +219,10 @@ def create_linked_account(company_id, branch_id, account_code, account_name, acc
                 timestamp,
             ],
         )
-        return cursor.lastrowid
+        account_id = cursor.lastrowid
+    if not account_id:
+        raise ValueError("Linked account could not be created. Please try again.")
+    return account_id
 
 
 def update_linked_account_name(account_id, company_id, branch_id, account_name):
@@ -265,6 +291,27 @@ def set_record_active(config, company_id, branch_id, user_id, record_id, is_acti
             """,
             [is_active, user_id, timestamp, record_id, company_id, branch_id],
         )
+
+
+def linked_account_has_journal_entries(account_id):
+    if not account_id:
+        return False
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM journal_entry_lines
+            WHERE account_id = %s
+            LIMIT 1
+            """,
+            [account_id],
+        )
+        return cursor.fetchone() is not None
+
+
+def future_reference_exists(table_key, record_id):
+    # Placeholder for Phase 7+ transaction-reference checks.
+    return False
 
 
 def clean_text(request, field_name):

@@ -66,6 +66,8 @@ def validate_journal_lines(company_id, branch_id, entry_date, lines):
         if not account_id:
             raise AccountingError("Each journal line must have an account.")
         account = get_account_by_id(account_id)
+        if not account:
+            raise AccountingError("Journal line account was not found.")
         if not account_belongs_to_scope(account, company_id, branch_id):
             raise AccountingError("Journal line account does not belong to the current company/branch.")
         debit = money(line.get("debit"))

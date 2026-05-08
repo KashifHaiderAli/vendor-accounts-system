@@ -1151,3 +1151,9 @@ th {
         width: 100%;
     }
 }
+
+.app-alert {
+    border-radius: 14px;
+    border-width: 1px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}

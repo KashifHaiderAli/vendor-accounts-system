@@ -157,8 +157,30 @@ python manage.py test_journal_engine
 
 The command ensures the default chart of accounts, creates one balanced test journal if one does not already exist with `reference_type = "test_journal_engine"`, and prints `PASS`.
 
+## Phase 6.5 Validation and Safety Pass
+
+Phase 6.5 strengthens master data safety before transaction modules:
+
+- Shared validation utilities in `core/validators.py`
+- Friendly field-level errors and form error summaries
+- Preserved submitted form values after validation failures
+- Stronger duplicate, email, decimal, integer, choice, tax-rate, and opening-balance checks
+- Safer linked-account creation for customers, suppliers, cash/bank accounts, and expense heads
+- Transaction rollback when a master record and linked account cannot both be saved
+- No hard deletes; master records still use activate/deactivate
+- Cash/bank accounts with journal entries are blocked from deactivation
+- Placeholder reference checks are in place for future invoice/purchase safety
+
+Validation smoke test:
+
+```powershell
+python manage.py test_master_validations
+```
+
+The command checks the reusable validation helpers and duplicate detection without creating database records.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
