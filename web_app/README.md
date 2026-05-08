@@ -20,26 +20,53 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-## Database Path
+## Environment File
 
-The app reads the SQLite database path from:
-
-```powershell
-$env:VENDOR_ACCOUNTS_DB_PATH = "C:\VendorAccounts\data\vendor_accounts.db"
-```
-
-If the environment variable is missing, the app defaults to:
+The app automatically loads environment values from:
 
 ```text
-C:\VendorAccounts\data\vendor_accounts.db
+web_app/.env
 ```
 
-The database must be created first using the DB App.
+Use `web_app/.env.example` as the template for local setup. The local `.env` file is ignored by Git so each machine can keep its own database path and development secret.
 
-## Run
+Current local example:
+
+```text
+VENDOR_ACCOUNTS_DB_PATH=D:\Development\vendor-accounts-system\data\vendor_accounts.db
+DJANGO_SECRET_KEY=local-dev-secret-key-change-later
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+```
+
+If `VENDOR_ACCOUNTS_DB_PATH` is missing, the app falls back to the repo-level database path:
+
+```text
+vendor-accounts-system/data/vendor_accounts.db
+```
+
+The database must be created first using the DB App. The web app will not create or alter the database schema.
+
+## Run With Python
 
 ```powershell
 python manage.py runserver
+```
+
+## Run With Script
+
+From `web_app/` on Windows:
+
+```powershell
+.\run_web_app.bat
+```
+
+The script activates the repo virtual environment at `..\venv` when it exists, then starts Django at `127.0.0.1:8000`.
+
+Git Bash users can run:
+
+```bash
+./run_web_app_gitbash.sh
 ```
 
 Open:

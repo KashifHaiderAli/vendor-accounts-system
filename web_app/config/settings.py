@@ -1,17 +1,24 @@
 import os
+import sys
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-phase-2-local-development-key",
-)
+load_dotenv(BASE_DIR / ".env")
 
-DEBUG = True
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "local-dev-secret-key")
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
+]
 
 INSTALLED_APPS = [
     "django.contrib.messages",
@@ -56,13 +63,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+DEFAULT_DB_PATH = REPO_ROOT / "data" / "vendor_accounts.db"
+DATABASE_PATH = os.getenv("VENDOR_ACCOUNTS_DB_PATH", str(DEFAULT_DB_PATH))
+DATABASE_FILE = Path(DATABASE_PATH)
+DATABASE_MISSING_MESSAGE = (
+    "Database file not found. Please create it first using DB App or check "
+    "VENDOR_ACCOUNTS_DB_PATH in web_app/.env"
+)
+
+if not DATABASE_FILE.parent.exists():
+    print(DATABASE_MISSING_MESSAGE, file=sys.stderr)
+    raise RuntimeError(DATABASE_MISSING_MESSAGE)
+
+if not DATABASE_FILE.exists():
+    print(DATABASE_MISSING_MESSAGE, file=sys.stderr)
+    raise RuntimeError(DATABASE_MISSING_MESSAGE)
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get(
-            "VENDOR_ACCOUNTS_DB_PATH",
-            r"C:\VendorAccounts\data\vendor_accounts.db",
-        ),
+        "NAME": DATABASE_PATH,
     }
 }
 
