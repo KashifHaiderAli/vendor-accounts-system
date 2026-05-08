@@ -205,7 +205,7 @@ Phase 7 adds the customer quotation workflow under `/sales/quotations/`:
 - Detail, duplicate, cancel, print, and PDF-friendly HTML views
 - Quotation statuses: Draft, Printed, Converted, Cancelled, with Expired shown visually when valid-till has passed
 - Activity logging for create, update, duplicate, cancel, and print/PDF views
-- Convert to Customer Confirmation / PO route as a Phase 8 placeholder
+- Convert to Customer Confirmation / PO route that opens the Phase 8 confirmation form
 
 Quotations do not post journal entries and do not affect accounts. The `/pdf/` route currently returns the same clean print-friendly HTML response so it stays reliable on Windows without adding a native PDF dependency. A dedicated PDF engine can be added later if needed.
 
@@ -217,8 +217,25 @@ python manage.py upgrade_schema_quotation_customer_fields
 
 New databases created by the DB App already include the quotation customer snapshot fields.
 
+## Phase 8 Customer Confirmation / PO Module
+
+Phase 8 adds Customer Confirmation / PO tracking under `/sales/confirmations/`:
+
+- Confirmation list with search, type/status/date filters, pagination, and permission-based actions
+- Direct confirmations for existing customers
+- Quotation-based confirmations for both saved customers and unregistered quotation parties
+- Confirmation types: PO, Phone, WhatsApp, Email, and Direct
+- PO number is required only when confirmation type is PO
+- Conversion from quotation updates the quotation status to Converted
+- Duplicate active confirmations from the same quotation are blocked
+- Confirmation detail, edit, cancel, and print views
+- Future Create Purchase, Create Delivery Challan, and Create Invoice buttons are visible as disabled placeholders
+- Activity logging for create, update, conversion, cancel, and print
+
+Confirmations do not create journal entries and do not affect accounts. In Version 1, direct confirmation without a quotation requires selecting an existing customer. New or unregistered parties are supported through quotation-based confirmation.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Purchase, delivery challan, invoice, receipt, and report modules will be added in later phases.

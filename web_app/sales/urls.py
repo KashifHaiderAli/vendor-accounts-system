@@ -17,4 +17,11 @@ urlpatterns = [
     path("quotations/<int:quotation_id>/print/", views.print_quotation, name="quotation_print"),
     path("quotations/<int:quotation_id>/pdf/", views.pdf_quotation, name="quotation_pdf"),
     path("quotations/<int:quotation_id>/convert-to-confirmation/", views.convert_to_confirmation, name="quotation_convert"),
+    path("confirmations/", views.confirmations_list, name="confirmations"),
+    path("confirmations/new/", views.confirmation_form, name="confirmation_new"),
+    path("confirmations/from-quotation/<int:quotation_id>/", views.confirmation_form, name="confirmation_from_quotation"),
+    path("confirmations/<int:confirmation_id>/", views.confirmation_detail, name="confirmation_detail"),
+    path("confirmations/<int:confirmation_id>/edit/", views.confirmation_form, name="confirmation_edit"),
+    path("confirmations/<int:confirmation_id>/cancel/", views.cancel_confirmation, name="confirmation_cancel"),
+    path("confirmations/<int:confirmation_id>/print/", views.print_confirmation, name="confirmation_print"),
 ]

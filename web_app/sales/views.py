@@ -13,7 +13,7 @@ from . import services
 
 SALES_CARDS = [
     ("Quotations", "quotations", "sales:quotations", "bi-file-earmark-text", "Prepare customer quotations with itemized totals."),
-    ("Customer Confirmations / PO", "customer_confirmations", "sales:index", "bi-clipboard-check", "Phase 8 workflow placeholder."),
+    ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations", "bi-clipboard-check", "Record customer POs, calls, messages, and direct confirmations."),
     ("Delivery Challans", "delivery_challans", "sales:index", "bi-truck", "Future delivery documentation."),
     ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index", "bi-receipt", "Future invoice workflow."),
     ("Sales Returns", "sales_returns", "sales:index", "bi-arrow-counterclockwise", "Future return workflow."),
@@ -243,11 +243,180 @@ def convert_to_confirmation(request, quotation_id):
     if not quotation:
         messages.error(request, "Quotation was not found.")
         return redirect("sales:quotations")
+    return redirect("sales:confirmation_from_quotation", quotation_id=quotation_id)
+
+
+@permission_required_custom("customer_confirmations", "view")
+def confirmations_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    confirmation_type = request.GET.get("confirmation_type", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = services.list_confirmations(company_id, branch_id, search, confirmation_type, status, date_from, date_to, page)
     return render(
         request,
-        "sales/quotation_convert_placeholder.html",
-        {"page_title": "Convert Quotation", "quotation": quotation},
+        "sales/confirmations_list.html",
+        {
+            "page_title": "Customer Confirmations / PO",
+            "rows": rows,
+            "search": search,
+            "confirmation_type": confirmation_type,
+            "status": status,
+            "date_from": date_from,
+            "date_to": date_to,
+            "pagination": pagination,
+            "confirmation_types": services.CONFIRMATION_TYPES,
+            "statuses": services.CONFIRMATION_STATUSES,
+            "can_add": user_has_permission(request, "customer_confirmations", "add"),
+            "can_edit": user_has_permission(request, "customer_confirmations", "edit"),
+            "can_cancel": can_cancel_confirmation(request),
+        },
     )
+
+
+@login_required_custom
+def confirmation_form(request, confirmation_id=None, quotation_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = confirmation_id is not None
+    if not user_has_permission(request, "customer_confirmations", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+
+    confirmation = services.get_confirmation(company_id, branch_id, confirmation_id) if is_edit else None
+    if is_edit and not confirmation:
+        messages.error(request, "Confirmation was not found.")
+        return redirect("sales:confirmations")
+    if is_edit and confirmation.get("status") == "Cancelled":
+        messages.error(request, "Cancelled confirmations cannot be edited.")
+        return redirect("sales:confirmation_detail", confirmation_id=confirmation_id)
+
+    quotation = None
+    if quotation_id:
+        quotation = services.get_quotation(company_id, branch_id, quotation_id)
+        if not quotation:
+            messages.error(request, "Quotation was not found.")
+            return redirect("sales:quotations")
+        if quotation.get("status") == "Cancelled":
+            messages.error(request, "Cancelled quotation cannot be converted to confirmation.")
+            return redirect("sales:quotation_detail", quotation_id=quotation_id)
+        existing = services.get_active_confirmation_for_quotation(company_id, branch_id, quotation_id)
+        if existing:
+            messages.warning(request, "This quotation already has an active confirmation.")
+            return redirect("sales:confirmation_detail", confirmation_id=existing["id"])
+
+    form_data = confirmation_form_data(confirmation) if is_edit else services.default_confirmation_form_data(company_id, branch_id, quotation)
+    errors = {}
+    selected_quotation = quotation or (services.get_quotation(company_id, branch_id, form_data.get("quotation_id")) if form_data.get("quotation_id") else None)
+
+    if request.method == "POST":
+        form_data = services.parse_confirmation_post(request.POST)
+        errors, form_data, selected_quotation = services.validate_confirmation_data(form_data, company_id, branch_id, confirmation_id)
+        if not errors:
+            try:
+                saved_id = services.save_confirmation(
+                    company_id,
+                    branch_id,
+                    request.session.get("user_id"),
+                    form_data,
+                    confirmation_id=confirmation_id,
+                )
+                action = "UPDATE" if is_edit else "CREATE"
+                description = f"{'Updated' if is_edit else 'Created'} confirmation {form_data['confirmation_no']}."
+                if form_data.get("quotation_id") and not is_edit:
+                    description = f"Created confirmation {form_data['confirmation_no']} from quotation."
+                log_user_activity(request, action, "Customer Confirmations", "customer_confirmations", saved_id, description)
+                messages.success(request, f"Confirmation {'updated' if is_edit else 'created'} successfully.")
+                return redirect("sales:confirmation_detail", confirmation_id=saved_id)
+            except DatabaseError:
+                messages.error(request, "Unable to save confirmation. Please retry.")
+        else:
+            messages.error(request, "Please correct the highlighted errors.")
+
+    return render(
+        request,
+        "sales/confirmation_form.html",
+        {
+            "page_title": "Edit Confirmation" if is_edit else "New Confirmation",
+            "form_data": form_data,
+            "errors": errors,
+            "error_summary": collect_errors(errors),
+            "is_edit": is_edit,
+            "customers": services.get_customers(company_id, branch_id),
+            "quotations": services.get_quotations_for_select(company_id, branch_id),
+            "selected_quotation": selected_quotation,
+            "confirmation_types": services.CONFIRMATION_TYPES,
+            "statuses": services.CONFIRMATION_STATUSES,
+        },
+    )
+
+
+@permission_required_custom("customer_confirmations", "view")
+def confirmation_detail(request, confirmation_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    confirmation = services.get_confirmation(company_id, branch_id, confirmation_id)
+    if not confirmation:
+        messages.error(request, "Confirmation was not found.")
+        return redirect("sales:confirmations")
+    return render(
+        request,
+        "sales/confirmation_detail.html",
+        {
+            "page_title": confirmation["confirmation_no"],
+            "confirmation": confirmation,
+            "can_edit": user_has_permission(request, "customer_confirmations", "edit") and confirmation.get("status") != "Cancelled",
+            "can_cancel": can_cancel_confirmation(request) and confirmation.get("status") != "Cancelled",
+        },
+    )
+
+
+@login_required_custom
+def cancel_confirmation(request, confirmation_id):
+    if not can_cancel_confirmation(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    confirmation = services.get_confirmation(company_id, branch_id, confirmation_id)
+    if not confirmation:
+        messages.error(request, "Confirmation was not found.")
+        return redirect("sales:confirmations")
+    if request.method == "POST":
+        try:
+            services.cancel_confirmation(request, confirmation)
+            messages.success(request, "Confirmation cancelled successfully.")
+            return redirect("sales:confirmation_detail", confirmation_id=confirmation_id)
+        except (DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to cancel confirmation.")
+            return redirect("sales:confirmation_detail", confirmation_id=confirmation_id)
+    return render(
+        request,
+        "sales/confirm_cancel_confirmation.html",
+        {"page_title": "Cancel Confirmation", "confirmation": confirmation},
+    )
+
+
+@permission_required_custom("customer_confirmations", "view")
+def print_confirmation(request, confirmation_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    confirmation = services.get_confirmation(company_id, branch_id, confirmation_id)
+    if not confirmation:
+        messages.error(request, "Confirmation was not found.")
+        return redirect("sales:confirmations")
+    services.mark_confirmation_printed(request, confirmation)
+    return render(request, "sales/confirmation_print.html", services.get_confirmation_print_context(company_id, branch_id, confirmation_id))
 
 
 def render_print_response(request, quotation_id, action_label):
@@ -275,6 +444,10 @@ def can_cancel(request):
     return user_has_permission(request, "quotations", "delete") or user_has_permission(request, "quotations", "edit")
 
 
+def can_cancel_confirmation(request):
+    return user_has_permission(request, "customer_confirmations", "delete") or user_has_permission(request, "customer_confirmations", "edit")
+
+
 def form_data_from_quotation(company_id, branch_id, quotation):
     data = dict(quotation)
     data["customer_mode"] = "existing" if quotation.get("customer_id") else "new"
@@ -296,6 +469,25 @@ def form_data_from_quotation(company_id, branch_id, quotation):
     if not data["items"]:
         data["items"] = services.default_form_data(company_id, branch_id)["items"]
     return data
+
+
+def confirmation_form_data(confirmation):
+    return {
+        "confirmation_no": confirmation.get("confirmation_no") or "",
+        "confirmation_date": confirmation.get("confirmation_date") or "",
+        "customer_id": confirmation.get("customer_id") or "",
+        "quotation_id": confirmation.get("quotation_id") or "",
+        "confirmation_type": confirmation.get("confirmation_type") or "PO",
+        "po_number": confirmation.get("po_number") or "",
+        "po_date": confirmation.get("po_date") or "",
+        "po_amount": confirmation.get("po_amount") or "0.00",
+        "contact_person": confirmation.get("contact_person") or "",
+        "confirmation_note": confirmation.get("confirmation_note") or "",
+        "attachment_path": confirmation.get("attachment_path") or "",
+        "total_amount": confirmation.get("total_amount") or "0.00",
+        "status": confirmation.get("status") or "Open",
+        "remarks": confirmation.get("remarks") or "",
+    }
 
 
 def collect_errors(errors):

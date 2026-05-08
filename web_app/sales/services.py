@@ -14,6 +14,13 @@ from settings_module.services import get_company_settings, get_numbering_setting
 PER_PAGE = 20
 TAX_OPTIONS = ["no_tax", "tax_inclusive", "tax_exclusive"]
 STATUSES = ["Draft", "Printed", "Converted", "Cancelled"]
+CONFIRMATION_TYPES = ["PO", "Phone", "WhatsApp", "Email", "Direct"]
+CONFIRMATION_STATUSES = ["Open", "Purchased", "Delivered", "Invoiced", "Closed", "Cancelled"]
+ACTIVE_CONFIRMATION_STATUSES = ["Open", "Purchased", "Delivered", "Invoiced", "Closed"]
+DOCUMENT_NUMBER_MAP = {
+    "quotation": ("quotation_prefix", "quotations", "quotation_no"),
+    "confirmation": ("confirmation_prefix", "customer_confirmations", "confirmation_no"),
+}
 
 
 def today_iso():
@@ -255,8 +262,12 @@ def quotation_no_exists(company_id, branch_id, quotation_no, exclude_id=None):
 
 
 def generate_document_number(company_id, branch_id, document_type):
+    prefix_field, table_name, number_field = DOCUMENT_NUMBER_MAP.get(
+        document_type,
+        (f"{document_type}_prefix", "quotations", "quotation_no"),
+    )
     settings = get_numbering_settings(company_id, branch_id)
-    prefix = settings.get(f"{document_type}_prefix") or "DOC"
+    prefix = settings.get(prefix_field) or "DOC"
     padding = int(settings.get("number_padding") or 4)
     use_year = int(settings.get("use_year_in_number") or 0) == 1
     year = str(date.today().year)
@@ -264,11 +275,11 @@ def generate_document_number(company_id, branch_id, document_type):
     like = f"{doc_prefix}%"
     with connection.cursor() as cursor:
         cursor.execute(
-            """
-            SELECT quotation_no
-            FROM quotations
-            WHERE company_id = %s AND branch_id = %s AND quotation_no LIKE %s
-            ORDER BY quotation_no DESC
+            f"""
+            SELECT {number_field}
+            FROM {table_name}
+            WHERE company_id = %s AND branch_id = %s AND {number_field} LIKE %s
+            ORDER BY {number_field} DESC
             LIMIT 1
             """,
             [company_id, branch_id, like],
@@ -864,4 +875,421 @@ def get_print_context(company_id, branch_id, quotation_id):
         "company_settings": get_company_settings(company_id, branch_id) or {},
         "quotation": quotation,
         "items": get_quotation_items(quotation_id),
+    }
+
+
+def list_confirmations(company_id, branch_id, search="", confirmation_type="", status="", date_from="", date_to="", page=1):
+    clauses = ["cc.company_id = %s", "cc.branch_id = %s"]
+    params = [company_id, branch_id]
+    if search:
+        like = f"%{search}%"
+        clauses.append(
+            """
+            (cc.confirmation_no LIKE %s OR cc.po_number LIKE %s OR cc.confirmation_note LIKE %s
+             OR q.quotation_no LIKE %s OR q.customer_name LIKE %s OR c.company_name LIKE %s)
+            """
+        )
+        params.extend([like, like, like, like, like, like])
+    if confirmation_type:
+        clauses.append("cc.confirmation_type = %s")
+        params.append(confirmation_type)
+    if status:
+        clauses.append("cc.status = %s")
+        params.append(status)
+    if date_from:
+        clauses.append("cc.confirmation_date >= %s")
+        params.append(date_from)
+    if date_to:
+        clauses.append("cc.confirmation_date <= %s")
+        params.append(date_to)
+
+    where_sql = " AND ".join(clauses)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM customer_confirmations cc
+            LEFT JOIN quotations q ON q.id = cc.quotation_id
+            LEFT JOIN customers c ON c.id = cc.customer_id
+            WHERE {where_sql}
+            """,
+            params,
+        )
+        pagination = paginate(int(cursor.fetchone()[0] or 0), page)
+        cursor.execute(
+            f"""
+            SELECT cc.*, q.quotation_no,
+                   COALESCE(NULLIF(q.customer_name, ''), c.company_name) AS display_party_name
+            FROM customer_confirmations cc
+            LEFT JOIN quotations q ON q.id = cc.quotation_id
+            LEFT JOIN customers c ON c.id = cc.customer_id
+            WHERE {where_sql}
+            ORDER BY cc.confirmation_date DESC, cc.id DESC
+            LIMIT %s OFFSET %s
+            """,
+            params + [pagination["per_page"], pagination["offset"]],
+        )
+        rows = dictfetchall(cursor)
+    return rows, pagination
+
+
+def confirmation_no_exists(company_id, branch_id, confirmation_no, exclude_id=None):
+    params = [company_id, branch_id, confirmation_no]
+    clause = "company_id = %s AND branch_id = %s AND lower(confirmation_no) = lower(%s)"
+    if exclude_id:
+        clause += " AND id <> %s"
+        params.append(exclude_id)
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT id FROM customer_confirmations WHERE {clause} LIMIT 1", params)
+        return cursor.fetchone() is not None
+
+
+def get_confirmation(company_id, branch_id, confirmation_id):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT cc.*,
+                   q.quotation_no, q.quotation_date, q.subject AS quotation_subject,
+                   q.customer_name AS quotation_customer_name, q.customer_phone AS quotation_customer_phone,
+                   q.customer_mobile AS quotation_customer_mobile, q.customer_email AS quotation_customer_email,
+                   q.customer_address AS quotation_customer_address, q.grand_total AS quotation_grand_total,
+                   q.status AS quotation_status,
+                   c.company_name AS customer_name, c.contact_person AS customer_contact_person,
+                   c.phone AS customer_phone, c.mobile AS customer_mobile, c.email AS customer_email,
+                   c.address AS customer_address,
+                   cb.full_name AS created_by_name, ub.full_name AS updated_by_name
+            FROM customer_confirmations cc
+            LEFT JOIN quotations q ON q.id = cc.quotation_id
+            LEFT JOIN customers c ON c.id = cc.customer_id
+            LEFT JOIN users cb ON cb.id = cc.created_by_id
+            LEFT JOIN users ub ON ub.id = cc.updated_by_id
+            WHERE cc.id = %s AND cc.company_id = %s AND cc.branch_id = %s
+            LIMIT 1
+            """,
+            [confirmation_id, company_id, branch_id],
+        )
+        confirmation = dictfetchone(cursor)
+    if confirmation:
+        apply_confirmation_display_fields(confirmation)
+    return confirmation
+
+
+def apply_confirmation_display_fields(confirmation):
+    confirmation["display_party_name"] = (
+        confirmation.get("quotation_customer_name") or confirmation.get("customer_name") or "Unregistered Party"
+    )
+    confirmation["display_party_phone"] = confirmation.get("quotation_customer_phone") or confirmation.get("customer_phone") or ""
+    confirmation["display_party_mobile"] = confirmation.get("quotation_customer_mobile") or confirmation.get("customer_mobile") or ""
+    confirmation["display_party_email"] = confirmation.get("quotation_customer_email") or confirmation.get("customer_email") or ""
+    confirmation["display_party_address"] = confirmation.get("quotation_customer_address") or confirmation.get("customer_address") or ""
+    confirmation["is_unregistered_party"] = bool(confirmation.get("quotation_id") and not confirmation.get("customer_id"))
+
+
+def get_quotations_for_select(company_id, branch_id):
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT q.id, q.quotation_no, q.quotation_date, q.customer_id, q.contact_person,
+                   q.customer_name, q.subject, q.grand_total, q.status,
+                   c.company_name AS master_customer_name
+            FROM quotations q
+            LEFT JOIN customers c ON c.id = q.customer_id
+            WHERE q.company_id = %s AND q.branch_id = %s AND q.status <> 'Cancelled'
+            ORDER BY q.quotation_date DESC, q.id DESC
+            """,
+            [company_id, branch_id],
+        )
+        rows = dictfetchall(cursor)
+    for row in rows:
+        row["display_customer_name"] = row.get("customer_name") or row.get("master_customer_name") or ""
+    return rows
+
+
+def get_active_confirmation_for_quotation(company_id, branch_id, quotation_id, exclude_id=None):
+    params = [company_id, branch_id, quotation_id]
+    exclude_clause = ""
+    if exclude_id:
+        exclude_clause = "AND cc.id <> %s"
+        params.append(exclude_id)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT cc.*
+            FROM customer_confirmations cc
+            WHERE cc.company_id = %s AND cc.branch_id = %s AND cc.quotation_id = %s
+              AND cc.status <> 'Cancelled' {exclude_clause}
+            ORDER BY cc.id DESC
+            LIMIT 1
+            """,
+            params,
+        )
+        return dictfetchone(cursor)
+
+
+def default_confirmation_form_data(company_id, branch_id, quotation=None):
+    return {
+        "confirmation_no": generate_document_number(company_id, branch_id, "confirmation"),
+        "confirmation_date": today_iso(),
+        "customer_id": quotation.get("customer_id") if quotation else "",
+        "quotation_id": quotation.get("id") if quotation else "",
+        "confirmation_type": "PO",
+        "po_number": "",
+        "po_date": "",
+        "po_amount": "0.00",
+        "contact_person": quotation.get("contact_person") if quotation else "",
+        "confirmation_note": "",
+        "attachment_path": "",
+        "total_amount": format_money(quotation.get("grand_total")) if quotation else "0.00",
+        "status": "Open",
+        "remarks": "",
+    }
+
+
+def parse_confirmation_post(post):
+    return {
+        "confirmation_no": post.get("confirmation_no", ""),
+        "confirmation_date": post.get("confirmation_date", ""),
+        "customer_id": post.get("customer_id", ""),
+        "quotation_id": post.get("quotation_id", ""),
+        "confirmation_type": post.get("confirmation_type", ""),
+        "po_number": post.get("po_number", ""),
+        "po_date": post.get("po_date", ""),
+        "po_amount": post.get("po_amount", ""),
+        "contact_person": post.get("contact_person", ""),
+        "confirmation_note": post.get("confirmation_note", ""),
+        "attachment_path": post.get("attachment_path", ""),
+        "total_amount": post.get("total_amount", ""),
+        "status": post.get("status", ""),
+        "remarks": post.get("remarks", ""),
+    }
+
+
+def validate_confirmation_data(data, company_id, branch_id, confirmation_id=None):
+    errors = {}
+    cleaned = {}
+
+    cleaned["confirmation_no"], errors["confirmation_no"] = validators.clean_text(
+        data.get("confirmation_no"),
+        max_length=50,
+        required=True,
+        field_name="Confirmation No",
+    )
+    if not errors["confirmation_no"] and confirmation_no_exists(company_id, branch_id, cleaned["confirmation_no"], confirmation_id):
+        errors["confirmation_no"] = "Confirmation No already exists for the current branch."
+
+    confirmation_date, error = validators.validate_date(data.get("confirmation_date"), "Confirmation Date", required=True)
+    cleaned["confirmation_date"] = confirmation_date.isoformat() if confirmation_date else ""
+    errors["confirmation_date"] = error
+
+    quotation = None
+    quotation_id = str(data.get("quotation_id") or "").strip()
+    if quotation_id:
+        quotation = get_quotation(company_id, branch_id, quotation_id)
+        if not quotation:
+            errors["quotation_id"] = "Selected quotation was not found."
+        elif quotation.get("status") == "Cancelled":
+            errors["quotation_id"] = "Cancelled quotation cannot be converted to confirmation."
+        else:
+            cleaned["quotation_id"] = quotation["id"]
+    else:
+        cleaned["quotation_id"] = None
+        errors["quotation_id"] = None
+
+    if quotation:
+        cleaned["customer_id"] = quotation.get("customer_id") or None
+    else:
+        customer_id = str(data.get("customer_id") or "").strip()
+        if not customer_id:
+            errors["customer_id"] = "Customer is required for direct confirmation without quotation."
+        elif not customer_exists(company_id, branch_id, customer_id):
+            errors["customer_id"] = "Selected customer was not found."
+        else:
+            cleaned["customer_id"] = customer_id
+
+    confirmation_type = str(data.get("confirmation_type") or "").strip()
+    errors["confirmation_type"] = validators.validate_choice(confirmation_type, CONFIRMATION_TYPES, "Confirmation Type")
+    cleaned["confirmation_type"] = confirmation_type
+
+    cleaned["po_number"], errors["po_number"] = validators.clean_text(
+        data.get("po_number"),
+        max_length=100,
+        required=confirmation_type == "PO",
+        field_name="PO Number",
+    )
+    po_date, error = validators.validate_date(data.get("po_date"), "PO Date", required=False)
+    cleaned["po_date"] = po_date.isoformat() if po_date else None
+    errors["po_date"] = error
+    if not error and po_date and quotation and quotation.get("quotation_date") and str(po_date.isoformat()) < str(quotation["quotation_date"]):
+        errors["po_date"] = "PO Date cannot be before the related quotation date."
+
+    cleaned["po_amount"], errors["po_amount"] = validators.validate_money(data.get("po_amount"), "PO Amount", allow_negative=False)
+    cleaned["contact_person"], errors["contact_person"] = validators.clean_text(
+        data.get("contact_person"),
+        max_length=150,
+        field_name="Contact Person",
+    )
+    cleaned["confirmation_note"], errors["confirmation_note"] = validators.clean_text(
+        data.get("confirmation_note"),
+        field_name="Confirmation Note",
+    )
+    cleaned["attachment_path"], errors["attachment_path"] = validators.clean_text(
+        data.get("attachment_path"),
+        max_length=500,
+        field_name="Attachment Path",
+    )
+    cleaned["total_amount"], errors["total_amount"] = validators.validate_money(
+        data.get("total_amount"),
+        "Total Amount",
+        allow_negative=False,
+    )
+    cleaned["remarks"], errors["remarks"] = validators.clean_text(data.get("remarks"), field_name="Remarks")
+
+    status = str(data.get("status") or "Open").strip()
+    errors["status"] = validators.validate_choice(status, CONFIRMATION_STATUSES, "Status")
+    cleaned["status"] = status
+    if quotation and status != "Cancelled":
+        existing = get_active_confirmation_for_quotation(company_id, branch_id, quotation["id"], exclude_id=confirmation_id)
+        if existing:
+            errors["quotation_id"] = "This quotation already has an active confirmation."
+
+    errors = {key: value for key, value in errors.items() if value}
+    for key, value in cleaned.items():
+        if isinstance(value, Decimal):
+            cleaned[key] = format_money(value)
+    return errors, {**data, **cleaned}, quotation
+
+
+def save_confirmation(company_id, branch_id, user_id, data, confirmation_id=None):
+    timestamp = now_text()
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            if confirmation_id:
+                cursor.execute(
+                    """
+                    UPDATE customer_confirmations
+                    SET confirmation_no = %s, confirmation_date = %s, customer_id = %s,
+                        quotation_id = %s, confirmation_type = %s, po_number = %s,
+                        po_date = %s, po_amount = %s, contact_person = %s,
+                        confirmation_note = %s, attachment_path = %s, total_amount = %s,
+                        status = %s, remarks = %s, updated_by_id = %s, updated_at = %s
+                    WHERE id = %s AND company_id = %s AND branch_id = %s
+                    """,
+                    confirmation_values(data)
+                    + [user_id, timestamp, confirmation_id, company_id, branch_id],
+                )
+                saved_id = confirmation_id
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO customer_confirmations (
+                        company_id, branch_id, confirmation_no, confirmation_date,
+                        customer_id, quotation_id, confirmation_type, po_number,
+                        po_date, po_amount, contact_person, confirmation_note,
+                        attachment_path, total_amount, status, remarks,
+                        created_by_id, updated_by_id, created_at, updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    [company_id, branch_id] + confirmation_values(data) + [user_id, user_id, timestamp, timestamp],
+                )
+                saved_id = cursor.lastrowid
+
+            if data.get("quotation_id") and data.get("status") != "Cancelled":
+                cursor.execute(
+                    """
+                    UPDATE quotations
+                    SET status = 'Converted', updated_by_id = %s, updated_at = %s
+                    WHERE id = %s AND company_id = %s AND branch_id = %s AND status <> 'Cancelled'
+                    """,
+                    [user_id, timestamp, data["quotation_id"], company_id, branch_id],
+                )
+    return saved_id
+
+
+def confirmation_values(data):
+    return [
+        data.get("confirmation_no"),
+        data.get("confirmation_date"),
+        data.get("customer_id") or None,
+        data.get("quotation_id") or None,
+        data.get("confirmation_type"),
+        data.get("po_number"),
+        data.get("po_date") or None,
+        data.get("po_amount") or "0.00",
+        data.get("contact_person"),
+        data.get("confirmation_note"),
+        data.get("attachment_path"),
+        data.get("total_amount") or "0.00",
+        data.get("status") or "Open",
+        data.get("remarks"),
+    ]
+
+
+def confirmation_has_future_references(_confirmation_id):
+    # Delivery, invoice, and purchase modules are future phases; keep this guard centralized.
+    return False
+
+
+def cancel_confirmation(request, confirmation):
+    if confirmation_has_future_references(confirmation["id"]):
+        raise ValueError("This confirmation is already used by a later document and cannot be cancelled.")
+    if confirmation.get("status") == "Cancelled":
+        raise ValueError("This confirmation is already cancelled.")
+
+    timestamp = now_text()
+    company_id, branch_id = get_scope(request)
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE customer_confirmations
+                SET status = 'Cancelled', updated_by_id = %s, updated_at = %s
+                WHERE id = %s AND company_id = %s AND branch_id = %s
+                """,
+                [request.session.get("user_id"), timestamp, confirmation["id"], company_id, branch_id],
+            )
+            if confirmation.get("quotation_id") and confirmation.get("quotation_status") == "Converted":
+                other = get_active_confirmation_for_quotation(company_id, branch_id, confirmation["quotation_id"], exclude_id=confirmation["id"])
+                if not other:
+                    cursor.execute(
+                        """
+                        UPDATE quotations
+                        SET status = 'Draft', updated_by_id = %s, updated_at = %s
+                        WHERE id = %s AND company_id = %s AND branch_id = %s
+                        """,
+                        [request.session.get("user_id"), timestamp, confirmation["quotation_id"], company_id, branch_id],
+                    )
+    log_user_activity(
+        request,
+        "CANCEL",
+        "Customer Confirmations",
+        "customer_confirmations",
+        confirmation["id"],
+        f"Cancelled confirmation {confirmation['confirmation_no']}.",
+    )
+
+
+def mark_confirmation_printed(request, confirmation):
+    log_user_activity(
+        request,
+        "PRINT",
+        "Customer Confirmations",
+        "customer_confirmations",
+        confirmation["id"],
+        f"Printed confirmation {confirmation['confirmation_no']}.",
+    )
+
+
+def get_confirmation_print_context(company_id, branch_id, confirmation_id):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM companies WHERE id = %s LIMIT 1", [company_id])
+        company = dictfetchone(cursor) or {}
+        cursor.execute("SELECT * FROM branches WHERE id = %s AND company_id = %s LIMIT 1", [branch_id, company_id])
+        branch = dictfetchone(cursor) or {}
+    confirmation = get_confirmation(company_id, branch_id, confirmation_id)
+    return {
+        "company": company,
+        "branch": branch,
+        "confirmation": confirmation,
+        "print_date": today_iso(),
     }

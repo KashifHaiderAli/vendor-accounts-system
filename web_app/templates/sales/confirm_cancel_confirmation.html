@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Cancel</span>
+        <h2>Cancel Confirmation</h2>
+        <p>{{ confirmation.confirmation_no }} · {{ confirmation.display_party_name }}</p>
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header">
+        <div><h3>Confirm Cancellation</h3><p>This will mark the confirmation as Cancelled. It will not delete any records.</p></div>
+        <i class="bi bi-exclamation-triangle"></i>
+    </div>
+    <div class="app-card-body">
+        <p>Are you sure you want to cancel confirmation <strong>{{ confirmation.confirmation_no }}</strong>?</p>
+        {% if confirmation.quotation_id %}
+        <p class="text-muted mb-0">If this is the only active confirmation for the quotation, the quotation status will be restored for future conversion.</p>
+        {% endif %}
+    </div>
+    <form class="app-card-body border-top form-actions" method="post">
+        {% csrf_token %}
+        <button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i> Yes, Cancel Confirmation</button>
+        <a class="btn btn-light" href="{% url 'sales:confirmation_detail' confirmation.id %}">Keep Confirmation</a>
+    </form>
+</section>
+{% endblock %}
