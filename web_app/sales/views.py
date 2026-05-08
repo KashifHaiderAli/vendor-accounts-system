@@ -4,18 +4,19 @@ from django.contrib import messages
 from django.db import DatabaseError
 from django.shortcuts import redirect, render
 
+from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from settings_module.services import log_user_activity
 
-from . import delivery_services, services
+from . import delivery_services, invoice_services, services
 
 
 SALES_CARDS = [
     ("Quotations", "quotations", "sales:quotations", "bi-file-earmark-text", "Prepare customer quotations with itemized totals."),
     ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations", "bi-clipboard-check", "Record customer POs, calls, messages, and direct confirmations."),
     ("Delivery Challans", "delivery_challans", "sales:delivery_challans", "bi-truck", "Issue no-amount delivery documents."),
-    ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index", "bi-receipt", "Future invoice workflow."),
+    ("Sales Invoices / Cash Memo", "sales_invoices", "sales:invoices", "bi-receipt", "Issue tax invoices and cash memos."),
     ("Sales Returns", "sales_returns", "sales:index", "bi-arrow-counterclockwise", "Future return workflow."),
     ("Customer Receipts", "customer_receipts", "sales:index", "bi-cash-coin", "Future receipt workflow."),
 ]
@@ -152,6 +153,7 @@ def quotation_detail(request, quotation_id):
             "can_cancel": can_cancel(request) and quotation.get("status") != "Converted" and quotation.get("status") != "Cancelled",
             "can_duplicate": user_has_permission(request, "quotations", "add"),
             "can_convert": user_has_permission(request, "customer_confirmations", "add") and quotation.get("status") in {"Draft", "Printed"},
+            "can_invoice": user_has_permission(request, "sales_invoices", "add") and quotation.get("status") != "Cancelled",
             "can_add_customer": user_has_permission(request, "customers", "add")
             and (not quotation.get("customer_id") or int(quotation.get("is_customer_saved") or 0) == 0),
         },
@@ -279,6 +281,7 @@ def confirmations_list(request):
             "can_edit": user_has_permission(request, "customer_confirmations", "edit"),
             "can_cancel": can_cancel_confirmation(request),
             "can_delivery": user_has_permission(request, "delivery_challans", "add"),
+            "can_invoice": user_has_permission(request, "sales_invoices", "add"),
         },
     )
 
@@ -378,6 +381,7 @@ def confirmation_detail(request, confirmation_id):
             "can_edit": user_has_permission(request, "customer_confirmations", "edit") and confirmation.get("status") != "Cancelled",
             "can_cancel": can_cancel_confirmation(request) and confirmation.get("status") != "Cancelled",
             "can_delivery": user_has_permission(request, "delivery_challans", "add") and confirmation.get("status") != "Cancelled",
+            "can_invoice": user_has_permission(request, "sales_invoices", "add") and confirmation.get("status") != "Cancelled",
         },
     )
 
@@ -450,6 +454,7 @@ def delivery_challans_list(request):
             "can_add": user_has_permission(request, "delivery_challans", "add"),
             "can_edit": user_has_permission(request, "delivery_challans", "edit"),
             "can_cancel": can_cancel_delivery(request),
+            "can_invoice": user_has_permission(request, "sales_invoices", "add"),
         },
     )
 
@@ -559,6 +564,7 @@ def delivery_challan_detail(request, challan_id):
             "items": delivery_services.get_challan_items(challan_id),
             "can_edit": user_has_permission(request, "delivery_challans", "edit") and challan.get("status") in {"Draft", "Printed", "Signed Received"},
             "can_cancel": can_cancel_delivery(request) and challan.get("status") not in {"Cancelled", "Invoiced"},
+            "can_invoice": user_has_permission(request, "sales_invoices", "add") and challan.get("status") not in {"Cancelled", "Invoiced"},
         },
     )
 
@@ -640,6 +646,205 @@ def upload_signed_challan(request, challan_id):
     )
 
 
+@permission_required_custom("sales_invoices", "view")
+def invoices_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    invoice_type = request.GET.get("invoice_type", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = invoice_services.list_invoices(company_id, branch_id, search, invoice_type, status, date_from, date_to, page)
+    return render(
+        request,
+        "sales/invoices_list.html",
+        {
+            "page_title": "Sales Invoices / Cash Memo",
+            "rows": rows,
+            "search": search,
+            "invoice_type": invoice_type,
+            "status": status,
+            "date_from": date_from,
+            "date_to": date_to,
+            "pagination": pagination,
+            "invoice_types": invoice_services.INVOICE_TYPES,
+            "invoice_type_labels": invoice_services.INVOICE_TYPE_LABELS,
+            "statuses": invoice_services.INVOICE_STATUSES,
+            "can_add": user_has_permission(request, "sales_invoices", "add"),
+            "can_edit": user_has_permission(request, "sales_invoices", "edit"),
+            "can_cancel": can_cancel_invoice(request),
+        },
+    )
+
+
+@login_required_custom
+def invoice_form(request, invoice_id=None, dc_id=None, confirmation_id=None, quotation_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = invoice_id is not None
+    if not user_has_permission(request, "sales_invoices", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+    invoice = invoice_services.get_invoice(company_id, branch_id, invoice_id) if is_edit else None
+    if is_edit and not invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    if is_edit and invoice.get("status") == "Cancelled":
+        messages.error(request, "Cancelled invoices cannot be edited.")
+        return redirect("sales:invoice_detail", invoice_id=invoice_id)
+    posted = bool(invoice and invoice.get("journal_entry_id"))
+
+    dc = invoice_services.get_delivery_challan(company_id, branch_id, dc_id) if dc_id else None
+    confirmation = invoice_services.get_confirmation(company_id, branch_id, confirmation_id) if confirmation_id else None
+    quotation = invoice_services.get_quotation(company_id, branch_id, quotation_id) if quotation_id else None
+    if dc_id and not dc:
+        messages.error(request, "Delivery challan was not found.")
+        return redirect("sales:delivery_challans")
+    if confirmation_id and not confirmation:
+        messages.error(request, "Customer confirmation was not found.")
+        return redirect("sales:confirmations")
+    if quotation_id and not quotation:
+        messages.error(request, "Quotation was not found.")
+        return redirect("sales:quotations")
+
+    invoice_type = request.GET.get("invoice_type", "tax_invoice")
+    form_data = invoice_form_data(invoice) if is_edit else invoice_services.default_form_data(company_id, branch_id, invoice_type, dc, confirmation, quotation)
+    errors = {}
+    if not form_data.get("customer_id") and (dc or confirmation or quotation):
+        messages.warning(request, "This invoice is for an unregistered party. Customer ledger/account posting requires customer master. Please add as customer before posting invoice.")
+
+    if request.method == "POST":
+        if posted:
+            form_data.update(
+                {
+                    "po_number": request.POST.get("po_number", ""),
+                    "payment_terms_id": request.POST.get("payment_terms_id", ""),
+                    "due_date": request.POST.get("due_date", ""),
+                    "remarks": request.POST.get("remarks", ""),
+                }
+            )
+            errors, form_data = validate_invoice_nonfinancial(form_data, company_id, branch_id)
+            if not errors:
+                invoice_services.save_invoice(company_id, branch_id, request.session.get("user_id"), form_data, invoice_id)
+                log_user_activity(request, "UPDATE", "Sales Invoices", "sales_invoices", invoice_id, f"Updated non-financial details for invoice {invoice['invoice_no']}.")
+                messages.success(request, "Invoice updated successfully.")
+                return redirect("sales:invoice_detail", invoice_id=invoice_id)
+            messages.error(request, "Please correct the highlighted errors.")
+        else:
+            form_data = invoice_services.parse_post(request.POST)
+            if request.POST.get("received_amount") not in {"", None, "0", "0.00"}:
+                messages.warning(request, "Customer Receipt module will handle payments in Phase 12. Received Amount is currently read-only/0.")
+            errors, form_data = invoice_services.validate_and_calculate(form_data, company_id, branch_id, invoice_id)
+            if not errors:
+                try:
+                    saved_id = invoice_services.save_invoice(company_id, branch_id, request.session.get("user_id"), form_data, invoice_id)
+                    log_user_activity(request, "CREATE" if not is_edit else "UPDATE", "Sales Invoices", "sales_invoices", saved_id, f"{'Created' if not is_edit else 'Updated'} invoice {form_data['invoice_no']}.")
+                    messages.success(request, f"Invoice {'created' if not is_edit else 'updated'} successfully.")
+                    return redirect("sales:invoice_detail", invoice_id=saved_id)
+                except AccountingError as exc:
+                    messages.error(request, f"Accounting posting failed: {exc}")
+                except DatabaseError:
+                    messages.error(request, "Unable to save invoice. Please retry.")
+            else:
+                messages.error(request, "Please correct the highlighted errors.")
+
+    return render(
+        request,
+        "sales/invoice_form.html",
+        {
+            "page_title": "Edit Invoice" if is_edit else "New Invoice",
+            "form_data": form_data,
+            "form_items": form_data.get("items", []),
+            "errors": errors,
+            "error_summary": collect_errors(errors),
+            "is_edit": is_edit,
+            "posted": posted,
+            "customers": invoice_services.get_customers(company_id, branch_id),
+            "items": invoice_services.get_items(company_id, branch_id),
+            "payment_terms": invoice_services.get_payment_terms(company_id, branch_id),
+            "delivery_challans": invoice_services.get_delivery_challans(company_id, branch_id),
+            "confirmations": invoice_services.get_confirmations(company_id, branch_id),
+            "quotations": invoice_services.get_quotations(company_id, branch_id),
+            "invoice_types": invoice_services.INVOICE_TYPES,
+            "invoice_type_labels": invoice_services.INVOICE_TYPE_LABELS,
+            "statuses": invoice_services.INVOICE_STATUSES,
+        },
+    )
+
+
+@permission_required_custom("sales_invoices", "view")
+def invoice_detail(request, invoice_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    invoice = invoice_services.get_invoice(company_id, branch_id, invoice_id)
+    if not invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    return render(
+        request,
+        "sales/invoice_detail.html",
+        {
+            "page_title": invoice["invoice_no"],
+            "invoice": invoice,
+            "items": invoice_services.get_invoice_items(invoice_id),
+            "can_edit": user_has_permission(request, "sales_invoices", "edit") and invoice.get("status") != "Cancelled",
+            "can_cancel": can_cancel_invoice(request) and invoice.get("status") != "Cancelled",
+        },
+    )
+
+
+@login_required_custom
+def cancel_invoice(request, invoice_id):
+    if not can_cancel_invoice(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    invoice = invoice_services.get_invoice(company_id, branch_id, invoice_id)
+    if not invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    if request.method == "POST":
+        try:
+            invoice_services.cancel_invoice(request, invoice)
+            messages.success(request, "Invoice cancelled and reversal journal created successfully.")
+            return redirect("sales:invoice_detail", invoice_id=invoice_id)
+        except (AccountingError, DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to cancel invoice.")
+            return redirect("sales:invoice_detail", invoice_id=invoice_id)
+    return render(request, "sales/confirm_cancel_invoice.html", {"page_title": "Cancel Invoice", "invoice": invoice})
+
+
+@permission_required_custom("sales_invoices", "view")
+def print_invoice(request, invoice_id):
+    return render_invoice_print(request, invoice_id, digital=False)
+
+
+@permission_required_custom("sales_invoices", "view")
+def digital_print_invoice(request, invoice_id):
+    return render_invoice_print(request, invoice_id, digital=True)
+
+
+def render_invoice_print(request, invoice_id, digital=False):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    invoice = invoice_services.get_invoice(company_id, branch_id, invoice_id)
+    if not invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    invoice_services.mark_printed(request, invoice, digital=digital)
+    template = "sales/invoice_print_digital.html" if digital else "sales/invoice_print_preprinted.html"
+    return render(request, template, invoice_services.get_print_context(company_id, branch_id, invoice_id))
+
+
 def render_print_response(request, quotation_id, action_label):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -671,6 +876,10 @@ def can_cancel_confirmation(request):
 
 def can_cancel_delivery(request):
     return user_has_permission(request, "delivery_challans", "delete") or user_has_permission(request, "delivery_challans", "edit")
+
+
+def can_cancel_invoice(request):
+    return user_has_permission(request, "sales_invoices", "delete") or user_has_permission(request, "sales_invoices", "edit")
 
 
 def form_data_from_quotation(company_id, branch_id, quotation):
@@ -731,6 +940,41 @@ def challan_form_data(challan):
     if not data["items"]:
         data["items"] = [delivery_services.empty_item_row()]
     return data
+
+
+def invoice_form_data(invoice):
+    data = dict(invoice)
+    for key in ["customer_id", "delivery_challan_id", "confirmation_id", "po_number", "payment_terms_id", "due_date", "remarks"]:
+        data[key] = data.get(key) or ""
+    data["items"] = [
+        {
+            "item_service_id": item.get("item_service_id") or "",
+            "description": item.get("description") or "",
+            "quantity": item.get("quantity") or "0",
+            "rate": item.get("rate") or "0",
+            "discount_percent": item.get("discount_percent") or "0",
+            "discount_amount": item.get("discount_amount") or "0",
+            "tax_percent": item.get("tax_percent") or "0",
+            "tax_amount": item.get("tax_amount") or "0",
+            "line_total": item.get("line_total") or "0",
+            "errors": {},
+        }
+        for item in invoice_services.get_invoice_items(invoice["id"])
+    ]
+    if not data["items"]:
+        data["items"] = [invoice_services.empty_item_row()]
+    return data
+
+
+def validate_invoice_nonfinancial(data, company_id, branch_id):
+    errors = {}
+    data["po_number"], errors["po_number"] = services.validators.clean_text(data.get("po_number"), max_length=100, field_name="PO Number")
+    if data.get("payment_terms_id") and not invoice_services.payment_terms_exists(company_id, branch_id, data.get("payment_terms_id")):
+        errors["payment_terms_id"] = "Selected payment terms were not found."
+    due_date, errors["due_date"] = services.validators.validate_date(data.get("due_date"), "Due Date", required=False)
+    data["due_date"] = due_date.isoformat() if due_date else None
+    data["remarks"], errors["remarks"] = services.validators.clean_text(data.get("remarks"), field_name="Remarks")
+    return {key: value for key, value in errors.items() if value}, data
 
 
 def collect_errors(errors):

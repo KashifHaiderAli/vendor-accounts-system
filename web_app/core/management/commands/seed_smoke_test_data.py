@@ -9,7 +9,7 @@ from accounts_module.accounting_utils import ensure_default_chart_of_accounts
 from authentication.auth_utils import dictfetchone
 from masters.master_utils import create_linked_account
 from purchases import services as purchase_services
-from sales import delivery_services, services as sales_services
+from sales import delivery_services, invoice_services, services as sales_services
 from settings_module.services import now_text
 
 
@@ -70,7 +70,8 @@ class Command(BaseCommand):
         confirmation_po = self.ensure_po_confirmation(company_id, branch_id, user_id, quotation, stats)
         self.ensure_phone_confirmation(company_id, branch_id, user_id, customer_1, stats)
         self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, item_1, confirmation_po, stats)
-        self.ensure_delivery_challan(company_id, branch_id, user_id, confirmation_po, stats)
+        challan = self.ensure_delivery_challan(company_id, branch_id, user_id, confirmation_po, stats)
+        self.ensure_sales_invoice(company_id, branch_id, user_id, challan, stats)
 
         for bucket, counter in stats.buckets.items():
             self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
@@ -327,6 +328,24 @@ class Command(BaseCommand):
             raise RuntimeError(f"Smoke delivery challan validation failed: {errors}")
         record_id = delivery_services.save_challan(company_id, branch_id, user_id, cleaned)
         stats.add("delivery_challans", True)
+        return record_id
+
+    def ensure_sales_invoice(self, company_id, branch_id, user_id, challan_id, stats):
+        existing = self.first_row("SELECT id FROM sales_invoices WHERE company_id = %s AND branch_id = %s AND delivery_challan_id = %s AND status <> 'Cancelled' LIMIT 1", [company_id, branch_id, challan_id])
+        if existing:
+            stats.add("invoices", False)
+            return existing["id"]
+        dc = invoice_services.get_delivery_challan(company_id, branch_id, challan_id)
+        data = invoice_services.default_form_data(company_id, branch_id, "tax_invoice", dc=dc)
+        data.update({"remarks": "Smoke sales invoice."})
+        if data.get("items"):
+            data["items"][0]["rate"] = "2200"
+            data["items"][0]["tax_percent"] = "5"
+        errors, cleaned = invoice_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke sales invoice validation failed: {errors}")
+        record_id = invoice_services.save_invoice(company_id, branch_id, user_id, cleaned)
+        stats.add("invoices", True)
         return record_id
 
 

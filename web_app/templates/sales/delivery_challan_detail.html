@@ -42,7 +42,7 @@
 
 <section class="app-card">
     <div class="app-card-body form-actions">
-        <button class="btn btn-light" type="button" disabled><i class="bi bi-receipt"></i> Create Invoice</button>
+        {% if can_invoice %}<a class="btn btn-primary" href="{% url 'sales:invoice_from_dc' challan.id %}"><i class="bi bi-receipt"></i> Create Invoice</a>{% else %}<button class="btn btn-light" type="button" disabled><i class="bi bi-receipt"></i> Create Invoice</button>{% endif %}
         {% if can_cancel %}<a class="btn btn-outline-danger" href="{% url 'sales:delivery_challan_cancel' challan.id %}"><i class="bi bi-x-circle"></i> Cancel Delivery Challan</a>{% endif %}
     </div>
 </section>

@@ -37,6 +37,7 @@
                         <a class="btn btn-sm btn-light" href="{% url 'sales:delivery_challan_print' row.id %}" title="Print"><i class="bi bi-printer"></i></a>
                         {% if can_edit and row.status != "Cancelled" and row.status != "Invoiced" %}<a class="btn btn-sm btn-light" href="{% url 'sales:delivery_challan_edit' row.id %}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
                         {% if can_edit and row.status != "Cancelled" and row.status != "Invoiced" %}<a class="btn btn-sm btn-light" href="{% url 'sales:delivery_challan_upload_signed' row.id %}" title="Signed Copy"><i class="bi bi-file-earmark-check"></i></a>{% endif %}
+                        {% if can_invoice and row.status != "Cancelled" and row.status != "Invoiced" %}<a class="btn btn-sm btn-light" href="{% url 'sales:invoice_from_dc' row.id %}" title="Create Invoice"><i class="bi bi-receipt"></i></a>{% endif %}
                         {% if can_cancel and row.status != "Cancelled" and row.status != "Invoiced" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'sales:delivery_challan_cancel' row.id %}" title="Cancel"><i class="bi bi-x-circle"></i></a>{% endif %}
                     </td>
                 </tr>

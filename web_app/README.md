@@ -270,6 +270,21 @@ python manage.py seed_smoke_test_data
 
 The command is idempotent and creates `SMK` / `Smoke` sample records for masters, quotations, confirmations, supplier purchases, and delivery challans without deleting existing data. It is intended for local development and testing only.
 
+## Phase 11 Sales Invoice / Cash Memo Module
+
+Phase 11 adds Sales Invoices and Cash Memos under `/sales/invoices/`:
+
+- Create invoices directly, from delivery challan, from confirmation, or from quotation
+- Invoices post journal entries through the hidden accounting engine
+- Debit Customer Receivable, credit Sales, and credit Output Tax Payable when tax is present
+- Posted financial fields and item rows are locked; cancel and recreate if financial details need correction
+- Cancelling an invoice creates a reversal journal entry and restores source document status where safe
+- Pre-printed invoice print excludes logo/company header and uses CSS offsets for A4 invoice stationery
+- Digital print includes company details and logo path when available
+- Payments are not recorded here; Customer Receipt is a future phase
+
+The smoke data command also creates one posted smoke sales invoice from the smoke delivery challan.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.

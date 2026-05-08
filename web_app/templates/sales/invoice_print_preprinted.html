@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ invoice.invoice_no }}</title>
+    <style>
+        :root { --invoice-top-offset: 42mm; --invoice-left-offset: 10mm; }
+        body { font-family: Arial, sans-serif; color:#111827; margin:0; }
+        .sheet { padding: var(--invoice-top-offset) 14mm 14mm var(--invoice-left-offset); }
+        table { width:100%; border-collapse:collapse; margin:10px 0 18px; }
+        th,td { border:1px solid #d1d5db; padding:7px 8px; font-size:12px; }
+        th { background:#f8fafc; } .text-end { text-align:right; }
+        .meta { display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; font-size:13px; }
+        .totals { width:320px; margin-left:auto; }
+        .no-print { margin:12px; } @media print { .no-print{display:none;} .sheet{padding:var(--invoice-top-offset) 14mm 14mm var(--invoice-left-offset);} }
+    </style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()">Print</button></div>
+<main class="sheet">
+    <div class="meta">
+        <div><strong>Invoice No:</strong> {{ invoice.invoice_no }}</div><div><strong>Date:</strong> {{ invoice.invoice_date }}</div>
+        <div><strong>Customer:</strong> {{ invoice.company_name }}</div><div><strong>Type:</strong> {{ invoice.invoice_type_label }}</div>
+        <div><strong>Address:</strong> {{ invoice.customer_address|default:"-" }}</div><div><strong>PO / DC:</strong> {{ invoice.po_number|default:"-" }} / {{ invoice.dc_no|default:"-" }}</div>
+        <div><strong>NTN/STRN:</strong> {{ invoice.customer_ntn|default:"-" }} / {{ invoice.customer_strn|default:"-" }}</div><div><strong>Terms/Due:</strong> {{ invoice.payment_terms_name|default:"-" }} / {{ invoice.due_date|default:"-" }}</div>
+    </div>
+    <table><thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Discount</th><th class="text-end">Tax</th><th class="text-end">Amount</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.rate|floatformat:2 }}</td><td class="text-end">{{ item.discount_amount|floatformat:2 }}</td><td class="text-end">{{ item.tax_amount|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table>
+    <table class="totals"><tr><th>Subtotal</th><td class="text-end">{{ invoice.subtotal|floatformat:2 }}</td></tr><tr><th>Discount</th><td class="text-end">{{ invoice.discount_total|floatformat:2 }}</td></tr><tr><th>Tax</th><td class="text-end">{{ invoice.tax_total|floatformat:2 }}</td></tr><tr><th>Grand Total</th><td class="text-end">{{ invoice.grand_total|floatformat:2 }}</td></tr></table>
+    <p><strong>Amount in words:</strong> TODO</p>
+    <p style="margin-top:44px;">Received By: ____________________ &nbsp;&nbsp;&nbsp; Authorized Sign: ____________________</p>
+</main>
+</body>
+</html>

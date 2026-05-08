@@ -71,6 +71,9 @@
                         {% if can_delivery and row.status != "Cancelled" %}
                         <a class="btn btn-sm btn-light" href="{% url 'sales:delivery_challan_from_confirmation' row.id %}" title="Create Delivery Challan"><i class="bi bi-truck"></i></a>
                         {% endif %}
+                        {% if can_invoice and row.status != "Cancelled" %}
+                        <a class="btn btn-sm btn-light" href="{% url 'sales:invoice_from_confirmation' row.id %}" title="Create Invoice"><i class="bi bi-receipt"></i></a>
+                        {% endif %}
                         {% if can_cancel and row.status != "Cancelled" %}
                         <a class="btn btn-sm btn-outline-danger" href="{% url 'sales:confirmation_cancel' row.id %}" title="Cancel"><i class="bi bi-x-circle"></i></a>
                         {% endif %}
