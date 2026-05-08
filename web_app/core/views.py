@@ -1,8 +1,12 @@
 from django.shortcuts import render
 
+from authentication.decorators import permission_required_custom
+from licensing.middleware import has_valid_license
+
 from .utils import build_page_context
 
 
+@permission_required_custom("dashboard", "view")
 def dashboard(request):
     cards = [
         {
@@ -42,7 +46,9 @@ def dashboard(request):
         },
         {
             "label": "License Status",
-            "value": "Pending",
+            "value": "Valid"
+            if has_valid_license(request.session.get("company_id"))
+            else "Pending",
             "tone": "secondary",
             "icon": "bi-shield-check",
             "hint": "Validation arrives in Phase 3",

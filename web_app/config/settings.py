@@ -21,6 +21,7 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
+    "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
@@ -37,10 +38,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "licensing.middleware.LicensePlaceholderMiddleware",
+    "authentication.middleware.AuthenticationRequiredMiddleware",
+    "licensing.middleware.LicenseValidationMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -97,3 +100,6 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"

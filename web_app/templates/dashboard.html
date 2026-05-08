@@ -4,8 +4,8 @@
 <section class="page-header dashboard-hero">
     <div>
         <span class="soft-badge">Windows 11 inspired workspace</span>
-        <h2>Welcome back</h2>
-        <p>{{ page_subtitle }}</p>
+        <h2>Welcome back, {{ logged_in_user_name }}</h2>
+        <p>{{ current_company_name }} / {{ current_branch_name }} / {{ logged_in_role_name }}</p>
     </div>
     <div class="hero-status-card">
         <i class="bi bi-database-check"></i>

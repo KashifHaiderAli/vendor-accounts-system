@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.urls import include, path
 
 from core import views as core_views
+from licensing import views as licensing_views
 
 
 handler403 = "core.views.permission_denied_view"
@@ -18,6 +19,7 @@ urlpatterns = [
     path("accounts/", include("accounts_module.urls")),
     path("reports/", include("reports.urls")),
     path("backup/", include("backup.urls")),
+    path("license-expired/", licensing_views.expired, name="license_expired"),
     path("license/", include("licensing.urls")),
 ]
 

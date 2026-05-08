@@ -8,103 +8,32 @@
     </div>
 
     <nav class="sidebar-nav">
+        {% if is_authenticated_custom and can_view_dashboard %}
         <a class="sidebar-link {% if request.path == '/' %}sidebar-link-active{% endif %}" href="{% url 'dashboard' %}">
             <i class="bi bi-grid-1x2"></i>
             <span>Dashboard</span>
         </a>
+        {% endif %}
 
-        <details class="sidebar-group {% if request.path == '/masters/' %}sidebar-group-active{% endif %}" open>
+        {% for group in sidebar_groups %}
+        <details class="sidebar-group {% if group.active %}sidebar-group-active{% endif %}" {% if group.active or forloop.counter <= 2 %}open{% endif %}>
             <summary>
-                <span><i class="bi bi-collection"></i> Masters</span>
+                <span><i class="bi {{ group.icon }}"></i> {{ group.label }}</span>
                 <i class="bi bi-chevron-down"></i>
             </summary>
             <div class="sidebar-subnav">
-                <a class="{% if request.path == '/masters/' %}active{% endif %}" href="{% url 'masters:index' %}">Customers</a>
-                <a href="{% url 'masters:index' %}">Suppliers</a>
-                <a href="{% url 'masters:index' %}">Items / Services</a>
-                <a href="{% url 'masters:index' %}">Cash / Bank Accounts</a>
-                <a href="{% url 'masters:index' %}">Expense Heads</a>
-                <a href="{% url 'masters:index' %}">Payment Terms</a>
+                {% for item in group.items %}
+                <a class="{% if item.active %}active{% endif %}" href="{{ item.url }}">{{ item.label }}</a>
+                {% endfor %}
             </div>
         </details>
-
-        <details class="sidebar-group {% if request.path == '/sales/' %}sidebar-group-active{% endif %}" open>
-            <summary>
-                <span><i class="bi bi-receipt"></i> Sales</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a class="{% if request.path == '/sales/' %}active{% endif %}" href="{% url 'sales:index' %}">Quotations</a>
-                <a href="{% url 'sales:index' %}">Customer Confirmations / PO</a>
-                <a href="{% url 'sales:index' %}">Delivery Challans</a>
-                <a href="{% url 'sales:index' %}">Sales Invoices / Cash Memo</a>
-                <a href="{% url 'sales:index' %}">Sales Returns</a>
-                <a href="{% url 'sales:index' %}">Customer Receipts</a>
+        {% empty %}
+            {% if is_authenticated_custom %}
+            <div class="sidebar-empty">
+                <i class="bi bi-lock"></i>
+                <span>No menu permissions assigned.</span>
             </div>
-        </details>
-
-        <details class="sidebar-group {% if request.path == '/purchases/' %}sidebar-group-active{% endif %}" {% if request.path == '/purchases/' %}open{% endif %}>
-            <summary>
-                <span><i class="bi bi-cart-check"></i> Purchases</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a class="{% if request.path == '/purchases/' %}active{% endif %}" href="{% url 'purchases:index' %}">Supplier Purchases</a>
-                <a href="{% url 'purchases:index' %}">Purchase Returns</a>
-                <a href="{% url 'purchases:index' %}">Supplier Payments</a>
-            </div>
-        </details>
-
-        <details class="sidebar-group {% if request.path == '/services/' %}sidebar-group-active{% endif %}" {% if request.path == '/services/' %}open{% endif %}>
-            <summary>
-                <span><i class="bi bi-briefcase"></i> Services</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a class="{% if request.path == '/services/' %}active{% endif %}" href="{% url 'services:index' %}">Service Contracts</a>
-            </div>
-        </details>
-
-        <details class="sidebar-group {% if request.path == '/accounts/' %}sidebar-group-active{% endif %}" {% if request.path == '/accounts/' %}open{% endif %}>
-            <summary>
-                <span><i class="bi bi-journal-richtext"></i> Accounts</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a class="{% if request.path == '/accounts/' %}active{% endif %}" href="{% url 'accounts_module:index' %}">Chart of Accounts</a>
-                <a href="{% url 'accounts_module:index' %}">Journal Entries</a>
-            </div>
-        </details>
-
-        <details class="sidebar-group {% if request.path == '/reports/' %}sidebar-group-active{% endif %}" {% if request.path == '/reports/' %}open{% endif %}>
-            <summary>
-                <span><i class="bi bi-bar-chart"></i> Reports</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a class="{% if request.path == '/reports/' %}active{% endif %}" href="{% url 'reports:index' %}">Customer Reports</a>
-                <a href="{% url 'reports:index' %}">Supplier Reports</a>
-                <a href="{% url 'reports:index' %}">Sales Reports</a>
-                <a href="{% url 'reports:index' %}">Purchase Reports</a>
-                <a href="{% url 'reports:index' %}">Service Reports</a>
-                <a href="{% url 'reports:index' %}">Accounting Reports</a>
-            </div>
-        </details>
-
-        <details class="sidebar-group {% if request.path == '/backup/' or request.path == '/license/' %}sidebar-group-active{% endif %}" {% if request.path == '/backup/' or request.path == '/license/' %}open{% endif %}>
-            <summary>
-                <span><i class="bi bi-sliders"></i> Settings</span>
-                <i class="bi bi-chevron-down"></i>
-            </summary>
-            <div class="sidebar-subnav">
-                <a href="{% url 'masters:index' %}">Company Settings</a>
-                <a href="{% url 'masters:index' %}">Branches</a>
-                <a href="{% url 'masters:index' %}">Users &amp; Roles</a>
-                <a href="{% url 'masters:index' %}">Numbering Settings</a>
-                <a href="{% url 'masters:index' %}">Tax Settings</a>
-                <a href="{% url 'backup:index' %}">Backup / Restore</a>
-                <a href="{% url 'licensing:index' %}">License Status</a>
-            </div>
-        </details>
+            {% endif %}
+        {% endfor %}
     </nav>
 </aside>

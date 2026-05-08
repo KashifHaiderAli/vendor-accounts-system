@@ -7,5 +7,5 @@ app_name = "licensing"
 
 urlpatterns = [
     path("", views.index, name="index"),
-    path("expired/", views.expired, name="expired"),
+    path("expired/", views.expired, name="expired_legacy"),
 ]

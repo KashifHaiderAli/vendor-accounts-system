@@ -1,16 +1,51 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-heading">
+<section class="page-header">
     <div>
-        <h1>License Expired</h1>
-        <p>License validation will be implemented in Phase 3.</p>
+        <span class="soft-badge soft-badge-warning">License required</span>
+        <h2>License Expired</h2>
+        <p>License not found, expired, or hardware mismatch.</p>
     </div>
-</div>
+</section>
 
-<section class="content-panel">
-    <div class="empty-state">
-        The license status screen is currently a placeholder.
-    </div>
+<section class="section-grid placeholder-grid">
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>License Check Failed</h3>
+                <p>Contact system provider for license renewal.</p>
+            </div>
+            <i class="bi bi-shield-exclamation"></i>
+        </div>
+        <div class="app-card-body system-list">
+            <div>
+                <span>Status</span>
+                <strong>Not valid</strong>
+            </div>
+            <div>
+                <span>Reason</span>
+                <strong>Missing, expired, or hardware mismatch</strong>
+            </div>
+            <div>
+                <span>Hardware Fingerprint</span>
+                <strong class="fingerprint-value">{{ hardware_fingerprint }}</strong>
+            </div>
+        </div>
+    </article>
+
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Next Step</h3>
+                <p>Generate or renew the license from the DB App.</p>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <div class="empty-state">
+                Share this hardware fingerprint with the system provider and renew the license for the current company.
+            </div>
+        </div>
+    </article>
 </section>
 {% endblock %}

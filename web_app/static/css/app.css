@@ -230,6 +230,18 @@ a {
     box-shadow: inset 3px 0 0 var(--primary);
 }
 
+.sidebar-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px;
+    padding: 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    color: var(--sidebar-muted);
+    font-size: 0.88rem;
+}
+
 .app-main {
     min-width: 0;
     flex: 1;
@@ -353,7 +365,8 @@ a {
 }
 
 .icon-button,
-.profile-button {
+.profile-button,
+.branch-button {
     border: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.78);
     color: var(--text-main);
@@ -370,7 +383,8 @@ a {
 }
 
 .icon-button:hover,
-.profile-button:hover {
+.profile-button:hover,
+.branch-button:hover {
     background: #fff;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
     transform: translateY(-1px);
@@ -380,12 +394,37 @@ a {
     display: none;
 }
 
-.profile-button {
+.profile-button,
+.branch-button {
     gap: 8px;
     min-height: 42px;
     padding: 6px 10px 6px 6px;
     border-radius: 999px;
     font-weight: 700;
+}
+
+.branch-button {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--text-main);
+}
+
+.branch-button span {
+    max-width: 124px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-button small {
+    max-width: 118px;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .profile-avatar {
@@ -788,6 +827,35 @@ button.quick-action-btn:disabled {
     color: var(--text-muted);
 }
 
+.input-icon-field {
+    position: relative;
+}
+
+.input-icon-field i {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+}
+
+.input-icon-field .form-control {
+    padding-left: 40px;
+}
+
+.login-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.fingerprint-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
 .error-page {
     max-width: 620px;
     padding: 42px;
@@ -913,6 +981,7 @@ th {
     .company-chip,
     .date-chip,
     .profile-button,
+    .branch-button,
     .page-header-actions,
     .page-header-actions .btn {
         width: 100%;

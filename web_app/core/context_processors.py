@@ -1,13 +1,145 @@
 from datetime import date
 
+from django.urls import reverse
+
+from authentication.auth_utils import get_user_allowed_branches, user_has_permission
+
+
+SIDEBAR_GROUPS = [
+    {
+        "label": "Masters",
+        "icon": "bi-collection",
+        "items": [
+            ("Customers", "customers", "masters:index"),
+            ("Suppliers", "suppliers", "masters:index"),
+            ("Items / Services", "item_services", "masters:index"),
+            ("Cash / Bank Accounts", "cash_bank_accounts", "masters:index"),
+            ("Expense Heads", "expense_heads", "masters:index"),
+            ("Payment Terms", "payment_terms", "masters:index"),
+        ],
+    },
+    {
+        "label": "Sales",
+        "icon": "bi-receipt",
+        "items": [
+            ("Quotations", "quotations", "sales:index"),
+            ("Customer Confirmations / PO", "customer_confirmations", "sales:index"),
+            ("Delivery Challans", "delivery_challans", "sales:index"),
+            ("Sales Invoices / Cash Memo", "sales_invoices", "sales:index"),
+            ("Sales Returns", "sales_returns", "sales:index"),
+            ("Customer Receipts", "customer_receipts", "sales:index"),
+        ],
+    },
+    {
+        "label": "Purchases",
+        "icon": "bi-cart-check",
+        "items": [
+            ("Supplier Purchases", "supplier_purchases", "purchases:index"),
+            ("Purchase Returns", "purchase_returns", "purchases:index"),
+            ("Supplier Payments", "supplier_payments", "purchases:index"),
+        ],
+    },
+    {
+        "label": "Services",
+        "icon": "bi-briefcase",
+        "items": [
+            ("Service Contracts", "service_contracts", "services:index"),
+        ],
+    },
+    {
+        "label": "Accounts",
+        "icon": "bi-journal-richtext",
+        "items": [
+            ("Chart of Accounts", "accounting_reports", "accounts_module:index"),
+            ("Journal Entries", "accounting_reports", "accounts_module:index"),
+        ],
+    },
+    {
+        "label": "Reports",
+        "icon": "bi-bar-chart",
+        "items": [
+            ("Customer Reports", "customer_reports", "reports:index"),
+            ("Supplier Reports", "supplier_reports", "reports:index"),
+            ("Sales Reports", "sales_reports", "reports:index"),
+            ("Purchase Reports", "purchase_reports", "reports:index"),
+            ("Service Reports", "service_reports", "reports:index"),
+            ("Accounting Reports", "accounting_reports", "reports:index"),
+        ],
+    },
+    {
+        "label": "Settings",
+        "icon": "bi-sliders",
+        "items": [
+            ("Company Settings", "company_settings", "masters:index"),
+            ("Branches", "branches", "masters:index"),
+            ("Users & Roles", "user_management", "masters:index"),
+            ("Role Management", "role_management", "masters:index"),
+            ("Numbering Settings", "numbering_settings", "masters:index"),
+            ("Tax Settings", "tax_settings", "masters:index"),
+            ("Backup / Restore", "backup_restore", "backup:index"),
+            ("License Status", "licensing", "licensing:index"),
+        ],
+    },
+]
+
 
 def app_context(request):
     today = date.today()
+    is_authenticated = bool(request.session.get("user_id"))
+    allowed_branches = []
+    sidebar_groups = []
+    can_view_dashboard = False
+
+    if is_authenticated:
+        allowed_branches = get_user_allowed_branches(request.session.get("user_id"))
+        can_view_dashboard = user_has_permission(request, "dashboard", "view")
+        sidebar_groups = build_sidebar_groups(request)
+
     return {
         "system_name": "Corporate Supplier Accounts System",
         "app_version": "0.1.0",
         "current_year": today.year,
         "current_date": today,
-        "current_company_name": "Your Company Name",
-        "current_branch_name": "Main Branch",
+        "current_company_name": request.session.get("company_name", "Your Company Name"),
+        "current_branch_name": request.session.get("current_branch_name", "No Branch Selected"),
+        "logged_in_user_name": request.session.get("full_name", ""),
+        "logged_in_role_name": request.session.get("role_name", ""),
+        "is_authenticated_custom": is_authenticated,
+        "is_master_user": int(request.session.get("is_master_user") or 0),
+        "allowed_branches": allowed_branches,
+        "sidebar_groups": sidebar_groups,
+        "can_view_dashboard": can_view_dashboard,
+        "user_has_permission": lambda permission_code, action="view": user_has_permission(
+            request,
+            permission_code,
+            action,
+        ),
     }
+
+
+def build_sidebar_groups(request):
+    groups = []
+    for group in SIDEBAR_GROUPS:
+        visible_items = []
+        for label, permission_code, url_name in group["items"]:
+            if user_has_permission(request, permission_code, "view"):
+                url = reverse(url_name)
+                visible_items.append(
+                    {
+                        "label": label,
+                        "permission_code": permission_code,
+                        "url_name": url_name,
+                        "url": url,
+                        "active": request.path == url,
+                    }
+                )
+        if visible_items:
+            groups.append(
+                {
+                    "label": group["label"],
+                    "icon": group["icon"],
+                    "items": visible_items,
+                    "active": any(item["active"] for item in visible_items),
+                }
+            )
+    return groups

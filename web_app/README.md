@@ -76,8 +76,30 @@ Open:
 - http://127.0.0.1:8000/
 - http://127.0.0.1:8000/login/
 
+## Phase 3 Login, Branches, and License
+
+The web app login uses the DB App-created user records from the custom `users` table. It does not use Django's default `auth_user` table.
+
+Default web app login:
+
+```text
+username: admin
+password: mdnuniball
+```
+
+The DB App login is separate:
+
+```text
+username: admin
+password: infoline
+```
+
+The web app reads roles, permissions, assigned branches, company details, and license records from the SQLite database created by the DB App. Branch selection is based on the branches assigned to the logged-in user.
+
+Licenses must be generated from the DB App. If the license is missing, expired, inactive, or belongs to a different hardware fingerprint, the web app redirects to the license expired page and shows the current hardware fingerprint for renewal.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Authentication, permissions, custom user table integration, and license validation will be implemented in Phase 3. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
