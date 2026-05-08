@@ -812,6 +812,10 @@ button.quick-action-btn:disabled {
     align-items: center;
 }
 
+.journal-filter-bar {
+    grid-template-columns: minmax(180px, 1fr) 150px 150px 180px auto auto;
+}
+
 .app-table {
     background: rgba(255, 255, 255, 0.76);
     border: 1px solid var(--border);
@@ -1129,7 +1133,8 @@ th {
     .quick-action-grid,
     .form-grid.two-col,
     .form-grid.three-col,
-    .filter-bar {
+    .filter-bar,
+    .journal-filter-bar {
         grid-template-columns: 1fr;
     }
 

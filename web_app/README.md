@@ -135,8 +135,30 @@ Customers, suppliers, cash/bank accounts, and expense heads automatically create
 
 Master data actions are logged into `user_activity_log`.
 
+## Phase 6 Hidden Accounting Engine
+
+Phase 6 adds the hidden accounting foundation used by future transaction modules:
+
+- Default Chart of Accounts assurance for each company/branch.
+- Double-entry journal validation using `Decimal` money calculations.
+- Journal entry creation and reversal helpers.
+- Posting helpers for future sales invoices, customer receipts, supplier purchases, supplier payments, sales returns, purchase returns, and expense vouchers.
+- Trial balance and account ledger backend utilities for later reports.
+- Read-only Chart of Accounts page: `/accounts/chart/`
+- Read-only Journal Entries page: `/accounts/journals/`
+
+The accounting engine writes only to existing DB App-created tables: `accounts`, `journal_entries`, `journal_entry_lines`, and `user_activity_log`. It does not create or alter database schema.
+
+Developer smoke test:
+
+```powershell
+python manage.py test_journal_engine
+```
+
+The command ensures the default chart of accounts, creates one balanced test journal if one does not already exist with `reference_type = "test_journal_engine"`, and prints `PASS`.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Business forms, quotation/invoice/purchase screens, and reports will be added in later phases.

@@ -51,8 +51,8 @@ SIDEBAR_GROUPS = [
         "label": "Accounts",
         "icon": "bi-journal-richtext",
         "items": [
-            ("Chart of Accounts", "accounting_reports", "accounts_module:index"),
-            ("Journal Entries", "accounting_reports", "accounts_module:index"),
+            ("Chart of Accounts", "accounting_reports", "accounts_module:chart"),
+            ("Journal Entries", "accounting_reports", "accounts_module:journals"),
         ],
     },
     {
