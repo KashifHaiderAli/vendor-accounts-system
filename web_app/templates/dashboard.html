@@ -1,29 +1,119 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-heading">
+<section class="page-header dashboard-hero">
     <div>
-        <h1>{{ page_title }}</h1>
+        <span class="soft-badge">Windows 11 inspired workspace</span>
+        <h2>Welcome back</h2>
         <p>{{ page_subtitle }}</p>
     </div>
-</div>
+    <div class="hero-status-card">
+        <i class="bi bi-database-check"></i>
+        <div>
+            <strong>Database Connected</strong>
+            <span>Ready for Phase 3 authentication mapping</span>
+        </div>
+    </div>
+</section>
 
-<div class="dashboard-grid">
+<section class="section-grid stat-grid">
     {% for card in dashboard_cards %}
-    <section class="metric-card metric-{{ card.tone }}">
-        <span>{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-    </section>
+    <article class="app-card stat-card stat-{{ card.tone }}">
+        <div class="stat-icon">
+            <i class="bi {{ card.icon }}"></i>
+        </div>
+        <div class="stat-content">
+            <span>{{ card.label }}</span>
+            <strong>{{ card.value }}</strong>
+            <small>{{ card.hint }}</small>
+        </div>
+    </article>
     {% endfor %}
-</div>
+</section>
 
-<section class="content-panel mt-4">
-    <div class="panel-heading">
-        <h2>Activity Overview</h2>
-        <span>Phase 2 placeholder</span>
+<section class="dashboard-layout mt-4">
+    <div class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Recent Activity</h3>
+                <p>Placeholder timeline for system events and transactions.</p>
+            </div>
+            <span class="soft-badge">Live data later</span>
+        </div>
+        <div class="app-card-body">
+            <div class="activity-list">
+                {% for item in activity_items %}
+                <div class="activity-item">
+                    <span class="activity-dot"></span>
+                    <p>{{ item }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-    <div class="empty-state">
-        Business workflows will be connected after authentication, permissions, and table mapping are added in Phase 3.
+
+    <div class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Quick Actions</h3>
+                <p>Common tasks will become active after business screens are added.</p>
+            </div>
+        </div>
+        <div class="app-card-body quick-action-grid">
+            {% for action in quick_actions %}
+            <a class="quick-action-btn" href="{{ action.url }}">
+                <i class="bi {{ action.icon }}"></i>
+                <span>{{ action.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
     </div>
+</section>
+
+<section class="section-grid insight-grid mt-4">
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Sales Trend</h3>
+                <p>Chart placeholder</p>
+            </div>
+            <i class="bi bi-bar-chart-line"></i>
+        </div>
+        <div class="app-card-body">
+            <div class="chart-placeholder">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+    </article>
+
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>License Status</h3>
+                <p>Validation will be activated in Phase 3.</p>
+            </div>
+            <span class="soft-badge soft-badge-warning">Pending</span>
+        </div>
+        <div class="app-card-body system-list">
+            <div><span>Status</span><strong>Placeholder</strong></div>
+            <div><span>Edition</span><strong>Local Development</strong></div>
+            <div><span>Version</span><strong>v{{ app_version }}</strong></div>
+        </div>
+    </article>
+
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>System Info</h3>
+                <p>Environment and branch context.</p>
+            </div>
+            <i class="bi bi-pc-display"></i>
+        </div>
+        <div class="app-card-body system-list">
+            <div><span>Company</span><strong>{{ current_company_name }}</strong></div>
+            <div><span>Branch</span><strong>{{ current_branch_name }}</strong></div>
+            <div><span>Date</span><strong>{{ current_date|date:"M d, Y" }}</strong></div>
+        </div>
+    </article>
 </section>
 {% endblock %}

@@ -4,6 +4,8 @@ This folder contains the Phase 2 Django web application foundation for the Corpo
 
 The web app uses Django Templates, Bootstrap 5, and the SQLite database created by the existing DB App. It does not create or modify database tables in this phase.
 
+The current UI theme is Windows 11 inspired and built with Bootstrap 5, Bootstrap Icons, and lightweight custom CSS. It uses soft surfaces, rounded cards, subtle shadows, responsive navigation, and reusable utility classes for future accounting screens.
+
 ## Setup
 
 Create and activate a virtual environment:

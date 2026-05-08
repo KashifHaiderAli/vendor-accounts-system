@@ -1,10 +1,44 @@
 <header class="topbar">
-    <div>
-        <span class="company-name">{{ current_company_name }}</span>
-        <small>Local development</small>
+    <div class="topbar-left">
+        <button class="icon-button sidebar-mobile-toggle" type="button" aria-label="Toggle navigation">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="topbar-title">
+            <span class="breadcrumb-line">Home / {{ page_title|default:"Dashboard" }}</span>
+            <h1>{{ page_title|default:"Dashboard" }}</h1>
+        </div>
     </div>
+
+    <div class="topbar-center">
+        <label class="search-box" aria-label="Search placeholder">
+            <i class="bi bi-search"></i>
+            <input type="search" placeholder="Search transactions, customers, invoices" disabled>
+        </label>
+    </div>
+
     <div class="topbar-actions">
-        <span class="version-pill">v{{ app_version }}</span>
-        <a class="btn btn-sm btn-outline-primary" href="{% url 'authentication:login' %}">Login</a>
+        <div class="company-chip">
+            <i class="bi bi-buildings"></i>
+            <span>{{ current_company_name }}</span>
+            <small>{{ current_branch_name }}</small>
+        </div>
+        <span class="date-chip">
+            <i class="bi bi-calendar3"></i>
+            {{ current_date|date:"M d, Y" }}
+        </span>
+        <button class="icon-button" type="button" aria-label="Notifications">
+            <i class="bi bi-bell"></i>
+        </button>
+        <div class="dropdown">
+            <button class="profile-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="profile-avatar">U</span>
+                <span>Phase 2 User</span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><span class="dropdown-item-text">Authentication in Phase 3</span></li>
+                <li><a class="dropdown-item" href="{% url 'authentication:login' %}">Login placeholder</a></li>
+            </ul>
+        </div>
     </div>
 </header>

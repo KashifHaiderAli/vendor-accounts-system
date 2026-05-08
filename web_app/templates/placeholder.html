@@ -1,16 +1,61 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-heading">
+<section class="page-header">
     <div>
-        <h1>{{ page_title }}</h1>
+        <span class="soft-badge">Module workspace</span>
+        <h2>{{ page_title }}</h2>
         <p>Placeholder workspace for the {{ page_title }} module.</p>
     </div>
-</div>
-
-<section class="content-panel">
-    <div class="empty-state">
-        This module route is ready. Business screens will be added in later phases.
+    <div class="page-header-actions">
+        <button class="btn btn-primary" type="button" disabled>
+            <i class="bi bi-plus-lg"></i>
+            New Entry
+        </button>
+        <button class="btn btn-light" type="button" disabled>
+            <i class="bi bi-funnel"></i>
+            Filter
+        </button>
     </div>
+</section>
+
+<section class="section-grid placeholder-grid">
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>{{ page_title }} Overview</h3>
+                <p>Business screens will be added in later phases.</p>
+            </div>
+            <i class="bi bi-window-stack"></i>
+        </div>
+        <div class="app-card-body">
+            <div class="empty-state">
+                This route is styled and ready for Phase 3 wiring. No records are read or written in this phase.
+            </div>
+        </div>
+    </article>
+
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Module Actions</h3>
+                <p>Future shortcuts for this workspace.</p>
+            </div>
+        </div>
+        <div class="app-card-body quick-action-grid compact">
+            <button class="quick-action-btn" type="button" disabled>
+                <i class="bi bi-plus-circle"></i>
+                <span>Create</span>
+            </button>
+            <button class="quick-action-btn" type="button" disabled>
+                <i class="bi bi-search"></i>
+                <span>Search</span>
+            </button>
+            <button class="quick-action-btn" type="button" disabled>
+                <i class="bi bi-download"></i>
+                <span>Export</span>
+            </button>
+        </div>
+    </article>
 </section>
 {% endblock %}
