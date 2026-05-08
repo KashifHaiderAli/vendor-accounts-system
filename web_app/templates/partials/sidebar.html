@@ -1,0 +1,58 @@
+<aside class="app-sidebar">
+    <div class="brand-block">
+        <div class="brand-mark">CS</div>
+        <div>
+            <strong>{{ system_name }}</strong>
+            <span>Accounts Suite</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Main navigation">
+        <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+
+        <div class="nav-section">Masters</div>
+        <a class="nav-link" href="{% url 'masters:index' %}">Customers</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Suppliers</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Items / Services</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Cash / Bank Accounts</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Expense Heads</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Payment Terms</a>
+
+        <div class="nav-section">Sales</div>
+        <a class="nav-link" href="{% url 'sales:index' %}">Quotations</a>
+        <a class="nav-link" href="{% url 'sales:index' %}">Customer Confirmations / PO</a>
+        <a class="nav-link" href="{% url 'sales:index' %}">Delivery Challans</a>
+        <a class="nav-link" href="{% url 'sales:index' %}">Sales Invoices / Cash Memo</a>
+        <a class="nav-link" href="{% url 'sales:index' %}">Sales Returns</a>
+        <a class="nav-link" href="{% url 'sales:index' %}">Customer Receipts</a>
+
+        <div class="nav-section">Purchases</div>
+        <a class="nav-link" href="{% url 'purchases:index' %}">Supplier Purchases</a>
+        <a class="nav-link" href="{% url 'purchases:index' %}">Purchase Returns</a>
+        <a class="nav-link" href="{% url 'purchases:index' %}">Supplier Payments</a>
+
+        <div class="nav-section">Services</div>
+        <a class="nav-link" href="{% url 'services:index' %}">Service Contracts</a>
+
+        <div class="nav-section">Accounts</div>
+        <a class="nav-link" href="{% url 'accounts_module:index' %}">Chart of Accounts</a>
+        <a class="nav-link" href="{% url 'accounts_module:index' %}">Journal Entries</a>
+
+        <div class="nav-section">Reports</div>
+        <a class="nav-link" href="{% url 'reports:index' %}">Customer Reports</a>
+        <a class="nav-link" href="{% url 'reports:index' %}">Supplier Reports</a>
+        <a class="nav-link" href="{% url 'reports:index' %}">Sales Reports</a>
+        <a class="nav-link" href="{% url 'reports:index' %}">Purchase Reports</a>
+        <a class="nav-link" href="{% url 'reports:index' %}">Service Reports</a>
+        <a class="nav-link" href="{% url 'reports:index' %}">Accounting Reports</a>
+
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="{% url 'masters:index' %}">Company Settings</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Branches</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Users &amp; Roles</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Numbering Settings</a>
+        <a class="nav-link" href="{% url 'masters:index' %}">Tax Settings</a>
+        <a class="nav-link" href="{% url 'backup:index' %}">Backup / Restore</a>
+        <a class="nav-link" href="{% url 'licensing:index' %}">License Status</a>
+    </nav>
+</aside>

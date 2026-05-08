@@ -1,0 +1,10 @@
+<header class="topbar">
+    <div>
+        <span class="company-name">{{ current_company_name }}</span>
+        <small>Local development</small>
+    </div>
+    <div class="topbar-actions">
+        <span class="version-pill">v{{ app_version }}</span>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'authentication:login' %}">Login</a>
+    </div>
+</header>
