@@ -35,7 +35,7 @@ SIDEBAR_GROUPS = [
         "label": "Purchases",
         "icon": "bi-cart-check",
         "items": [
-            ("Supplier Purchases", "supplier_purchases", "purchases:index"),
+            ("Supplier Purchases", "supplier_purchases", "purchases:supplier_purchases"),
             ("Purchase Returns", "purchase_returns", "purchases:index"),
             ("Supplier Payments", "supplier_payments", "purchases:index"),
         ],

@@ -234,6 +234,20 @@ Phase 8 adds Customer Confirmation / PO tracking under `/sales/confirmations/`:
 
 Confirmations do not create journal entries and do not affect accounts. In Version 1, direct confirmation without a quotation requires selecting an existing customer. New or unregistered parties are supported through quotation-based confirmation.
 
+## Phase 9 Supplier Purchase Module
+
+Phase 9 adds supplier purchase recording under `/purchases/supplier-purchases/`:
+
+- Supplier purchase list with search, status/date filters, pagination, and permission-based actions
+- Purchase form with dynamic item rows and server-side total recalculation
+- Supplier purchases post accounting journals through the hidden journal engine
+- Debit Purchases / Cost of Goods, debit Input Tax Receivable when applicable, and credit Supplier Payable
+- `journal_entry_id` is saved on the purchase header for audit drill-down
+- Purchases do not affect inventory and do not add serial tracking
+- Posted purchase financial details are read-only; only supplier bill details and remarks can be edited
+- Cancelling a purchase keeps the record, marks it Cancelled, and creates a reversal journal entry
+- Supplier payments and purchase returns remain future modules
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.

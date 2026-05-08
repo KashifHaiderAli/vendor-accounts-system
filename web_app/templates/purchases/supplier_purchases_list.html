@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Purchases</span>
+        <h2>Supplier Purchases</h2>
+        <p>Supplier bills with automatic purchase cost and payable journal posting.</p>
+    </div>
+    <div class="page-header-actions">
+        {% if can_add %}<a class="btn btn-primary" href="{% url 'purchases:supplier_purchase_new' %}"><i class="bi bi-plus-lg"></i> New Purchase</a>{% endif %}
+    </div>
+</section>
+
+<form class="app-card filter-card" method="get">
+    <div class="app-card-body filter-bar">
+        <input class="form-control" name="q" value="{{ search }}" placeholder="Search purchase, supplier, bill, confirmation">
+        <select class="form-select" name="status">
+            <option value="">All Status</option>
+            {% for option in statuses %}<option value="{{ option }}" {% if status == option %}selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+        <input class="form-control" type="date" name="date_from" value="{{ date_from }}">
+        <input class="form-control" type="date" name="date_to" value="{{ date_to }}">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+    </div>
+</form>
+
+<section class="app-card">
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead><tr><th>Purchase No</th><th>Date</th><th>Supplier</th><th>Supplier Bill No</th><th>Confirmation</th><th class="text-end">Grand Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'purchases:supplier_purchase_detail' row.id %}">{{ row.purchase_no }}</a></td>
+                    <td>{{ row.purchase_date }}</td>
+                    <td>{{ row.supplier_name|default:"-" }}</td>
+                    <td>{{ row.supplier_bill_no|default:"-" }}</td>
+                    <td>{{ row.confirmation_no|default:"-" }}</td>
+                    <td class="text-end">{{ row.grand_total|floatformat:2 }}</td>
+                    <td class="text-end">{{ row.paid_amount|floatformat:2 }}</td>
+                    <td class="text-end">{{ row.balance_amount|floatformat:2 }}</td>
+                    <td><span class="soft-badge">{{ row.status|default:"Unpaid" }}</span></td>
+                    <td class="text-end table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_detail' row.id %}" title="View"><i class="bi bi-eye"></i></a>
+                        {% if can_print %}<a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_print' row.id %}" title="Print"><i class="bi bi-printer"></i></a>{% endif %}
+                        {% if can_edit and row.status != "Cancelled" %}<a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_edit' row.id %}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
+                        {% if can_cancel and row.status != "Cancelled" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'purchases:supplier_purchase_cancel' row.id %}" title="Cancel"><i class="bi bi-x-circle"></i></a>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="10" class="text-center text-muted py-4">No supplier purchases found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.total_pages > 1 %}
+    <div class="app-card-body border-top">
+        <nav class="pagination-wrap">
+            {% for page_no in pagination.pages %}
+            <a class="btn btn-sm {% if page_no == pagination.page %}btn-primary{% else %}btn-light{% endif %}" href="?q={{ search }}&status={{ status }}&date_from={{ date_from }}&date_to={{ date_to }}&page={{ page_no }}">{{ page_no }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

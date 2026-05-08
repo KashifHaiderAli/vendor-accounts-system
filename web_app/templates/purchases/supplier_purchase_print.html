@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ purchase.purchase_no }} - Supplier Purchase</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #111827; margin: 32px; }
+        .header { display:flex; justify-content:space-between; border-bottom:2px solid #111827; padding-bottom:16px; margin-bottom:24px; }
+        h1 { margin:0 0 6px; font-size:24px; } h2 { text-align:center; margin:20px 0; letter-spacing:.04em; }
+        table { width:100%; border-collapse:collapse; margin:14px 0 22px; }
+        th,td { border:1px solid #d1d5db; padding:8px 10px; vertical-align:top; }
+        th { background:#f3f4f6; text-align:left; } .text-end { text-align:right; }
+        .totals { margin-left:auto; width:320px; } .no-print { margin-bottom:16px; }
+        .signature { margin-top:56px; display:flex; justify-content:space-between; }
+        @media print { body { margin:18mm; } .no-print { display:none; } }
+    </style>
+</head>
+<body>
+    <div class="no-print"><button onclick="window.print()">Print</button></div>
+    <div class="header">
+        <div><h1>{{ company.company_name|default:"Company" }}</h1><div>{{ branch.branch_name|default:"" }}</div><div>{{ company.address|default:"" }}</div></div>
+        <div><strong>Prepared By:</strong> {{ purchase.created_by_name|default:"-" }}<br><strong>Print Date:</strong> {{ print_date }}</div>
+    </div>
+    <h2>SUPPLIER PURCHASE VOUCHER</h2>
+    <table>
+        <tr><th>Purchase No</th><td>{{ purchase.purchase_no }}</td><th>Purchase Date</th><td>{{ purchase.purchase_date }}</td></tr>
+        <tr><th>Supplier</th><td>{{ purchase.supplier_name|default:"-" }}</td><th>Status</th><td>{{ purchase.status|default:"Unpaid" }}</td></tr>
+        <tr><th>Supplier Bill No</th><td>{{ purchase.supplier_bill_no|default:"-" }}</td><th>Supplier Bill Date</th><td>{{ purchase.supplier_bill_date|default:"-" }}</td></tr>
+        <tr><th>Related Confirmation</th><td>{{ purchase.confirmation_no|default:"-" }}</td><th>Journal Entry</th><td>{{ purchase.journal_entry_no|default:"-" }}</td></tr>
+    </table>
+    <table>
+        <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Tax</th><th class="text-end">Total</th></tr></thead>
+        <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.purchase_rate|floatformat:2 }}</td><td class="text-end">{{ item.tax_amount|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <table class="totals">
+        <tr><th>Subtotal</th><td class="text-end">{{ purchase.subtotal|floatformat:2 }}</td></tr>
+        <tr><th>Tax</th><td class="text-end">{{ purchase.tax_total|floatformat:2 }}</td></tr>
+        <tr><th>Grand Total</th><td class="text-end">{{ purchase.grand_total|floatformat:2 }}</td></tr>
+        <tr><th>Paid</th><td class="text-end">{{ purchase.paid_amount|floatformat:2 }}</td></tr>
+        <tr><th>Balance</th><td class="text-end">{{ purchase.balance_amount|floatformat:2 }}</td></tr>
+    </table>
+    <p><strong>Remarks:</strong><br>{{ purchase.remarks|default:"-"|linebreaksbr }}</p>
+    <div class="signature"><div>Prepared By: ____________________</div><div>Approved By: ____________________</div></div>
+</body>
+</html>

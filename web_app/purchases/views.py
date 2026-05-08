@@ -1,7 +1,254 @@
-from django.shortcuts import render
+from __future__ import annotations
 
-from authentication.decorators import permission_required_custom
+from django.contrib import messages
+from django.db import DatabaseError
+from django.shortcuts import redirect, render
+
+from accounts_module.accounting_engine import AccountingError
+from authentication.auth_utils import user_has_permission
+from authentication.decorators import login_required_custom, permission_required_custom
+from core import validators
+from settings_module.services import log_user_activity
+
+from . import services
+
+
+PURCHASE_CARDS = [
+    ("Supplier Purchases", "supplier_purchases", "purchases:supplier_purchases", "bi-bag-check", "Record supplier bills and post purchase journals."),
+    ("Purchase Returns", "purchase_returns", "purchases:index", "bi-arrow-counterclockwise", "Future purchase return workflow."),
+    ("Supplier Payments", "supplier_payments", "purchases:index", "bi-wallet2", "Future supplier payment workflow."),
+]
+
+
+@login_required_custom
+def index(request):
+    cards = []
+    for label, permission, url_name, icon, description in PURCHASE_CARDS:
+        if user_has_permission(request, permission, "view"):
+            cards.append({"label": label, "url_name": url_name, "icon": icon, "description": description})
+    return render(request, "purchases/index.html", {"page_title": "Purchases", "purchase_cards": cards})
+
 
 @permission_required_custom("supplier_purchases", "view")
-def index(request):
-    return render(request, "placeholder.html", {"page_title": "Purchases"})
+def purchases_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = services.list_purchases(company_id, branch_id, search, status, date_from, date_to, page)
+    return render(
+        request,
+        "purchases/supplier_purchases_list.html",
+        {
+            "page_title": "Supplier Purchases",
+            "rows": rows,
+            "search": search,
+            "status": status,
+            "date_from": date_from,
+            "date_to": date_to,
+            "pagination": pagination,
+            "statuses": services.PURCHASE_STATUSES,
+            "can_add": user_has_permission(request, "supplier_purchases", "add"),
+            "can_edit": user_has_permission(request, "supplier_purchases", "edit"),
+            "can_cancel": can_cancel(request),
+            "can_print": can_print(request),
+        },
+    )
+
+
+@login_required_custom
+def purchase_form(request, purchase_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = purchase_id is not None
+    if not user_has_permission(request, "supplier_purchases", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+
+    purchase = services.get_purchase(company_id, branch_id, purchase_id) if is_edit else None
+    if is_edit and not purchase:
+        messages.error(request, "Supplier purchase was not found.")
+        return redirect("purchases:supplier_purchases")
+    if is_edit and purchase.get("status") == "Cancelled":
+        messages.error(request, "Cancelled purchases cannot be edited.")
+        return redirect("purchases:supplier_purchase_detail", purchase_id=purchase_id)
+
+    posted = bool(purchase and purchase.get("journal_entry_id"))
+    form_data = purchase_form_data(purchase) if is_edit else services.default_form_data(company_id, branch_id)
+    errors = {}
+
+    if request.method == "POST":
+        if posted:
+            form_data.update(
+                {
+                    "supplier_bill_no": request.POST.get("supplier_bill_no", ""),
+                    "supplier_bill_date": request.POST.get("supplier_bill_date", ""),
+                    "remarks": request.POST.get("remarks", ""),
+                }
+            )
+            bill_no, errors["supplier_bill_no"] = validators.clean_text(form_data.get("supplier_bill_no"), max_length=100, field_name="Supplier Bill No")
+            bill_date, errors["supplier_bill_date"] = validators.validate_date(form_data.get("supplier_bill_date"), "Supplier Bill Date", required=False)
+            remarks, errors["remarks"] = validators.clean_text(form_data.get("remarks"), field_name="Remarks")
+            errors = {key: value for key, value in errors.items() if value}
+            if not errors:
+                form_data["supplier_bill_no"] = bill_no
+                form_data["supplier_bill_date"] = bill_date.isoformat() if bill_date else None
+                form_data["remarks"] = remarks
+                services.save_purchase(company_id, branch_id, request.session.get("user_id"), form_data, purchase_id)
+                log_user_activity(request, "UPDATE", "Supplier Purchases", "supplier_purchases", purchase_id, f"Updated non-financial details for purchase {purchase['purchase_no']}.")
+                messages.success(request, "Supplier purchase updated successfully.")
+                return redirect("purchases:supplier_purchase_detail", purchase_id=purchase_id)
+            messages.error(request, "Please correct the highlighted errors.")
+        else:
+            form_data = services.parse_purchase_post(request.POST)
+            errors, form_data = services.validate_and_calculate(form_data, company_id, branch_id, purchase_id)
+            if not errors:
+                try:
+                    saved_id = services.save_purchase(company_id, branch_id, request.session.get("user_id"), form_data, purchase_id)
+                    log_user_activity(
+                        request,
+                        "UPDATE" if is_edit else "CREATE",
+                        "Supplier Purchases",
+                        "supplier_purchases",
+                        saved_id,
+                        f"{'Updated' if is_edit else 'Created'} supplier purchase {form_data['purchase_no']}.",
+                    )
+                    messages.success(request, f"Supplier purchase {'updated' if is_edit else 'created'} successfully.")
+                    return redirect("purchases:supplier_purchase_detail", purchase_id=saved_id)
+                except AccountingError as exc:
+                    messages.error(request, f"Accounting posting failed: {exc}")
+                except DatabaseError:
+                    messages.error(request, "Unable to save supplier purchase. Please retry.")
+            else:
+                messages.error(request, "Please correct the highlighted errors.")
+
+    return render(
+        request,
+        "purchases/supplier_purchase_form.html",
+        {
+            "page_title": "Edit Supplier Purchase" if is_edit else "New Supplier Purchase",
+            "form_data": form_data,
+            "form_items": form_data.get("items", []),
+            "errors": errors,
+            "error_summary": collect_errors(errors),
+            "is_edit": is_edit,
+            "posted": posted,
+            "suppliers": services.get_suppliers(company_id, branch_id),
+            "items": services.get_items(company_id, branch_id),
+            "confirmations": services.get_confirmations(company_id, branch_id),
+            "statuses": services.PURCHASE_STATUSES,
+        },
+    )
+
+
+@permission_required_custom("supplier_purchases", "view")
+def purchase_detail(request, purchase_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    purchase = services.get_purchase(company_id, branch_id, purchase_id)
+    if not purchase:
+        messages.error(request, "Supplier purchase was not found.")
+        return redirect("purchases:supplier_purchases")
+    return render(
+        request,
+        "purchases/supplier_purchase_detail.html",
+        {
+            "page_title": purchase["purchase_no"],
+            "purchase": purchase,
+            "items": services.get_purchase_items(purchase_id),
+            "can_edit": user_has_permission(request, "supplier_purchases", "edit") and purchase.get("status") != "Cancelled",
+            "can_cancel": can_cancel(request) and purchase.get("status") != "Cancelled",
+            "can_print": can_print(request),
+        },
+    )
+
+
+@login_required_custom
+def cancel_purchase(request, purchase_id):
+    if not can_cancel(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    purchase = services.get_purchase(company_id, branch_id, purchase_id)
+    if not purchase:
+        messages.error(request, "Supplier purchase was not found.")
+        return redirect("purchases:supplier_purchases")
+    if request.method == "POST":
+        try:
+            services.cancel_purchase(request, purchase)
+            messages.success(request, "Supplier purchase cancelled and reversal journal created successfully.")
+            return redirect("purchases:supplier_purchase_detail", purchase_id=purchase_id)
+        except (AccountingError, DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to cancel supplier purchase.")
+            return redirect("purchases:supplier_purchase_detail", purchase_id=purchase_id)
+    return render(request, "purchases/confirm_cancel_purchase.html", {"page_title": "Cancel Supplier Purchase", "purchase": purchase})
+
+
+@login_required_custom
+def print_purchase(request, purchase_id):
+    if not can_print(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    purchase = services.get_purchase(company_id, branch_id, purchase_id)
+    if not purchase:
+        messages.error(request, "Supplier purchase was not found.")
+        return redirect("purchases:supplier_purchases")
+    log_user_activity(request, "PRINT", "Supplier Purchases", "supplier_purchases", purchase_id, f"Printed supplier purchase {purchase['purchase_no']}.")
+    return render(request, "purchases/supplier_purchase_print.html", services.get_print_context(company_id, branch_id, purchase_id))
+
+
+def require_scope(request):
+    company_id, branch_id = services.get_scope(request)
+    if not company_id or not branch_id:
+        messages.error(request, "Company or branch session is missing. Please login again.")
+        return None, None
+    return company_id, branch_id
+
+
+def can_cancel(request):
+    return user_has_permission(request, "supplier_purchases", "delete") or user_has_permission(request, "supplier_purchases", "edit")
+
+
+def can_print(request):
+    return user_has_permission(request, "supplier_purchases", "print") or user_has_permission(request, "supplier_purchases", "view")
+
+
+def purchase_form_data(purchase):
+    data = dict(purchase)
+    for key in ["supplier_bill_no", "supplier_bill_date", "confirmation_id", "remarks"]:
+        data[key] = data.get(key) or ""
+    data["items"] = [
+        {
+            "item_service_id": item.get("item_service_id") or "",
+            "description": item.get("description") or "",
+            "quantity": item.get("quantity") or "0",
+            "purchase_rate": item.get("purchase_rate") or "0",
+            "tax_percent": item.get("tax_percent") or "0",
+            "tax_amount": item.get("tax_amount") or "0",
+            "line_total": item.get("line_total") or "0",
+            "errors": {},
+        }
+        for item in services.get_purchase_items(purchase["id"])
+    ]
+    return data
+
+
+def collect_errors(errors):
+    summary = []
+    for key, value in errors.items():
+        if key == "items":
+            summary.append(value)
+        elif value:
+            summary.append(str(value))
+    return summary
