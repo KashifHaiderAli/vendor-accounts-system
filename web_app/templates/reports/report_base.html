@@ -1,0 +1,44 @@
+<section class="app-card">
+    <div class="app-card-header">
+        <div>
+            <h3>{{ report_title }}</h3>
+            <p>{{ rows|length }} row{{ rows|length|pluralize }} found.</p>
+        </div>
+    </div>
+    {% if summary %}
+    <div class="app-card-body report-summary-grid">
+        {% for label, value in summary.items %}
+        <div class="report-summary-item">
+            <span>{{ label }}</span>
+            <strong>{{ value }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead>
+                <tr>
+                    {% for column in columns %}
+                    <th class="{% if column.kind == 'money' %}text-end{% endif %}">{{ column.label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    {% for cell in row.cells %}
+                    <td class="{% if cell.kind == 'money' %}text-end{% endif %}">
+                        {% if cell.kind == 'money' %}{{ cell.value|floatformat:2 }}{% else %}{{ cell.value|default:"-" }}{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ columns|length }}" class="text-center text-muted py-4">No rows found for the selected filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>

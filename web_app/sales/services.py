@@ -7,6 +7,7 @@ from django.db import connection, transaction
 
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.print_utils import build_print_context
 from masters.master_utils import create_linked_account
 from settings_module.services import get_company_settings, get_numbering_settings, get_tax_settings, log_user_activity, now_text
 
@@ -875,6 +876,7 @@ def get_print_context(company_id, branch_id, quotation_id):
         "company_settings": get_company_settings(company_id, branch_id) or {},
         "quotation": quotation,
         "items": get_quotation_items(quotation_id),
+        **build_print_context(company_id),
     }
 
 

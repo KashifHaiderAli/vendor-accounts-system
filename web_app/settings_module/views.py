@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core.logo_utils import get_company_logo_url, save_company_logo
 from core import validators as form_validators
 
 from .services import (
@@ -63,12 +64,21 @@ def company_settings_view(request):
             for field in COMPANY_FIELDS
             if field != "is_active"
         }
+        if request.POST.get("remove_logo") == "on":
+            company_data["logo_path"] = ""
+        elif request.FILES.get("logo_file"):
+            try:
+                company_data["logo_path"] = save_company_logo(request.FILES["logo_file"])
+            except Exception as exc:
+                errors["logo_file"] = str(exc)
+        else:
+            company_data["logo_path"] = company.get("logo_path") or company_data.get("logo_path", "")
         company_data["is_active"] = 1 if request.POST.get("is_active") == "on" else 0
         settings_data = {
             field: request.POST.get(field, "").strip()
             for field in COMPANY_SETTINGS_FIELDS
         }
-        errors = validate_company_form(company_data, settings_data)
+        errors.update(validate_company_form(company_data, settings_data))
         form_data = {**company_data, **settings_data}
 
         if not errors:
@@ -101,6 +111,7 @@ def company_settings_view(request):
             "form_data": form_data,
             "errors": errors,
             "error_summary": form_validators.collect_form_errors(errors),
+            "logo_url": get_company_logo_url(company_id),
         },
     )
 

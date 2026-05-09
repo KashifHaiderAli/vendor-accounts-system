@@ -9,7 +9,7 @@
     </div>
 </section>
 
-<form method="post" class="app-card settings-form-card">
+<form method="post" enctype="multipart/form-data" class="app-card settings-form-card">
     {% csrf_token %}
     <div class="app-card-header">
         <div>
@@ -67,8 +67,29 @@
             </div>
             <div class="full-span">
                 <label class="form-label" for="logo_path">Logo Path</label>
-                <input class="form-control {% if errors.logo_path %}is-invalid{% endif %}" id="logo_path" name="logo_path" maxlength="500" value="{{ form_data.logo_path|default:'' }}" placeholder="Future upload path">
+                <input class="form-control {% if errors.logo_path %}is-invalid{% endif %}" id="logo_path" name="logo_path" maxlength="500" value="{{ form_data.logo_path|default:'' }}" placeholder="Stored logo path" readonly>
                 {% if errors.logo_path %}<div class="invalid-feedback">{{ errors.logo_path }}</div>{% endif %}
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="logo_file">Company Logo</label>
+                <div class="logo-upload-panel">
+                    {% if logo_url %}
+                    <img class="company-logo-preview" src="{{ logo_url }}" alt="Company logo preview">
+                    {% else %}
+                    <div class="company-logo-placeholder"><i class="bi bi-image"></i><span>No logo uploaded</span></div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <input class="form-control {% if errors.logo_file %}is-invalid{% endif %}" id="logo_file" name="logo_file" type="file" accept=".png,.jpg,.jpeg,.webp,.bmp,image/png,image/jpeg,image/webp,image/bmp">
+                        <div class="form-text">PNG, JPG, JPEG, WEBP, or BMP. Maximum 2 MB. Stored as a stable company logo file.</div>
+                        {% if errors.logo_file %}<div class="invalid-feedback d-block">{{ errors.logo_file }}</div>{% endif %}
+                        {% if logo_url %}
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo">
+                            <label class="form-check-label" for="remove_logo">Remove logo from company profile</label>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             <div class="form-check form-switch">
                 <input class="form-check-input" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>

@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import AccountingError, post_sales_invoice_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.print_utils import build_print_context
 from settings_module.services import get_company_settings, get_numbering_settings, get_tax_settings, log_user_activity, now_text
 
 
@@ -716,4 +717,4 @@ def get_print_context(company_id, branch_id, invoice_id):
         company = dictfetchone(cursor) or {}
         cursor.execute("SELECT * FROM branches WHERE id=%s AND company_id=%s LIMIT 1", [branch_id, company_id])
         branch = dictfetchone(cursor) or {}
-    return {"company": company, "branch": branch, "company_settings": get_company_settings(company_id, branch_id) or {}, "tax_settings": get_tax_settings(company_id, branch_id) or {}, "invoice": get_invoice(company_id, branch_id, invoice_id), "items": get_invoice_items(invoice_id), "print_date": today_iso()}
+    return {"company": company, "branch": branch, "company_settings": get_company_settings(company_id, branch_id) or {}, "tax_settings": get_tax_settings(company_id, branch_id) or {}, "invoice": get_invoice(company_id, branch_id, invoice_id), "items": get_invoice_items(invoice_id), "print_date": today_iso(), **build_print_context(company_id)}

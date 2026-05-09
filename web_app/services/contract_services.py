@@ -7,6 +7,7 @@ from django.db import connection, transaction
 
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.print_utils import build_print_context
 from sales import invoice_services
 from settings_module.services import get_numbering_settings, get_tax_settings, log_user_activity, now_text
 
@@ -268,4 +269,4 @@ def get_print_context(company_id, branch_id, contract_id):
         company = dictfetchone(cursor)
         cursor.execute("SELECT * FROM branches WHERE id=%s LIMIT 1", [branch_id])
         branch = dictfetchone(cursor)
-    return {"contract": contract, "company": company, "branch": branch, "print_date": today_iso()}
+    return {"contract": contract, "company": company, "branch": branch, "print_date": today_iso(), **build_print_context(company_id)}

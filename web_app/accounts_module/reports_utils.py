@@ -21,8 +21,8 @@ def get_trial_balance(company_id, branch_id, date_to=None):
                 a.account_code,
                 a.account_name,
                 a.account_type,
-                COALESCE(SUM(jel.debit), 0) AS debit_total,
-                COALESCE(SUM(jel.credit), 0) AS credit_total
+                COALESCE(SUM(CASE WHEN je.id IS NOT NULL THEN jel.debit ELSE 0 END), 0) AS debit_total,
+                COALESCE(SUM(CASE WHEN je.id IS NOT NULL THEN jel.credit ELSE 0 END), 0) AS credit_total
             FROM accounts a
             LEFT JOIN journal_entry_lines jel ON jel.account_id = a.id
             LEFT JOIN journal_entries je ON je.id = jel.journal_entry_id

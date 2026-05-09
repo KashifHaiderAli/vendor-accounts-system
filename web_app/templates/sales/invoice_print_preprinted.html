@@ -4,8 +4,13 @@
     <meta charset="utf-8">
     <title>{{ invoice.invoice_no }}</title>
     <style>
-        :root { --invoice-top-offset: 42mm; --invoice-left-offset: 10mm; }
-        body { font-family: Arial, sans-serif; color:#111827; margin:0; }
+        :root {
+            --invoice-top-offset: {{ preprinted_invoice_settings.top_margin_mm|default:35 }}mm;
+            --invoice-left-offset: {{ preprinted_invoice_settings.left_margin_mm|default:10 }}mm;
+            --invoice-font-size: {{ preprinted_invoice_settings.font_size|default:12 }}px;
+            --invoice-line-height: {{ preprinted_invoice_settings.line_height|default:1.4 }};
+        }
+        body { font-family: Arial, sans-serif; color:#111827; margin:0; font-size:var(--invoice-font-size); line-height:var(--invoice-line-height); }
         .sheet { padding: var(--invoice-top-offset) 14mm 14mm var(--invoice-left-offset); }
         table { width:100%; border-collapse:collapse; margin:10px 0 18px; }
         th,td { border:1px solid #d1d5db; padding:7px 8px; font-size:12px; }

@@ -1,0 +1,28 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ report_title }}</title>
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+</head>
+<body>
+<div class="print-actions">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+</div>
+<main class="print-page">
+    <header class="print-header">
+        <div>
+            {% if logo_url %}<img class="print-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
+            <div class="company-name">{{ current_company_name }}</div>
+            <div class="muted">{{ current_branch_name }}</div>
+        </div>
+        <div class="print-title">
+            <h1>{{ report_title }}</h1>
+            <div class="muted">{{ current_date }}</div>
+        </div>
+    </header>
+    {% include "reports/report_base.html" %}
+</main>
+</body>
+</html>

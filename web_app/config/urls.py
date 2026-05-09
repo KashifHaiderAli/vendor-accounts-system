@@ -11,6 +11,7 @@ handler404 = "core.views.page_not_found_view"
 
 urlpatterns = [
     path("", core_views.dashboard, name="dashboard"),
+    path("company-logo/", core_views.company_logo, name="company_logo"),
     path("", include("authentication.urls")),
     path("masters/", include("masters.urls")),
     path("sales/", include("sales.urls")),

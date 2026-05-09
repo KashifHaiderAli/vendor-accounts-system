@@ -60,12 +60,12 @@ SIDEBAR_GROUPS = [
         "label": "Reports",
         "icon": "bi-bar-chart",
         "items": [
-            ("Customer Reports", "customer_reports", "reports:index"),
-            ("Supplier Reports", "supplier_reports", "reports:index"),
-            ("Sales Reports", "sales_reports", "reports:index"),
-            ("Purchase Reports", "purchase_reports", "reports:index"),
-            ("Service Reports", "service_reports", "reports:index"),
-            ("Accounting Reports", "accounting_reports", "reports:index"),
+            ("Customer Reports", "customer_reports", "reports:customer_outstanding"),
+            ("Supplier Reports", "supplier_reports", "reports:supplier_payable"),
+            ("Sales Reports", "sales_reports", "reports:sales_invoices"),
+            ("Purchase Reports", "purchase_reports", "reports:purchase_report"),
+            ("Service Reports", "service_reports", "reports:service_contracts"),
+            ("Accounting Reports", "accounting_reports", "reports:trial_balance"),
         ],
     },
     {

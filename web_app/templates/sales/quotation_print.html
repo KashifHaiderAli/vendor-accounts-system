@@ -43,7 +43,7 @@
     <main class="print-page">
         <header class="print-header">
             <div class="company-block">
-                {% if company.logo_path %}<img class="company-logo" src="{{ company.logo_path }}" alt="Company logo">{% endif %}
+                {% if logo_url %}<img class="company-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
                 <div>
                     <div class="company-name">{{ company.company_name }}</div>
                     <p class="muted">{{ company.address|default:"" }}</p>

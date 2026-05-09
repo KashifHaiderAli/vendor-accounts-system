@@ -376,8 +376,53 @@ python manage.py test_dashboard_queries
 
 Smoke data now creates one expense voucher when the expense voucher table exists.
 
+## Company Logo Upload
+
+Company logos now use the existing `companies.logo_path` field.
+
+- DB App company setup includes a Browse Logo button
+- Web App `/settings/company/` supports logo upload, preview, and remove
+- Allowed logo formats: PNG, JPG, JPEG, WEBP, BMP
+- Maximum web upload size: 2 MB
+- Logos are copied to the database folder under `company_assets/logo/company_logo.<ext>`
+- Quotation print, digital invoice print, service contract print, and report print headers show the logo when available
+- Pre-printed invoice output intentionally does not show the logo or company header
+
+## Phase 18 Reports
+
+Reports are available under `/reports/` with branch-aware filters, CSV export, and print-friendly pages.
+
+Priority reports implemented with real SQL queries:
+
+- Customer Ledger, Customer Outstanding, Customer Aging, Customer Statement
+- Supplier Ledger, Supplier Payable, Supplier Aging, Supplier Statement
+- Sales Invoice Report and Receipt Report
+- Purchase Report and Supplier Payment Report
+- Cash Book, Bank Book, General Ledger, Trial Balance, Profit and Loss, Balance Sheet
+
+Additional report URLs are present as safe placeholders so links do not break while the detailed report bodies are expanded.
+
+Run the report query smoke test:
+
+```powershell
+python manage.py seed_smoke_test_data
+python manage.py test_reports_queries
+```
+
+CSV export is available from each report screen. The PDF button opens the print-friendly HTML view so the browser can print or save as PDF without adding a heavy Windows-sensitive PDF dependency.
+
+## Phase 19 Print Finalization
+
+Common print helpers and CSS were added for stable A4 output.
+
+- Shared print CSS lives in `static/css/print.css`
+- Pre-printed invoice alignment defaults live in `core/print_settings.py`
+- Pre-printed invoice supports CSS variables for top offset, left offset, font size, and line height
+- Digital document prints can show the company logo through a safe logo-serving route
+- Future work can move print alignment settings from constants into database-backed settings
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Full reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Phase 18 adds the reporting framework and priority reports. Phase 19 adds print/PDF layout finalization helpers.

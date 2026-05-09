@@ -1,7 +1,9 @@
+from django.http import FileResponse, Http404
 from django.shortcuts import render
 
 from authentication.decorators import permission_required_custom
 from .dashboard_utils import dashboard_data
+from .logo_utils import get_company_logo_path
 
 from .utils import build_page_context
 
@@ -22,3 +24,10 @@ def permission_denied_view(request, exception=None):
 
 def page_not_found_view(request, exception=None):
     return render(request, "errors/404.html", status=404)
+
+
+def company_logo(request):
+    logo_path = get_company_logo_path(request.session.get("company_id"))
+    if not logo_path:
+        raise Http404("Company logo was not found.")
+    return FileResponse(open(logo_path, "rb"))
