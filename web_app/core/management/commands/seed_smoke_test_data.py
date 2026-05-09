@@ -8,8 +8,9 @@ from django.db import connection
 from accounts_module.accounting_utils import ensure_default_chart_of_accounts
 from authentication.auth_utils import dictfetchone
 from masters.master_utils import create_linked_account
-from purchases import payment_services, services as purchase_services
-from sales import delivery_services, invoice_services, receipt_services, services as sales_services
+from purchases import payment_services, return_services as purchase_return_services, services as purchase_services
+from sales import delivery_services, invoice_services, receipt_services, return_services as sales_return_services, services as sales_services
+from services import contract_services
 from settings_module.services import now_text
 
 
@@ -74,6 +75,10 @@ class Command(BaseCommand):
         invoice = self.ensure_sales_invoice(company_id, branch_id, user_id, challan, stats)
         self.ensure_customer_receipt(company_id, branch_id, user_id, invoice, cash_account, stats)
         self.ensure_supplier_payment(company_id, branch_id, user_id, purchase, cash_account, stats)
+        self.ensure_sales_return(company_id, branch_id, user_id, invoice, stats)
+        self.ensure_purchase_return(company_id, branch_id, user_id, purchase, stats)
+        contract = self.ensure_service_contract(company_id, branch_id, user_id, customer_1, stats)
+        self.ensure_contract_invoice(company_id, branch_id, user_id, contract, stats)
 
         for bucket, counter in stats.buckets.items():
             self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
@@ -388,6 +393,83 @@ class Command(BaseCommand):
             raise RuntimeError(f"Smoke supplier payment validation failed: {errors}")
         record_id = payment_services.save_payment(company_id, branch_id, user_id, cleaned)
         stats.add("supplier_payments", True)
+        return record_id
+
+    def ensure_sales_return(self, company_id, branch_id, user_id, invoice_id, stats):
+        existing = self.first_row("SELECT id FROM sales_returns WHERE company_id = %s AND branch_id = %s AND sales_invoice_id = %s AND return_reason = 'Smoke sales return.' LIMIT 1", [company_id, branch_id, invoice_id])
+        if existing:
+            stats.add("sales_returns", False)
+            return existing["id"]
+        invoice = sales_return_services.get_invoice(company_id, branch_id, invoice_id)
+        if not invoice:
+            stats.add("sales_returns", False)
+            return None
+        data = sales_return_services.default_form_data(company_id, branch_id, invoice)
+        data.update({"return_reason": "Smoke sales return.", "remarks": "Smoke credit note."})
+        if data.get("items"):
+            data["items"] = [data["items"][0]]
+            data["items"][0]["quantity"] = "1"
+        errors, cleaned = sales_return_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            stats.add("sales_returns", False)
+            return None
+        record_id = sales_return_services.save_return(company_id, branch_id, user_id, cleaned)
+        stats.add("sales_returns", True)
+        return record_id
+
+    def ensure_purchase_return(self, company_id, branch_id, user_id, purchase_id, stats):
+        existing = self.first_row("SELECT id FROM purchase_returns WHERE company_id = %s AND branch_id = %s AND supplier_purchase_id = %s AND return_reason = 'Smoke purchase return.' LIMIT 1", [company_id, branch_id, purchase_id])
+        if existing:
+            stats.add("purchase_returns", False)
+            return existing["id"]
+        purchase = purchase_return_services.get_purchase(company_id, branch_id, purchase_id)
+        if not purchase:
+            stats.add("purchase_returns", False)
+            return None
+        data = purchase_return_services.default_form_data(company_id, branch_id, purchase)
+        data.update({"return_reason": "Smoke purchase return.", "remarks": "Smoke debit note."})
+        if data.get("items"):
+            data["items"] = [data["items"][0]]
+            data["items"][0]["quantity"] = "1"
+        errors, cleaned = purchase_return_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            stats.add("purchase_returns", False)
+            return None
+        record_id = purchase_return_services.save_return(company_id, branch_id, user_id, cleaned)
+        stats.add("purchase_returns", True)
+        return record_id
+
+    def ensure_service_contract(self, company_id, branch_id, user_id, customer_id, stats):
+        existing = self.first_row("SELECT id FROM service_contracts WHERE company_id = %s AND branch_id = %s AND service_type = 'Smoke Support Contract' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("service_contracts", False)
+            return existing["id"]
+        data = contract_services.default_form_data(company_id, branch_id)
+        data.update({"customer_id": customer_id, "service_type": "Smoke Support Contract", "billing_cycle": "Monthly", "contract_amount": "2500", "tax_applicable": 1, "contract_details": "Smoke monthly support contract.", "remarks": "Smoke service contract."})
+        errors, cleaned = contract_services.validate_contract(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke service contract validation failed: {errors}")
+        record_id = contract_services.save_contract(company_id, branch_id, user_id, cleaned)
+        stats.add("service_contracts", True)
+        return record_id
+
+    def ensure_contract_invoice(self, company_id, branch_id, user_id, contract_id, stats):
+        if not contract_id:
+            stats.add("contract_invoices", False)
+            return None
+        contract = contract_services.get_contract(company_id, branch_id, contract_id)
+        existing = self.first_row("SELECT id FROM sales_invoices WHERE company_id = %s AND branch_id = %s AND remarks = %s LIMIT 1", [company_id, branch_id, f"Generated from service contract {contract['contract_no']}."])
+        if existing:
+            stats.add("contract_invoices", False)
+            return existing["id"]
+        class FakeRequest:
+            session = {"company_id": company_id, "current_branch_id": branch_id, "user_id": user_id}
+        try:
+            record_id = contract_services.generate_invoice_from_contract(FakeRequest(), contract)
+        except ValueError:
+            stats.add("contract_invoices", False)
+            return None
+        stats.add("contract_invoices", True)
         return record_id
 
 

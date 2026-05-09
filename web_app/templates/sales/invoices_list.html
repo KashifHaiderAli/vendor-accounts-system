@@ -39,6 +39,7 @@
                         <a class="btn btn-sm btn-light" href="{% url 'sales:invoice_print' row.id %}" title="Print"><i class="bi bi-printer"></i></a>
                         <a class="btn btn-sm btn-light" href="{% url 'sales:invoice_digital_print' row.id %}" title="Digital Print"><i class="bi bi-file-richtext"></i></a>
                         {% if can_receipt and row.status != "Cancelled" and row.status != "Paid" %}<a class="btn btn-sm btn-light" href="{% url 'sales:receipt_from_invoice' row.id %}" title="Receive Payment"><i class="bi bi-cash-coin"></i></a>{% endif %}
+                        {% if can_return and row.status != "Cancelled" %}<a class="btn btn-sm btn-light" href="{% url 'sales:return_from_invoice' row.id %}" title="Sales Return"><i class="bi bi-arrow-counterclockwise"></i></a>{% endif %}
                         {% if can_edit and row.status != "Cancelled" %}<a class="btn btn-sm btn-light" href="{% url 'sales:invoice_edit' row.id %}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
                         {% if can_cancel and row.status != "Cancelled" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'sales:invoice_cancel' row.id %}" title="Cancel"><i class="bi bi-x-circle"></i></a>{% endif %}
                     </td>

@@ -50,4 +50,11 @@ urlpatterns = [
     path("receipts/<int:receipt_id>/edit/", views.receipt_form, name="receipt_edit"),
     path("receipts/<int:receipt_id>/cancel/", views.cancel_receipt, name="receipt_cancel"),
     path("receipts/<int:receipt_id>/print/", views.print_receipt, name="receipt_print"),
+    path("returns/", views.sales_returns_list, name="returns"),
+    path("returns/new/", views.sales_return_form, name="return_new"),
+    path("returns/from-invoice/<int:invoice_id>/", views.sales_return_form, name="return_from_invoice"),
+    path("returns/<int:return_id>/", views.sales_return_detail, name="return_detail"),
+    path("returns/<int:return_id>/edit/", views.sales_return_form, name="return_edit"),
+    path("returns/<int:return_id>/cancel/", views.cancel_sales_return, name="return_cancel"),
+    path("returns/<int:return_id>/print/", views.print_sales_return, name="return_print"),
 ]

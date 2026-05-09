@@ -27,7 +27,7 @@ SIDEBAR_GROUPS = [
             ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations"),
             ("Delivery Challans", "delivery_challans", "sales:delivery_challans"),
             ("Sales Invoices / Cash Memo", "sales_invoices", "sales:invoices"),
-            ("Sales Returns", "sales_returns", "sales:index"),
+            ("Sales Returns", "sales_returns", "sales:returns"),
             ("Customer Receipts", "customer_receipts", "sales:receipts"),
         ],
     },
@@ -36,7 +36,7 @@ SIDEBAR_GROUPS = [
         "icon": "bi-cart-check",
         "items": [
             ("Supplier Purchases", "supplier_purchases", "purchases:supplier_purchases"),
-            ("Purchase Returns", "purchase_returns", "purchases:index"),
+            ("Purchase Returns", "purchase_returns", "purchases:returns"),
             ("Supplier Payments", "supplier_payments", "purchases:supplier_payments"),
         ],
     },
@@ -44,7 +44,7 @@ SIDEBAR_GROUPS = [
         "label": "Services",
         "icon": "bi-briefcase",
         "items": [
-            ("Service Contracts", "service_contracts", "services:index"),
+            ("Service Contracts", "service_contracts", "services:contracts"),
         ],
     },
     {

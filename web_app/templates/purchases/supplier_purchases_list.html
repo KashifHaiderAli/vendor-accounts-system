@@ -45,6 +45,7 @@
                         <a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_detail' row.id %}" title="View"><i class="bi bi-eye"></i></a>
                         {% if can_print %}<a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_print' row.id %}" title="Print"><i class="bi bi-printer"></i></a>{% endif %}
                         {% if can_payment and row.status != "Cancelled" and row.status != "Paid" %}<a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_payment_from_purchase' row.id %}" title="Make Payment"><i class="bi bi-wallet2"></i></a>{% endif %}
+                        {% if can_return and row.status != "Cancelled" %}<a class="btn btn-sm btn-light" href="{% url 'purchases:return_from_purchase' row.id %}" title="Purchase Return"><i class="bi bi-arrow-counterclockwise"></i></a>{% endif %}
                         {% if can_edit and row.status != "Cancelled" %}<a class="btn btn-sm btn-light" href="{% url 'purchases:supplier_purchase_edit' row.id %}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
                         {% if can_cancel and row.status != "Cancelled" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'purchases:supplier_purchase_cancel' row.id %}" title="Cancel"><i class="bi bi-x-circle"></i></a>{% endif %}
                     </td>

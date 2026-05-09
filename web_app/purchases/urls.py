@@ -20,4 +20,11 @@ urlpatterns = [
     path("supplier-payments/<int:payment_id>/edit/", views.supplier_payment_form, name="supplier_payment_edit"),
     path("supplier-payments/<int:payment_id>/cancel/", views.cancel_supplier_payment, name="supplier_payment_cancel"),
     path("supplier-payments/<int:payment_id>/print/", views.print_supplier_payment, name="supplier_payment_print"),
+    path("returns/", views.purchase_returns_list, name="returns"),
+    path("returns/new/", views.purchase_return_form, name="return_new"),
+    path("returns/from-purchase/<int:purchase_id>/", views.purchase_return_form, name="return_from_purchase"),
+    path("returns/<int:return_id>/", views.purchase_return_detail, name="return_detail"),
+    path("returns/<int:return_id>/edit/", views.purchase_return_form, name="return_edit"),
+    path("returns/<int:return_id>/cancel/", views.cancel_purchase_return, name="return_cancel"),
+    path("returns/<int:return_id>/print/", views.print_purchase_return, name="return_print"),
 ]

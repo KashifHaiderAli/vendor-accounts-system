@@ -10,7 +10,7 @@ from authentication.decorators import login_required_custom, permission_required
 from core import validators
 from settings_module.services import log_user_activity
 
-from . import delivery_services, invoice_services, receipt_services, services
+from . import delivery_services, invoice_services, receipt_services, return_services, services
 
 
 SALES_CARDS = [
@@ -18,7 +18,7 @@ SALES_CARDS = [
     ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations", "bi-clipboard-check", "Record customer POs, calls, messages, and direct confirmations."),
     ("Delivery Challans", "delivery_challans", "sales:delivery_challans", "bi-truck", "Issue no-amount delivery documents."),
     ("Sales Invoices / Cash Memo", "sales_invoices", "sales:invoices", "bi-receipt", "Issue tax invoices and cash memos."),
-    ("Sales Returns", "sales_returns", "sales:index", "bi-arrow-counterclockwise", "Future return workflow."),
+    ("Sales Returns", "sales_returns", "sales:returns", "bi-arrow-counterclockwise", "Record sales returns and post credit note journals."),
     ("Customer Receipts", "customer_receipts", "sales:receipts", "bi-cash-coin", "Record customer payments and post receipt journals."),
 ]
 
@@ -681,6 +681,7 @@ def invoices_list(request):
             "can_edit": user_has_permission(request, "sales_invoices", "edit"),
             "can_cancel": can_cancel_invoice(request),
             "can_receipt": user_has_permission(request, "customer_receipts", "add"),
+            "can_return": user_has_permission(request, "sales_returns", "add"),
         },
     )
 
@@ -799,6 +800,7 @@ def invoice_detail(request, invoice_id):
             "can_edit": user_has_permission(request, "sales_invoices", "edit") and invoice.get("status") != "Cancelled",
             "can_cancel": can_cancel_invoice(request) and invoice.get("status") != "Cancelled",
             "can_receipt": user_has_permission(request, "customer_receipts", "add") and invoice.get("status") not in {"Cancelled", "Paid"},
+            "can_return": user_has_permission(request, "sales_returns", "add") and invoice.get("status") != "Cancelled",
         },
     )
 
@@ -1006,6 +1008,122 @@ def print_receipt(request, receipt_id):
     return render(request, "sales/receipt_print.html", receipt_services.get_print_context(company_id, branch_id, receipt_id))
 
 
+@permission_required_custom("sales_returns", "view")
+def sales_returns_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = return_services.list_returns(company_id, branch_id, search, status, date_from, date_to, page)
+    return render(request, "sales/sales_returns_list.html", {"page_title": "Sales Returns", "rows": rows, "search": search, "status": status, "date_from": date_from, "date_to": date_to, "pagination": pagination, "statuses": return_services.RETURN_STATUSES, "can_add": user_has_permission(request, "sales_returns", "add"), "can_edit": user_has_permission(request, "sales_returns", "edit"), "can_cancel": can_cancel_sales_return(request)})
+
+
+@login_required_custom
+def sales_return_form(request, return_id=None, invoice_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = return_id is not None
+    if not user_has_permission(request, "sales_returns", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+    sales_return = return_services.get_return(company_id, branch_id, return_id) if is_edit else None
+    if is_edit and not sales_return:
+        messages.error(request, "Sales return was not found.")
+        return redirect("sales:returns")
+    if is_edit and sales_return.get("status") == "Cancelled":
+        messages.error(request, "Cancelled sales returns cannot be edited.")
+        return redirect("sales:return_detail", return_id=return_id)
+    source_invoice = return_services.get_invoice(company_id, branch_id, invoice_id) if invoice_id else None
+    if invoice_id and not source_invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    posted = bool(sales_return and sales_return.get("journal_entry_id"))
+    form_data = sales_return_form_data(sales_return) if is_edit else return_services.default_form_data(company_id, branch_id, source_invoice)
+    errors = {}
+    if request.method == "POST":
+        if posted:
+            form_data.update({"return_reason": request.POST.get("return_reason", ""), "remarks": request.POST.get("remarks", "")})
+            form_data["return_reason"], errors["return_reason"] = validators.clean_text(form_data.get("return_reason"), field_name="Return Reason")
+            form_data["remarks"], errors["remarks"] = validators.clean_text(form_data.get("remarks"), field_name="Remarks")
+            errors = {key: value for key, value in errors.items() if value}
+            if not errors:
+                return_services.save_return(company_id, branch_id, request.session.get("user_id"), form_data, return_id)
+                log_user_activity(request, "UPDATE", "Sales Returns", "sales_returns", return_id, f"Updated non-financial details for sales return {sales_return['sales_return_no']}.")
+                messages.success(request, "Sales return updated successfully.")
+                return redirect("sales:return_detail", return_id=return_id)
+            messages.error(request, "Please correct the highlighted errors.")
+        else:
+            form_data = return_services.parse_post(request.POST)
+            errors, form_data = return_services.validate_and_calculate(form_data, company_id, branch_id, return_id)
+            if not errors:
+                try:
+                    saved_id = return_services.save_return(company_id, branch_id, request.session.get("user_id"), form_data, return_id)
+                    log_user_activity(request, "CREATE", "Sales Returns", "sales_returns", saved_id, f"Created sales return {form_data['sales_return_no']}.")
+                    messages.success(request, "Sales return created and posted successfully.")
+                    return redirect("sales:return_detail", return_id=saved_id)
+                except AccountingError as exc:
+                    messages.error(request, f"Accounting posting failed: {exc}")
+                except DatabaseError:
+                    messages.error(request, "Unable to save sales return. Please retry.")
+            else:
+                messages.error(request, "Please correct the highlighted errors.")
+    return render(request, "sales/sales_return_form.html", {"page_title": "Edit Sales Return" if is_edit else "New Sales Return", "form_data": form_data, "form_items": form_data.get("items", []), "errors": errors, "error_summary": collect_errors(errors), "is_edit": is_edit, "posted": posted, "customers": return_services.get_customers(company_id, branch_id), "invoices": return_services.get_invoices(company_id, branch_id, form_data.get("customer_id") or None), "items": return_services.get_items(company_id, branch_id)})
+
+
+@permission_required_custom("sales_returns", "view")
+def sales_return_detail(request, return_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    sales_return = return_services.get_return(company_id, branch_id, return_id)
+    if not sales_return:
+        messages.error(request, "Sales return was not found.")
+        return redirect("sales:returns")
+    return render(request, "sales/sales_return_detail.html", {"page_title": sales_return["sales_return_no"], "sales_return": sales_return, "items": return_services.get_return_items(return_id), "can_edit": user_has_permission(request, "sales_returns", "edit") and sales_return.get("status") != "Cancelled", "can_cancel": can_cancel_sales_return(request) and sales_return.get("status") != "Cancelled"})
+
+
+@login_required_custom
+def cancel_sales_return(request, return_id):
+    if not can_cancel_sales_return(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    sales_return = return_services.get_return(company_id, branch_id, return_id)
+    if not sales_return:
+        messages.error(request, "Sales return was not found.")
+        return redirect("sales:returns")
+    if request.method == "POST":
+        try:
+            return_services.cancel_return(request, sales_return)
+            messages.success(request, "Sales return cancelled and reversal journal created successfully.")
+            return redirect("sales:return_detail", return_id=return_id)
+        except (AccountingError, DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to cancel sales return.")
+            return redirect("sales:return_detail", return_id=return_id)
+    return render(request, "sales/confirm_cancel_sales_return.html", {"page_title": "Cancel Sales Return", "sales_return": sales_return})
+
+
+@permission_required_custom("sales_returns", "view")
+def print_sales_return(request, return_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    sales_return = return_services.get_return(company_id, branch_id, return_id)
+    if not sales_return:
+        messages.error(request, "Sales return was not found.")
+        return redirect("sales:returns")
+    return_services.mark_printed(request, sales_return)
+    return render(request, "sales/sales_return_print.html", return_services.get_print_context(company_id, branch_id, return_id))
+
+
 def render_print_response(request, quotation_id, action_label):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -1045,6 +1163,10 @@ def can_cancel_invoice(request):
 
 def can_cancel_receipt(request):
     return user_has_permission(request, "customer_receipts", "delete") or user_has_permission(request, "customer_receipts", "edit")
+
+
+def can_cancel_sales_return(request):
+    return user_has_permission(request, "sales_returns", "delete") or user_has_permission(request, "sales_returns", "edit")
 
 
 def form_data_from_quotation(company_id, branch_id, quotation):
@@ -1101,6 +1223,17 @@ def receipt_form_data(receipt):
         "adjusted_invoice_id": receipt.get("adjusted_invoice_id") or "",
         "remarks": receipt.get("remarks") or "",
     }
+
+
+def sales_return_form_data(sales_return):
+    data = dict(sales_return)
+    for key in ["return_reason", "remarks"]:
+        data[key] = data.get(key) or ""
+    data["items"] = [
+        {"item_service_id": item.get("item_service_id") or "", "sales_invoice_item_id": item.get("sales_invoice_item_id") or "", "description": item.get("description") or "", "quantity": item.get("quantity") or "0", "rate": item.get("rate") or "0", "discount_percent": item.get("discount_percent") or "0", "discount_amount": item.get("discount_amount") or "0", "tax_percent": item.get("tax_percent") or "0", "tax_amount": item.get("tax_amount") or "0", "line_total": item.get("line_total") or "0", "errors": {}}
+        for item in return_services.get_return_items(sales_return["id"])
+    ]
+    return data
 
 
 def challan_form_data(challan):

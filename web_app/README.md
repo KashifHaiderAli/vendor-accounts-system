@@ -315,8 +315,34 @@ Phase 13 adds Supplier Payments under `/purchases/supplier-payments/`:
 
 The smoke data command also creates one smoke customer receipt and one smoke supplier payment when matching smoke invoice/purchase balances are available.
 
+## Phase 14 Sales and Purchase Returns
+
+Phase 14 adds return workflows:
+
+- Sales Returns under `/sales/returns/`
+- Purchase Returns under `/purchases/returns/`
+- Returns can be created directly or from the related invoice/purchase
+- Return quantities are checked against original quantities less previous non-cancelled returns
+- Sales returns post credit note journals and reduce invoice balance
+- Purchase returns post debit note journals and reduce supplier purchase balance
+- Posted return financial fields are locked; cancel and recreate if financial details need correction
+- Cancelling a return keeps the record, creates a reversal journal, and restores source balance/status
+- Returns do not affect inventory and do not create cash refunds automatically
+
+## Phase 15 Service Contracts
+
+Phase 15 adds Service Contracts under `/services/contracts/`:
+
+- Create, edit, print, and close customer service contracts
+- Supports Monthly, Quarterly, Yearly, and One Time billing cycles
+- Contract invoice generation creates a posted sales invoice through the existing invoice module
+- Contract invoice generation updates next billing date, or closes one-time contracts
+- Service contracts do not post journal entries directly; accounting starts when an invoice is generated
+
+The smoke data command also creates one smoke sales return, one smoke purchase return, one active service contract, and one idempotent contract invoice when possible.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Return and report modules will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Full reports will be added in later phases.
