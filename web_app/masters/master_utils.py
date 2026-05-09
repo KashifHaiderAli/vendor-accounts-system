@@ -206,7 +206,7 @@ def create_linked_account(company_id, branch_id, account_code, account_name, acc
                 parent_id, is_control_account, is_system_account, is_active,
                 created_at, updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, 0, 0, 1, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, 0, 1, 1, %s, %s)
             """,
             [
                 company_id,

@@ -48,8 +48,8 @@
                         <td>{{ row.account_name }}</td>
                         <td>{{ row.account_type }}</td>
                         <td>{{ row.parent_account_name|default:"-" }}</td>
-                        <td>{% if row.is_control_account %}<span class="soft-badge">Yes</span>{% else %}-{% endif %}</td>
-                        <td>{% if row.is_system_account %}<span class="soft-badge">Yes</span>{% else %}-{% endif %}</td>
+                        <td>{% if row.is_control_account == 1 %}<span class="soft-badge">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
+                        <td>{% if row.is_system_account == 1 %}<span class="soft-badge">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
                         <td>{% include "masters/partials/status_badge.html" with value=row.is_active %}</td>
                     </tr>
                     {% empty %}

@@ -10,23 +10,23 @@ from settings_module.services import now_text
 
 DEFAULT_ACCOUNTS = [
     ("ASSET", "Assets", "Assets", None, 1),
-    ("CASH", "Cash", "Assets", "Assets", 1),
-    ("BANK", "Bank", "Assets", "Assets", 1),
+    ("CASH", "Cash", "Assets", "Assets", 0),
+    ("BANK", "Bank", "Assets", "Assets", 0),
     ("AR", "Accounts Receivable", "Assets", "Assets", 1),
-    ("INPUT-TAX", "Input Tax Receivable", "Assets", "Assets", 1),
+    ("INPUT-TAX", "Input Tax Receivable", "Assets", "Assets", 0),
     ("LIABILITY", "Liabilities", "Liabilities", None, 1),
     ("AP", "Accounts Payable", "Liabilities", "Liabilities", 1),
-    ("OUTPUT-TAX", "Output Tax Payable", "Liabilities", "Liabilities", 1),
+    ("OUTPUT-TAX", "Output Tax Payable", "Liabilities", "Liabilities", 0),
     ("EQUITY", "Equity", "Equity", None, 1),
-    ("CAPITAL", "Capital / Opening Balance", "Equity", "Equity", 1),
+    ("CAPITAL", "Capital / Opening Balance", "Equity", "Equity", 0),
     ("INCOME", "Income", "Income", None, 1),
-    ("SALES", "Sales", "Income", "Income", 1),
-    ("SERVICE-INCOME", "Service Income", "Income", "Income", 1),
+    ("SALES", "Sales", "Income", "Income", 0),
+    ("SERVICE-INCOME", "Service Income", "Income", "Income", 0),
     ("EXPENSE", "Expenses", "Expenses", None, 1),
-    ("PURCHASES", "Purchases / Cost of Goods", "Expenses", "Expenses", 1),
+    ("PURCHASES", "Purchases / Cost of Goods", "Expenses", "Expenses", 0),
     ("OFFICE-EXP", "Office Expenses", "Expenses", "Expenses", 1),
-    ("SALES-RETURN", "Sales Returns", "Expenses", "Expenses", 1),
-    ("PURCHASE-RETURN", "Purchase Returns", "Expenses", "Expenses", 1),
+    ("SALES-RETURN", "Sales Returns", "Expenses", "Expenses", 0),
+    ("PURCHASE-RETURN", "Purchase Returns", "Expenses", "Expenses", 0),
 ]
 
 
@@ -108,9 +108,11 @@ def find_or_create_system_account(
 ):
     existing = get_account_by_name(company_id, branch_id, account_name)
     if existing:
+        update_account_flags(existing["id"], is_control_account, 1)
         return existing
     existing = get_account_by_code(company_id, branch_id, account_code)
     if existing:
+        update_account_flags(existing["id"], is_control_account, 1)
         return existing
 
     timestamp = now_iso()
@@ -139,6 +141,21 @@ def find_or_create_system_account(
         )
         account_id = cursor.lastrowid
     return get_account_by_id(account_id)
+
+
+def update_account_flags(account_id, is_control_account, is_system_account):
+    timestamp = now_iso()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE accounts
+            SET is_control_account = %s,
+                is_system_account = %s,
+                updated_at = %s
+            WHERE id = %s
+            """,
+            [is_control_account, is_system_account, timestamp, account_id],
+        )
 
 
 def unique_account_code(company_id, branch_id, account_code):
@@ -212,6 +229,9 @@ def list_chart_accounts(company_id, branch_id, search="", account_type="", statu
             params + [limit, offset],
         )
         rows = dictfetchall(cursor)
+    for row in rows:
+        row["is_control_account"] = int(row.get("is_control_account") or 0)
+        row["is_system_account"] = int(row.get("is_system_account") or 0)
     return rows, total
 
 

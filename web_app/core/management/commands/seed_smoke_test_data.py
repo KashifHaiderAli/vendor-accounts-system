@@ -91,6 +91,21 @@ class Command(BaseCommand):
             cursor.execute(sql, params or [])
             return dictfetchone(cursor)
 
+    def ensure_posting_system_account(self, account_id):
+        if not account_id:
+            return
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE accounts
+                SET is_control_account = 0,
+                    is_system_account = 1,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                [now_text(), account_id],
+            )
+
     def ensure_numbering_settings(self, company_id, branch_id):
         if self.first_row("SELECT id FROM numbering_settings WHERE company_id = %s AND branch_id = %s LIMIT 1", [company_id, branch_id]):
             return
@@ -133,12 +148,14 @@ class Command(BaseCommand):
         return record_id
 
     def ensure_customer(self, company_id, branch_id, user_id, code, name, terms_id, stats):
-        existing = self.first_row("SELECT id FROM customers WHERE company_id = %s AND branch_id = %s AND customer_code = %s LIMIT 1", [company_id, branch_id, code])
+        existing = self.first_row("SELECT id, account_id FROM customers WHERE company_id = %s AND branch_id = %s AND customer_code = %s LIMIT 1", [company_id, branch_id, code])
         if existing:
+            self.ensure_posting_system_account(existing.get("account_id"))
             stats.add("customers", False)
             return existing["id"]
         timestamp = now_text()
         account_id = create_linked_account(company_id, branch_id, f"AR-{code}", name, "Assets", "Accounts Receivable")
+        self.ensure_posting_system_account(account_id)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -157,12 +174,14 @@ class Command(BaseCommand):
         return record_id
 
     def ensure_supplier(self, company_id, branch_id, user_id, code, name, stats):
-        existing = self.first_row("SELECT id FROM suppliers WHERE company_id = %s AND branch_id = %s AND supplier_code = %s LIMIT 1", [company_id, branch_id, code])
+        existing = self.first_row("SELECT id, account_id FROM suppliers WHERE company_id = %s AND branch_id = %s AND supplier_code = %s LIMIT 1", [company_id, branch_id, code])
         if existing:
+            self.ensure_posting_system_account(existing.get("account_id"))
             stats.add("suppliers", False)
             return existing["id"]
         timestamp = now_text()
         account_id = create_linked_account(company_id, branch_id, f"AP-{code}", name, "Liability", "Accounts Payable")
+        self.ensure_posting_system_account(account_id)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -202,13 +221,15 @@ class Command(BaseCommand):
         return record_id
 
     def ensure_cash_bank(self, company_id, branch_id, user_id, name, account_type, stats):
-        existing = self.first_row("SELECT id FROM cash_bank_accounts WHERE company_id = %s AND branch_id = %s AND lower(account_name) = lower(%s) LIMIT 1", [company_id, branch_id, name])
+        existing = self.first_row("SELECT id, account_id FROM cash_bank_accounts WHERE company_id = %s AND branch_id = %s AND lower(account_name) = lower(%s) LIMIT 1", [company_id, branch_id, name])
         if existing:
+            self.ensure_posting_system_account(existing.get("account_id"))
             stats.add("cash_bank", False)
             return existing["id"]
         parent = "Cash" if account_type == "cash" else "Bank"
         code = "CASH-SMK" if account_type == "cash" else "BANK-SMK"
         account_id = create_linked_account(company_id, branch_id, code, name, "Assets", parent)
+        self.ensure_posting_system_account(account_id)
         timestamp = now_text()
         with connection.cursor() as cursor:
             cursor.execute(
@@ -226,11 +247,13 @@ class Command(BaseCommand):
         return record_id
 
     def ensure_expense_head(self, company_id, branch_id, user_id, code, name, stats):
-        existing = self.first_row("SELECT id FROM expense_heads WHERE company_id = %s AND branch_id = %s AND expense_code = %s LIMIT 1", [company_id, branch_id, code])
+        existing = self.first_row("SELECT id, account_id FROM expense_heads WHERE company_id = %s AND branch_id = %s AND expense_code = %s LIMIT 1", [company_id, branch_id, code])
         if existing:
+            self.ensure_posting_system_account(existing.get("account_id"))
             stats.add("expense_heads", False)
             return existing["id"]
         account_id = create_linked_account(company_id, branch_id, f"EXP-{code}", name, "Expense", "Office Expenses")
+        self.ensure_posting_system_account(account_id)
         timestamp = now_text()
         with connection.cursor() as cursor:
             cursor.execute(

@@ -70,6 +70,8 @@ def validate_journal_lines(company_id, branch_id, entry_date, lines):
             raise AccountingError("Journal line account was not found.")
         if not account_belongs_to_scope(account, company_id, branch_id):
             raise AccountingError("Journal line account does not belong to the current company/branch.")
+        if int(account.get("is_control_account") or 0) == 1:
+            raise AccountingError("Cannot post journal entry to a control account. Please select a posting account.")
         debit = money(line.get("debit"))
         credit = money(line.get("credit"))
         if debit < 0 or credit < 0:

@@ -456,6 +456,21 @@ python manage.py test_validation_safety
 
 The command checks duplicate document numbers, invalid invoice dates, negative totals, over-receipts, over-payments, unbalanced journals, missing linked accounts, invalid branch access, and expense voucher amount validation.
 
+## Chart Of Accounts Flags
+
+The Chart of Accounts uses two protection flags from the `accounts` table:
+
+- Control: parent/group accounts such as Assets, Liabilities, Accounts Receivable, and Office Expenses. These are shown as `Yes` and cannot receive direct journal postings.
+- System: accounts created or managed by the application. These are protected from unsafe edit/delete flows.
+
+Posting/detail accounts such as Cash, Bank, Sales, Purchases / Cost of Goods, tax accounts, customer linked accounts, supplier linked accounts, cash/bank linked accounts, and expense head linked accounts should show Control = `No`.
+
+For existing databases, repair account flags with:
+
+```powershell
+python manage.py fix_account_flags
+```
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
