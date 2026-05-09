@@ -281,12 +281,42 @@ Phase 11 adds Sales Invoices and Cash Memos under `/sales/invoices/`:
 - Cancelling an invoice creates a reversal journal entry and restores source document status where safe
 - Pre-printed invoice print excludes logo/company header and uses CSS offsets for A4 invoice stationery
 - Digital print includes company details and logo path when available
-- Payments are not recorded here; Customer Receipt is a future phase
+- Payments are recorded through the Customer Receipt module added in Phase 12
 
 The smoke data command also creates one posted smoke sales invoice from the smoke delivery challan.
+
+## Phase 12 Customer Receipt Module
+
+Phase 12 adds Customer Receipts under `/sales/receipts/`:
+
+- Create receipts directly or from a sales invoice
+- Supports Cash, Bank, Cheque, and Online Transfer modes
+- Receipts post journal entries through the hidden accounting engine
+- Debit Cash/Bank and credit Customer Receivable
+- Partial payments are supported and invoice balance/status is updated
+- Overpayment is blocked when adjusting a specific invoice
+- Advance/unadjusted customer receipts are allowed
+- Posted financial fields are locked; only reference number and remarks can be edited
+- Cancelling a receipt creates a reversal journal and restores invoice balance where applicable
+
+## Phase 13 Supplier Payment Module
+
+Phase 13 adds Supplier Payments under `/purchases/supplier-payments/`:
+
+- Create payments directly or from a supplier purchase
+- Supports Cash, Bank, Cheque, and Online Transfer modes
+- Supplier payments post journal entries through the hidden accounting engine
+- Debit Supplier Payable and credit Cash/Bank
+- Partial payments are supported and purchase balance/status is updated
+- Overpayment is blocked when adjusting a specific purchase
+- Advance/unadjusted supplier payments are allowed
+- Posted financial fields are locked; only reference number and remarks can be edited
+- Cancelling a payment creates a reversal journal and restores purchase balance where applicable
+
+The smoke data command also creates one smoke customer receipt and one smoke supplier payment when matching smoke invoice/purchase balances are available.
 
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Purchase, delivery challan, invoice, receipt, and report modules will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Return and report modules will be added in later phases.

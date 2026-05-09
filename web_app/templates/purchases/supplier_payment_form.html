@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Supplier Payment</span><h2>{{ page_title }}</h2><p>{% if posted %}Posted payment: only reference and remarks can be updated.{% else %}Record supplier settlement by cash, bank, cheque, or online transfer.{% endif %}</p></div>
+    <div class="page-header-actions"><a class="btn btn-light" href="{% url 'purchases:supplier_payments' %}"><i class="bi bi-arrow-left"></i> Back</a></div>
+</section>
+
+{% if error_summary %}<div class="alert alert-danger"><strong>Please fix these items:</strong><ul class="mb-0">{% for error in error_summary %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+
+<form class="app-card" method="post" novalidate>
+    {% csrf_token %}
+    <div class="app-card-header"><div><h3>Payment Details</h3><p>Supplier payment posting details.</p></div><i class="bi bi-wallet2"></i></div>
+    <div class="app-card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><label class="form-label">Payment No</label><input class="form-control {% if errors.payment_no %}is-invalid{% endif %}" name="payment_no" value="{{ form_data.payment_no }}" maxlength="50" {% if posted %}readonly{% endif %}>{% if errors.payment_no %}<div class="invalid-feedback">{{ errors.payment_no }}</div>{% endif %}</div>
+            <div class="col-md-3"><label class="form-label">Payment Date</label><input class="form-control {% if errors.payment_date %}is-invalid{% endif %}" type="date" name="payment_date" value="{{ form_data.payment_date }}" {% if posted %}readonly{% endif %}>{% if errors.payment_date %}<div class="invalid-feedback">{{ errors.payment_date }}</div>{% endif %}</div>
+            <div class="col-md-6"><label class="form-label">Supplier</label><select class="form-select {% if errors.supplier_id %}is-invalid{% endif %}" name="supplier_id" id="supplier-payment-supplier" {% if posted %}disabled{% endif %}><option value="">Select supplier</option>{% for supplier in suppliers %}<option value="{{ supplier.id }}" {% if form_data.supplier_id|stringformat:"s" == supplier.id|stringformat:"s" %}selected{% endif %}>{{ supplier.supplier_name }} ({{ supplier.supplier_code }})</option>{% endfor %}</select>{% if posted %}<input type="hidden" name="supplier_id" value="{{ form_data.supplier_id }}">{% endif %}{% if errors.supplier_id %}<div class="invalid-feedback">{{ errors.supplier_id }}</div>{% endif %}</div>
+            <div class="col-md-3"><label class="form-label">Payment Mode</label><select class="form-select {% if errors.payment_mode %}is-invalid{% endif %}" name="payment_mode" {% if posted %}disabled{% endif %}>{% for option in payment_modes %}<option value="{{ option }}" {% if form_data.payment_mode == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>{% if posted %}<input type="hidden" name="payment_mode" value="{{ form_data.payment_mode }}">{% endif %}{% if errors.payment_mode %}<div class="invalid-feedback">{{ errors.payment_mode }}</div>{% endif %}</div>
+            <div class="col-md-5"><label class="form-label">Cash / Bank Account</label><select class="form-select {% if errors.cash_bank_account_id %}is-invalid{% endif %}" name="cash_bank_account_id" {% if posted %}disabled{% endif %}><option value="">Select account</option>{% for account in cash_bank_accounts %}<option value="{{ account.id }}" {% if form_data.cash_bank_account_id|stringformat:"s" == account.id|stringformat:"s" %}selected{% endif %}>{{ account.account_name }} ({{ account.account_type|title }})</option>{% endfor %}</select>{% if posted %}<input type="hidden" name="cash_bank_account_id" value="{{ form_data.cash_bank_account_id }}">{% endif %}{% if errors.cash_bank_account_id %}<div class="invalid-feedback">{{ errors.cash_bank_account_id }}</div>{% endif %}</div>
+            <div class="col-md-4"><label class="form-label">Reference No</label><input class="form-control {% if errors.cheque_reference_no %}is-invalid{% endif %}" name="cheque_reference_no" value="{{ form_data.cheque_reference_no }}" maxlength="100">{% if errors.cheque_reference_no %}<div class="invalid-feedback">{{ errors.cheque_reference_no }}</div>{% endif %}</div>
+            <div class="col-md-6"><label class="form-label">Adjusted Purchase</label><select class="form-select {% if errors.adjusted_purchase_id %}is-invalid{% endif %}" name="adjusted_purchase_id" id="supplier-payment-purchase" {% if posted %}disabled{% endif %}><option value="">Supplier advance / unadjusted payment</option>{% for purchase in open_purchases %}<option value="{{ purchase.id }}" data-balance="{{ purchase.balance_amount }}" {% if form_data.adjusted_purchase_id|stringformat:"s" == purchase.id|stringformat:"s" %}selected{% endif %}>{{ purchase.purchase_no }} - Balance {{ purchase.balance_amount|floatformat:2 }}</option>{% endfor %}</select>{% if posted %}<input type="hidden" name="adjusted_purchase_id" value="{{ form_data.adjusted_purchase_id }}">{% endif %}{% if errors.adjusted_purchase_id %}<div class="invalid-feedback">{{ errors.adjusted_purchase_id }}</div>{% endif %}</div>
+            <div class="col-md-3"><label class="form-label">Amount</label><input class="form-control {% if errors.amount %}is-invalid{% endif %}" type="number" step="0.01" min="0.01" inputmode="decimal" name="amount" id="supplier-payment-amount" value="{{ form_data.amount }}" {% if posted %}readonly{% endif %}>{% if errors.amount %}<div class="invalid-feedback">{{ errors.amount }}</div>{% endif %}</div>
+            <div class="col-12"><label class="form-label">Remarks</label><textarea class="form-control {% if errors.remarks %}is-invalid{% endif %}" name="remarks" rows="3">{{ form_data.remarks }}</textarea>{% if errors.remarks %}<div class="invalid-feedback">{{ errors.remarks }}</div>{% endif %}</div>
+        </div>
+    </div>
+    <div class="app-card-body border-top form-actions"><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Save Payment</button><a class="btn btn-light" href="{% url 'purchases:supplier_payments' %}">Cancel</a></div>
+</form>
+<script src="{% static 'js/supplier_payment.js' %}"></script>
+{% endblock %}

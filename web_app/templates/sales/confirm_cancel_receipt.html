@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Customer Receipt</span><h2>Reverse Receipt</h2><p>{{ receipt.receipt_no }} · {{ receipt.amount|floatformat:2 }}</p></div></section>
+<section class="app-card"><div class="app-card-header"><div><h3>Confirm Reversal</h3><p>The receipt will remain as historical record and a reversal journal will be created.</p></div><i class="bi bi-exclamation-triangle"></i></div><div class="app-card-body"><form method="post">{% csrf_token %}<div class="form-actions"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Reverse Receipt</button><a class="btn btn-light" href="{% url 'sales:receipt_detail' receipt.id %}">Cancel</a></div></form></div></section>
+{% endblock %}

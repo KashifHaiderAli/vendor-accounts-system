@@ -28,7 +28,7 @@ SIDEBAR_GROUPS = [
             ("Delivery Challans", "delivery_challans", "sales:delivery_challans"),
             ("Sales Invoices / Cash Memo", "sales_invoices", "sales:invoices"),
             ("Sales Returns", "sales_returns", "sales:index"),
-            ("Customer Receipts", "customer_receipts", "sales:index"),
+            ("Customer Receipts", "customer_receipts", "sales:receipts"),
         ],
     },
     {
@@ -37,7 +37,7 @@ SIDEBAR_GROUPS = [
         "items": [
             ("Supplier Purchases", "supplier_purchases", "purchases:supplier_purchases"),
             ("Purchase Returns", "purchase_returns", "purchases:index"),
-            ("Supplier Payments", "supplier_payments", "purchases:index"),
+            ("Supplier Payments", "supplier_payments", "purchases:supplier_payments"),
         ],
     },
     {

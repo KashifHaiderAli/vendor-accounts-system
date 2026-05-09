@@ -50,7 +50,7 @@
 <section class="app-card">
     <div class="app-card-header"><div><h3>Next Steps</h3><p>Prepared for later phases.</p></div></div>
     <div class="app-card-body form-actions">
-        <button class="btn btn-light" type="button" disabled><i class="bi bi-wallet2"></i> Create Supplier Payment</button>
+        {% if can_payment %}<a class="btn btn-primary" href="{% url 'purchases:supplier_payment_from_purchase' purchase.id %}"><i class="bi bi-wallet2"></i> Make Payment</a>{% else %}<button class="btn btn-light" type="button" disabled><i class="bi bi-wallet2"></i> Create Supplier Payment</button>{% endif %}
         <button class="btn btn-light" type="button" disabled><i class="bi bi-arrow-counterclockwise"></i> Purchase Return</button>
         {% if can_cancel %}<a class="btn btn-outline-danger" href="{% url 'purchases:supplier_purchase_cancel' purchase.id %}"><i class="bi bi-x-circle"></i> Cancel Purchase</a>{% endif %}
     </div>

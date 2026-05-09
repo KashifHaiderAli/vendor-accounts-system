@@ -8,8 +8,8 @@ from django.db import connection
 from accounts_module.accounting_utils import ensure_default_chart_of_accounts
 from authentication.auth_utils import dictfetchone
 from masters.master_utils import create_linked_account
-from purchases import services as purchase_services
-from sales import delivery_services, invoice_services, services as sales_services
+from purchases import payment_services, services as purchase_services
+from sales import delivery_services, invoice_services, receipt_services, services as sales_services
 from settings_module.services import now_text
 
 
@@ -61,7 +61,7 @@ class Command(BaseCommand):
         item_2 = self.ensure_item(company_id, branch_id, user_id, "SMK-ITM002", "Smoke Switch Product", "product", "2500", "3400", "5", stats)
         self.ensure_item(company_id, branch_id, user_id, "SMK-SRV001", "Smoke Configuration Service", "service", "500", "1000", "0", stats)
 
-        self.ensure_cash_bank(company_id, branch_id, user_id, "Smoke Cash Account", "cash", stats)
+        cash_account = self.ensure_cash_bank(company_id, branch_id, user_id, "Smoke Cash Account", "cash", stats)
         self.ensure_cash_bank(company_id, branch_id, user_id, "Smoke Bank Account", "bank", stats)
         self.ensure_expense_head(company_id, branch_id, user_id, "SMK-EXP001", "Smoke Office Expense", stats)
 
@@ -69,9 +69,11 @@ class Command(BaseCommand):
         self.ensure_unregistered_quotation(company_id, branch_id, user_id, [item_1], stats)
         confirmation_po = self.ensure_po_confirmation(company_id, branch_id, user_id, quotation, stats)
         self.ensure_phone_confirmation(company_id, branch_id, user_id, customer_1, stats)
-        self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, item_1, confirmation_po, stats)
+        purchase = self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, item_1, confirmation_po, stats)
         challan = self.ensure_delivery_challan(company_id, branch_id, user_id, confirmation_po, stats)
-        self.ensure_sales_invoice(company_id, branch_id, user_id, challan, stats)
+        invoice = self.ensure_sales_invoice(company_id, branch_id, user_id, challan, stats)
+        self.ensure_customer_receipt(company_id, branch_id, user_id, invoice, cash_account, stats)
+        self.ensure_supplier_payment(company_id, branch_id, user_id, purchase, cash_account, stats)
 
         for bucket, counter in stats.buckets.items():
             self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
@@ -346,6 +348,46 @@ class Command(BaseCommand):
             raise RuntimeError(f"Smoke sales invoice validation failed: {errors}")
         record_id = invoice_services.save_invoice(company_id, branch_id, user_id, cleaned)
         stats.add("invoices", True)
+        return record_id
+
+    def ensure_customer_receipt(self, company_id, branch_id, user_id, invoice_id, cash_bank_id, stats):
+        existing = self.first_row("SELECT id FROM customer_receipts WHERE company_id = %s AND branch_id = %s AND adjusted_invoice_id = %s LIMIT 1", [company_id, branch_id, invoice_id])
+        if existing:
+            stats.add("receipts", False)
+            return existing["id"]
+        invoice = receipt_services.get_invoice(company_id, branch_id, invoice_id)
+        if not invoice or receipt_services.money(invoice.get("balance_amount")) <= 0:
+            stats.add("receipts", False)
+            return None
+        data = receipt_services.default_form_data(company_id, branch_id, invoice)
+        data.update({"cash_bank_account_id": cash_bank_id, "amount": "1000.00", "remarks": "Smoke customer receipt."})
+        if receipt_services.money(invoice.get("balance_amount")) < receipt_services.money(data["amount"]):
+            data["amount"] = receipt_services.format_money(invoice.get("balance_amount"))
+        errors, cleaned = receipt_services.validate_and_clean(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke customer receipt validation failed: {errors}")
+        record_id = receipt_services.save_receipt(company_id, branch_id, user_id, cleaned)
+        stats.add("receipts", True)
+        return record_id
+
+    def ensure_supplier_payment(self, company_id, branch_id, user_id, purchase_id, cash_bank_id, stats):
+        existing = self.first_row("SELECT id FROM supplier_payments WHERE company_id = %s AND branch_id = %s AND adjusted_purchase_id = %s LIMIT 1", [company_id, branch_id, purchase_id])
+        if existing:
+            stats.add("supplier_payments", False)
+            return existing["id"]
+        purchase = payment_services.get_purchase(company_id, branch_id, purchase_id)
+        if not purchase or payment_services.money(purchase.get("balance_amount")) <= 0:
+            stats.add("supplier_payments", False)
+            return None
+        data = payment_services.default_form_data(company_id, branch_id, purchase)
+        data.update({"cash_bank_account_id": cash_bank_id, "amount": "500.00", "remarks": "Smoke supplier payment."})
+        if payment_services.money(purchase.get("balance_amount")) < payment_services.money(data["amount"]):
+            data["amount"] = payment_services.format_money(purchase.get("balance_amount"))
+        errors, cleaned = payment_services.validate_and_clean(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke supplier payment validation failed: {errors}")
+        record_id = payment_services.save_payment(company_id, branch_id, user_id, cleaned)
+        stats.add("supplier_payments", True)
         return record_id
 
 

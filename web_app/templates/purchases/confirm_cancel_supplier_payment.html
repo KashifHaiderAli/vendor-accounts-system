@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Supplier Payment</span><h2>Reverse Payment</h2><p>{{ payment.payment_no }} · {{ payment.amount|floatformat:2 }}</p></div></section>
+<section class="app-card"><div class="app-card-header"><div><h3>Confirm Reversal</h3><p>The payment will remain as historical record and a reversal journal will be created.</p></div><i class="bi bi-exclamation-triangle"></i></div><div class="app-card-body"><form method="post">{% csrf_token %}<div class="form-actions"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Reverse Payment</button><a class="btn btn-light" href="{% url 'purchases:supplier_payment_detail' payment.id %}">Cancel</a></div></form></div></section>
+{% endblock %}

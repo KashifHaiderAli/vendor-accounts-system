@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ payment.payment_no }}</title>
+    <style>
+        body{font-family:Arial,sans-serif;color:#111827;margin:32px}.header{display:flex;justify-content:space-between;border-bottom:1px solid #d1d5db;padding-bottom:16px}.title{text-align:center;margin:28px 0 20px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 28px}.box{border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-top:18px}.amount{font-size:24px;font-weight:700}.sign{display:flex;justify-content:space-between;margin-top:72px}.line{border-top:1px solid #111827;width:180px;text-align:center;padding-top:8px}@media print{body{margin:18mm}.no-print{display:none}}
+    </style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">Print</button>
+<div class="header"><div><h2>{{ company.company_name|default:"Company" }}</h2><p>{{ branch.branch_name|default:"" }}</p></div><div><strong>Print Date:</strong> {{ print_date }}</div></div>
+<div class="title"><h1>Supplier Payment Voucher</h1><p>{{ payment.payment_no }}</p></div>
+<div class="box grid"><div><strong>Date:</strong> {{ payment.payment_date }}</div><div><strong>Supplier:</strong> {{ payment.supplier_name|default:"-" }}</div><div><strong>Payment Mode:</strong> {{ payment.payment_mode }}</div><div><strong>Cash/Bank:</strong> {{ payment.cash_bank_name|default:"-" }}</div><div><strong>Reference:</strong> {{ payment.cheque_reference_no|default:"-" }}</div><div><strong>Purchase:</strong> {{ payment.purchase_no|default:"Advance / Unadjusted" }}</div></div>
+<div class="box"><p>Amount</p><div class="amount">{{ payment.amount|floatformat:2 }}</div><p>Amount in words: TODO</p></div>
+<div class="box"><strong>Remarks</strong><p>{{ payment.remarks|default:"-"|linebreaksbr }}</p></div>
+<div class="sign"><div class="line">Prepared By</div><div class="line">Authorized By</div><div class="line">Signature</div></div>
+</body>
+</html>

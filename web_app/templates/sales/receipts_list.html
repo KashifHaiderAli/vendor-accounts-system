@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Sales</span><h2>Customer Receipts</h2><p>Record customer payments and post cash/bank receipt journals.</p></div>
+    <div class="page-header-actions">{% if can_add %}<a class="btn btn-primary" href="{% url 'sales:receipt_new' %}"><i class="bi bi-plus-lg"></i> New Receipt</a>{% endif %}</div>
+</section>
+
+<form class="app-card filter-card" method="get">
+    <div class="app-card-body filter-bar">
+        <input class="form-control" name="q" value="{{ search }}" placeholder="Search receipt, customer, reference, invoice">
+        <select class="form-select" name="payment_mode"><option value="">All Modes</option>{% for option in payment_modes %}<option value="{{ option }}" {% if payment_mode == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+        <input class="form-control" type="date" name="date_from" value="{{ date_from }}">
+        <input class="form-control" type="date" name="date_to" value="{{ date_to }}">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+    </div>
+</form>
+
+<section class="app-card">
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead><tr><th>Receipt No</th><th>Date</th><th>Customer</th><th>Payment Mode</th><th>Cash/Bank</th><th>Reference No</th><th class="text-end">Amount</th><th>Adjusted Invoice</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'sales:receipt_detail' row.id %}">{{ row.receipt_no }}</a>{% if row.reversal_id %}<span class="soft-badge ms-1">Reversed</span>{% endif %}</td>
+                    <td>{{ row.receipt_date }}</td>
+                    <td>{{ row.customer_name|default:"-" }}</td>
+                    <td>{{ row.payment_mode }}</td>
+                    <td>{{ row.cash_bank_name|default:"-" }}</td>
+                    <td>{{ row.cheque_reference_no|default:"-" }}</td>
+                    <td class="text-end">{{ row.amount|floatformat:2 }}</td>
+                    <td>{{ row.invoice_no|default:"Advance / Unadjusted" }}</td>
+                    <td class="text-end table-actions">
+                        <a class="btn btn-sm btn-light" href="{% url 'sales:receipt_detail' row.id %}" title="View"><i class="bi bi-eye"></i></a>
+                        <a class="btn btn-sm btn-light" href="{% url 'sales:receipt_print' row.id %}" title="Print"><i class="bi bi-printer"></i></a>
+                        {% if can_edit and not row.reversal_id %}<a class="btn btn-sm btn-light" href="{% url 'sales:receipt_edit' row.id %}" title="Edit"><i class="bi bi-pencil"></i></a>{% endif %}
+                        {% if can_cancel and not row.reversal_id %}<a class="btn btn-sm btn-outline-danger" href="{% url 'sales:receipt_cancel' row.id %}" title="Reverse"><i class="bi bi-arrow-counterclockwise"></i></a>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">No customer receipts found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.total_pages > 1 %}<div class="app-card-body border-top"><nav class="pagination-wrap">{% for page_no in pagination.pages %}<a class="btn btn-sm {% if page_no == pagination.page %}btn-primary{% else %}btn-light{% endif %}" href="?q={{ search }}&payment_mode={{ payment_mode }}&date_from={{ date_from }}&date_to={{ date_to }}&page={{ page_no }}">{{ page_no }}</a>{% endfor %}</nav></div>{% endif %}
+</section>
+{% endblock %}

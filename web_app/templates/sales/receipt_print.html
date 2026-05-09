@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ receipt.receipt_no }}</title>
+    <style>
+        body{font-family:Arial,sans-serif;color:#111827;margin:32px}.header{display:flex;justify-content:space-between;border-bottom:1px solid #d1d5db;padding-bottom:16px}.title{text-align:center;margin:28px 0 20px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 28px}.box{border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-top:18px}.amount{font-size:24px;font-weight:700}.sign{display:flex;justify-content:space-between;margin-top:72px}.line{border-top:1px solid #111827;width:180px;text-align:center;padding-top:8px}@media print{body{margin:18mm}.no-print{display:none}}
+    </style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">Print</button>
+<div class="header"><div><h2>{{ company.company_name|default:"Company" }}</h2><p>{{ branch.branch_name|default:"" }}</p></div><div><strong>Print Date:</strong> {{ print_date }}</div></div>
+<div class="title"><h1>Customer Receipt Voucher</h1><p>{{ receipt.receipt_no }}</p></div>
+<div class="box grid"><div><strong>Date:</strong> {{ receipt.receipt_date }}</div><div><strong>Customer:</strong> {{ receipt.customer_name|default:"-" }}</div><div><strong>Payment Mode:</strong> {{ receipt.payment_mode }}</div><div><strong>Cash/Bank:</strong> {{ receipt.cash_bank_name|default:"-" }}</div><div><strong>Reference:</strong> {{ receipt.cheque_reference_no|default:"-" }}</div><div><strong>Invoice:</strong> {{ receipt.invoice_no|default:"Advance / Unadjusted" }}</div></div>
+<div class="box"><p>Amount</p><div class="amount">{{ receipt.amount|floatformat:2 }}</div><p>Amount in words: TODO</p></div>
+<div class="box"><strong>Remarks</strong><p>{{ receipt.remarks|default:"-"|linebreaksbr }}</p></div>
+<div class="sign"><div class="line">Received By</div><div class="line">Prepared By</div><div class="line">Signature</div></div>
+</body>
+</html>

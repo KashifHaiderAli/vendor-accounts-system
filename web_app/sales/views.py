@@ -7,9 +7,10 @@ from django.shortcuts import redirect, render
 from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core import validators
 from settings_module.services import log_user_activity
 
-from . import delivery_services, invoice_services, services
+from . import delivery_services, invoice_services, receipt_services, services
 
 
 SALES_CARDS = [
@@ -18,7 +19,7 @@ SALES_CARDS = [
     ("Delivery Challans", "delivery_challans", "sales:delivery_challans", "bi-truck", "Issue no-amount delivery documents."),
     ("Sales Invoices / Cash Memo", "sales_invoices", "sales:invoices", "bi-receipt", "Issue tax invoices and cash memos."),
     ("Sales Returns", "sales_returns", "sales:index", "bi-arrow-counterclockwise", "Future return workflow."),
-    ("Customer Receipts", "customer_receipts", "sales:index", "bi-cash-coin", "Future receipt workflow."),
+    ("Customer Receipts", "customer_receipts", "sales:receipts", "bi-cash-coin", "Record customer payments and post receipt journals."),
 ]
 
 
@@ -679,6 +680,7 @@ def invoices_list(request):
             "can_add": user_has_permission(request, "sales_invoices", "add"),
             "can_edit": user_has_permission(request, "sales_invoices", "edit"),
             "can_cancel": can_cancel_invoice(request),
+            "can_receipt": user_has_permission(request, "customer_receipts", "add"),
         },
     )
 
@@ -796,6 +798,7 @@ def invoice_detail(request, invoice_id):
             "items": invoice_services.get_invoice_items(invoice_id),
             "can_edit": user_has_permission(request, "sales_invoices", "edit") and invoice.get("status") != "Cancelled",
             "can_cancel": can_cancel_invoice(request) and invoice.get("status") != "Cancelled",
+            "can_receipt": user_has_permission(request, "customer_receipts", "add") and invoice.get("status") not in {"Cancelled", "Paid"},
         },
     )
 
@@ -845,6 +848,164 @@ def render_invoice_print(request, invoice_id, digital=False):
     return render(request, template, invoice_services.get_print_context(company_id, branch_id, invoice_id))
 
 
+@permission_required_custom("customer_receipts", "view")
+def receipts_list(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    try:
+        page = int(request.GET.get("page", "1"))
+    except ValueError:
+        page = 1
+    search = request.GET.get("q", "").strip()
+    payment_mode = request.GET.get("payment_mode", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    rows, pagination = receipt_services.list_receipts(company_id, branch_id, search, payment_mode, date_from, date_to, page)
+    return render(
+        request,
+        "sales/receipts_list.html",
+        {
+            "page_title": "Customer Receipts",
+            "rows": rows,
+            "search": search,
+            "payment_mode": payment_mode,
+            "date_from": date_from,
+            "date_to": date_to,
+            "pagination": pagination,
+            "payment_modes": receipt_services.PAYMENT_MODES,
+            "can_add": user_has_permission(request, "customer_receipts", "add"),
+            "can_edit": user_has_permission(request, "customer_receipts", "edit"),
+            "can_cancel": can_cancel_receipt(request),
+        },
+    )
+
+
+@login_required_custom
+def receipt_form(request, receipt_id=None, invoice_id=None):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    is_edit = receipt_id is not None
+    if not user_has_permission(request, "customer_receipts", "edit" if is_edit else "add"):
+        return render(request, "errors/403.html", status=403)
+    receipt = receipt_services.get_receipt(company_id, branch_id, receipt_id) if is_edit else None
+    if is_edit and not receipt:
+        messages.error(request, "Customer receipt was not found.")
+        return redirect("sales:receipts")
+    if is_edit and receipt.get("reversal_id"):
+        messages.error(request, "Cancelled receipts cannot be edited.")
+        return redirect("sales:receipt_detail", receipt_id=receipt_id)
+    source_invoice = receipt_services.get_invoice(company_id, branch_id, invoice_id) if invoice_id else None
+    if invoice_id and not source_invoice:
+        messages.error(request, "Invoice was not found or has no payable balance.")
+        return redirect("sales:invoices")
+
+    posted = bool(receipt and receipt.get("journal_entry_id"))
+    form_data = receipt_form_data(receipt) if is_edit else receipt_services.default_form_data(company_id, branch_id, source_invoice)
+    errors = {}
+    if request.method == "POST":
+        if posted:
+            form_data.update({"cheque_reference_no": request.POST.get("cheque_reference_no", ""), "remarks": request.POST.get("remarks", "")})
+            form_data["cheque_reference_no"], errors["cheque_reference_no"] = validators.clean_text(form_data.get("cheque_reference_no"), max_length=100, field_name="Reference No")
+            form_data["remarks"], errors["remarks"] = validators.clean_text(form_data.get("remarks"), field_name="Remarks")
+            errors = {key: value for key, value in errors.items() if value}
+            if not errors:
+                receipt_services.save_receipt(company_id, branch_id, request.session.get("user_id"), form_data, receipt_id)
+                log_user_activity(request, "UPDATE", "Customer Receipts", "customer_receipts", receipt_id, f"Updated non-financial details for receipt {receipt['receipt_no']}.")
+                messages.success(request, "Customer receipt updated successfully.")
+                return redirect("sales:receipt_detail", receipt_id=receipt_id)
+            messages.error(request, "Please correct the highlighted errors.")
+        else:
+            form_data = receipt_services.parse_post(request.POST)
+            errors, form_data = receipt_services.validate_and_clean(form_data, company_id, branch_id, receipt_id)
+            if not errors:
+                try:
+                    saved_id = receipt_services.save_receipt(company_id, branch_id, request.session.get("user_id"), form_data, receipt_id)
+                    log_user_activity(request, "CREATE" if not is_edit else "UPDATE", "Customer Receipts", "customer_receipts", saved_id, f"{'Created' if not is_edit else 'Updated'} customer receipt {form_data['receipt_no']}.")
+                    messages.success(request, f"Customer receipt {'created' if not is_edit else 'updated'} successfully.")
+                    return redirect("sales:receipt_detail", receipt_id=saved_id)
+                except AccountingError as exc:
+                    messages.error(request, f"Accounting posting failed: {exc}")
+                except DatabaseError:
+                    messages.error(request, "Unable to save customer receipt. Please retry.")
+            else:
+                messages.error(request, "Please correct the highlighted errors.")
+
+    return render(
+        request,
+        "sales/receipt_form.html",
+        {
+            "page_title": "Edit Customer Receipt" if is_edit else "New Customer Receipt",
+            "form_data": form_data,
+            "errors": errors,
+            "error_summary": collect_errors(errors),
+            "is_edit": is_edit,
+            "posted": posted,
+            "customers": receipt_services.get_customers(company_id, branch_id),
+            "cash_bank_accounts": receipt_services.get_cash_bank_accounts(company_id, branch_id),
+            "open_invoices": receipt_services.get_open_invoices(company_id, branch_id, form_data.get("customer_id") or None),
+            "payment_modes": receipt_services.PAYMENT_MODES,
+        },
+    )
+
+
+@permission_required_custom("customer_receipts", "view")
+def receipt_detail(request, receipt_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    receipt = receipt_services.get_receipt(company_id, branch_id, receipt_id)
+    if not receipt:
+        messages.error(request, "Customer receipt was not found.")
+        return redirect("sales:receipts")
+    return render(
+        request,
+        "sales/receipt_detail.html",
+        {
+            "page_title": receipt["receipt_no"],
+            "receipt": receipt,
+            "can_edit": user_has_permission(request, "customer_receipts", "edit") and not receipt.get("reversal_id"),
+            "can_cancel": can_cancel_receipt(request) and not receipt.get("reversal_id"),
+        },
+    )
+
+
+@login_required_custom
+def cancel_receipt(request, receipt_id):
+    if not can_cancel_receipt(request):
+        return render(request, "errors/403.html", status=403)
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    receipt = receipt_services.get_receipt(company_id, branch_id, receipt_id)
+    if not receipt:
+        messages.error(request, "Customer receipt was not found.")
+        return redirect("sales:receipts")
+    if request.method == "POST":
+        try:
+            receipt_services.cancel_receipt(request, receipt)
+            messages.success(request, "Customer receipt reversed successfully. The historical receipt record remains visible.")
+            return redirect("sales:receipt_detail", receipt_id=receipt_id)
+        except (AccountingError, DatabaseError, ValueError) as exc:
+            messages.error(request, str(exc) or "Unable to reverse customer receipt.")
+            return redirect("sales:receipt_detail", receipt_id=receipt_id)
+    return render(request, "sales/confirm_cancel_receipt.html", {"page_title": "Reverse Customer Receipt", "receipt": receipt})
+
+
+@permission_required_custom("customer_receipts", "view")
+def print_receipt(request, receipt_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    receipt = receipt_services.get_receipt(company_id, branch_id, receipt_id)
+    if not receipt:
+        messages.error(request, "Customer receipt was not found.")
+        return redirect("sales:receipts")
+    receipt_services.mark_printed(request, receipt)
+    return render(request, "sales/receipt_print.html", receipt_services.get_print_context(company_id, branch_id, receipt_id))
+
+
 def render_print_response(request, quotation_id, action_label):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -880,6 +1041,10 @@ def can_cancel_delivery(request):
 
 def can_cancel_invoice(request):
     return user_has_permission(request, "sales_invoices", "delete") or user_has_permission(request, "sales_invoices", "edit")
+
+
+def can_cancel_receipt(request):
+    return user_has_permission(request, "customer_receipts", "delete") or user_has_permission(request, "customer_receipts", "edit")
 
 
 def form_data_from_quotation(company_id, branch_id, quotation):
@@ -921,6 +1086,20 @@ def confirmation_form_data(confirmation):
         "total_amount": confirmation.get("total_amount") or "0.00",
         "status": confirmation.get("status") or "Open",
         "remarks": confirmation.get("remarks") or "",
+    }
+
+
+def receipt_form_data(receipt):
+    return {
+        "receipt_no": receipt.get("receipt_no") or "",
+        "receipt_date": receipt.get("receipt_date") or "",
+        "customer_id": receipt.get("customer_id") or "",
+        "payment_mode": receipt.get("payment_mode") or "Cash",
+        "cash_bank_account_id": receipt.get("cash_bank_account_id") or "",
+        "cheque_reference_no": receipt.get("cheque_reference_no") or "",
+        "amount": receipt.get("amount") or "0.00",
+        "adjusted_invoice_id": receipt.get("adjusted_invoice_id") or "",
+        "remarks": receipt.get("remarks") or "",
     }
 
 
