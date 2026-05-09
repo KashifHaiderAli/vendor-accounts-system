@@ -53,6 +53,7 @@ SIDEBAR_GROUPS = [
         "items": [
             ("Chart of Accounts", "accounting_reports", "accounts_module:chart"),
             ("Journal Entries", "accounting_reports", "accounts_module:journals"),
+            ("Expense Vouchers", "expense_heads", "accounts_module:expenses"),
         ],
     },
     {

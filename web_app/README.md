@@ -341,8 +341,43 @@ Phase 15 adds Service Contracts under `/services/contracts/`:
 
 The smoke data command also creates one smoke sales return, one smoke purchase return, one active service contract, and one idempotent contract invoice when possible.
 
+## Phase 16 Expense Vouchers
+
+Phase 16 adds Expense Vouchers under `/accounts/expenses/`:
+
+- Expense vouchers post journal entries immediately
+- Debit Expense Head, debit Input Tax Receivable when tax is present, and credit Cash/Bank
+- Posted financial fields are locked; only reference number and remarks can be edited
+- Cancelling a voucher keeps the record and creates a reversal journal
+- Existing databases may need the raw SQL schema upgrade:
+
+```powershell
+python manage.py upgrade_schema_expense_vouchers
+```
+
+New databases created by the DB App include the expense voucher table.
+
+## Phase 17 Real Dashboard
+
+The dashboard at `/` now uses live branch-level data:
+
+- Today sales, month sales, customer outstanding, supplier payable, cash/bank balance
+- Today receipts and supplier payments excluding detected reversals
+- Active contracts, expiring contracts, license status
+- Recent invoices, receipts, purchases, delivery challans, and activity logs
+- Permission-aware quick actions
+- Lightweight six-month sales and receipts bars
+
+Dashboard query testing:
+
+```powershell
+python manage.py test_dashboard_queries
+```
+
+Smoke data now creates one expense voucher when the expense voucher table exists.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Full reports will be added in later phases.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Full reports will be added in later phases.

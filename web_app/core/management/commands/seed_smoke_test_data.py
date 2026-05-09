@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 
 from accounts_module.accounting_utils import ensure_default_chart_of_accounts
+from accounts_module import expense_services
 from authentication.auth_utils import dictfetchone
 from masters.master_utils import create_linked_account
 from purchases import payment_services, return_services as purchase_return_services, services as purchase_services
@@ -79,6 +80,7 @@ class Command(BaseCommand):
         self.ensure_purchase_return(company_id, branch_id, user_id, purchase, stats)
         contract = self.ensure_service_contract(company_id, branch_id, user_id, customer_1, stats)
         self.ensure_contract_invoice(company_id, branch_id, user_id, contract, stats)
+        self.ensure_expense_voucher(company_id, branch_id, user_id, cash_account, stats)
 
         for bucket, counter in stats.buckets.items():
             self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
@@ -470,6 +472,27 @@ class Command(BaseCommand):
             stats.add("contract_invoices", False)
             return None
         stats.add("contract_invoices", True)
+        return record_id
+
+    def ensure_expense_voucher(self, company_id, branch_id, user_id, cash_bank_id, stats):
+        if not expense_services.table_exists():
+            stats.add("expense_vouchers", False)
+            return None
+        existing = self.first_row("SELECT id FROM expense_vouchers WHERE company_id=%s AND branch_id=%s AND remarks='Smoke expense voucher.' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("expense_vouchers", False)
+            return existing["id"]
+        expense = self.first_row("SELECT id FROM expense_heads WHERE company_id=%s AND branch_id=%s AND expense_code='SMK-EXP001' LIMIT 1", [company_id, branch_id])
+        if not expense:
+            stats.add("expense_vouchers", False)
+            return None
+        data = expense_services.default_form_data(company_id, branch_id)
+        data.update({"expense_head_id": expense["id"], "cash_bank_account_id": cash_bank_id, "payment_mode": "Cash", "amount": "750.00", "tax_percent": "0", "remarks": "Smoke expense voucher."})
+        errors, cleaned = expense_services.validate_and_calculate(data, company_id, branch_id)
+        if errors:
+            raise RuntimeError(f"Smoke expense voucher validation failed: {errors}")
+        record_id = expense_services.save_voucher(company_id, branch_id, user_id, cleaned)
+        stats.add("expense_vouchers", True)
         return record_id
 
 

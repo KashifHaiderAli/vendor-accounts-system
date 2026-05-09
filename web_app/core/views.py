@@ -1,78 +1,18 @@
 from django.shortcuts import render
 
 from authentication.decorators import permission_required_custom
-from licensing.middleware import has_valid_license
+from .dashboard_utils import dashboard_data
 
 from .utils import build_page_context
 
 
 @permission_required_custom("dashboard", "view")
 def dashboard(request):
-    cards = [
-        {
-            "label": "Today Sales",
-            "value": "0.00",
-            "tone": "primary",
-            "icon": "bi-receipt",
-            "hint": "No invoices posted today",
-        },
-        {
-            "label": "This Month Sales",
-            "value": "0.00",
-            "tone": "success",
-            "icon": "bi-graph-up-arrow",
-            "hint": "Month-to-date placeholder",
-        },
-        {
-            "label": "Customer Outstanding",
-            "value": "0.00",
-            "tone": "warning",
-            "icon": "bi-person-lines-fill",
-            "hint": "Receivables pending setup",
-        },
-        {
-            "label": "Supplier Payable",
-            "value": "0.00",
-            "tone": "danger",
-            "icon": "bi-truck",
-            "hint": "Payables pending setup",
-        },
-        {
-            "label": "Cash / Bank Balance",
-            "value": "0.00",
-            "tone": "info",
-            "icon": "bi-bank",
-            "hint": "Accounts pending setup",
-        },
-        {
-            "label": "License Status",
-            "value": "Valid"
-            if has_valid_license(request.session.get("company_id"))
-            else "Pending",
-            "tone": "secondary",
-            "icon": "bi-shield-check",
-            "hint": "Validation arrives in Phase 3",
-        },
-    ]
-    quick_actions = [
-        {"label": "New Customer", "icon": "bi-person-plus", "url": "/masters/customers/new/"},
-        {"label": "New Supplier", "icon": "bi-truck", "url": "/masters/suppliers/new/"},
-        {"label": "New Item / Service", "icon": "bi-box-seam", "url": "/masters/items/new/"},
-        {"label": "New Cash / Bank", "icon": "bi-bank", "url": "/masters/cash-bank/new/"},
-        {"label": "New Payment Term", "icon": "bi-calendar-plus", "url": "/masters/payment-terms/new/"},
-    ]
-    activity_items = [
-        "Dashboard shell is ready for live accounting data.",
-        "Database connection is configured through web_app/.env.",
-        "Authentication and role permissions are planned for Phase 3.",
-    ]
     context = build_page_context(
         "Dashboard",
-        "Operational snapshot for sales, purchases, accounts, and licensing.",
+        "Live branch snapshot for sales, purchases, cash flow, contracts, and alerts.",
     )
-    context["dashboard_cards"] = cards
-    context["quick_actions"] = quick_actions
-    context["activity_items"] = activity_items
+    context.update(dashboard_data(request))
     return render(request, "dashboard.html", context)
 
 
