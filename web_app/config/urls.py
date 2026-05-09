@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from backup import views as backup_views
 from core import views as core_views
 from licensing import views as licensing_views
 
@@ -19,7 +20,8 @@ urlpatterns = [
     path("services/", include("services.urls")),
     path("accounts/", include("accounts_module.urls")),
     path("reports/", include("reports.urls")),
-    path("backup/", include("backup.urls")),
+    path("backup/", backup_views.backup_dashboard, name="legacy_backup"),
+    path("system/", include("backup.urls")),
     path("settings/", include("settings_module.urls")),
     path("license-expired/", licensing_views.expired, name="license_expired"),
     path("license/", include("licensing.urls")),

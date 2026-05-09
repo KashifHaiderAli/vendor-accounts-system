@@ -69,6 +69,15 @@ SIDEBAR_GROUPS = [
         ],
     },
     {
+        "label": "System",
+        "icon": "bi-shield-lock",
+        "items": [
+            ("Backup / Restore", "backup_restore", "backup:dashboard"),
+            ("Audit Log", "audit_log", "backup:audit_log"),
+            ("License Status", "licensing", "licensing:index"),
+        ],
+    },
+    {
         "label": "Settings",
         "icon": "bi-sliders",
         "items": [
@@ -78,8 +87,6 @@ SIDEBAR_GROUPS = [
             ("Role Management", "role_management", "masters:index"),
             ("Numbering Settings", "numbering_settings", "settings_module:numbering"),
             ("Tax Settings", "tax_settings", "settings_module:tax"),
-            ("Backup / Restore", "backup_restore", "backup:index"),
-            ("License Status", "licensing", "licensing:index"),
         ],
     },
 ]
@@ -125,7 +132,9 @@ def build_sidebar_groups(request):
     for group in SIDEBAR_GROUPS:
         visible_items = []
         for label, permission_code, url_name in group["items"]:
-            if user_has_permission(request, permission_code, "view"):
+            if user_has_permission(request, permission_code, "view") or (
+                permission_code in {"audit_log", "backup_restore"} and is_admin_session(request)
+            ):
                 url = reverse(url_name)
                 visible_items.append(
                     {
@@ -146,6 +155,11 @@ def build_sidebar_groups(request):
                 }
             )
     return groups
+
+
+def is_admin_session(request):
+    role_name = str(request.session.get("role_name") or "").lower()
+    return int(request.session.get("is_master_user") or 0) == 1 or "admin" in role_name
 
 
 def refresh_session_company_branch(request):

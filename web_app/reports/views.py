@@ -6,6 +6,7 @@ from django.shortcuts import render
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom
 from core.print_utils import build_print_context
+from core.audit_utils import log_export_report
 from core.utils import build_page_context
 
 from .export_utils import csv_response
@@ -207,6 +208,7 @@ def generic_report(request, report_key):
         messages.info(request, "Select a supplier to view this report.")
 
     if request.GET.get("export") == "csv":
+        log_export_report(request, definition["title"], "CSV")
         return csv_response(f"{report_key}.csv", columns, data)
 
     context = build_page_context(definition["title"], "Filter, print, or export this report.")
@@ -225,6 +227,8 @@ def generic_report(request, report_key):
         }
     )
     template = "reports/print_report.html" if context["print_mode"] else "reports/generic_table_report.html"
+    if context["print_mode"]:
+        log_export_report(request, definition["title"], "PRINT")
     return render(request, template, context)
 
 
@@ -252,8 +256,11 @@ def placeholder_report(request, report_key):
         }
     )
     if request.GET.get("export") == "csv":
+        log_export_report(request, title, "CSV")
         return csv_response(f"{report_key}.csv", columns, data)
     template = "reports/print_report.html" if context["print_mode"] else "reports/generic_table_report.html"
+    if context["print_mode"]:
+        log_export_report(request, title, "PRINT")
     return render(request, template, context)
 
 

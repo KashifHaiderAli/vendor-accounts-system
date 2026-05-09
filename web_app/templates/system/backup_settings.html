@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">System</span><h2>Backup Settings</h2><p>Choose where backup copies are stored.</p></div>
+</section>
+
+<form method="post" class="app-card">
+    {% csrf_token %}
+    <div class="app-card-body">
+        <div class="mb-3">
+            <label class="form-label" for="backup_folder">Backup Folder Path</label>
+            <input class="form-control" id="backup_folder" name="backup_folder" value="{{ backup_folder }}" required>
+            <div class="form-text">The folder will be created if it does not exist. Live DB folder: {{ live_db_folder }}</div>
+        </div>
+        {% if backup_folder_same_warning %}<div class="alert alert-warning">This folder is the same as the live DB folder.</div>{% endif %}
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'backup:dashboard' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Settings</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

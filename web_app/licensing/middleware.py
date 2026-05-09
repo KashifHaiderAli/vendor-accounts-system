@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.db import connection
 from django.shortcuts import redirect
 
+from core.audit_utils import log_license_failure
+
 from .hardware_fingerprint import get_hardware_fingerprint
 
 
@@ -20,6 +22,7 @@ class LicenseValidationMiddleware:
             return self.get_response(request)
 
         if not has_valid_license(company_id):
+            log_license_failure(request, f"License blocked path {request.path}.")
             messages.error(
                 request,
                 "License not found, expired, or hardware mismatch.",

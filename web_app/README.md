@@ -421,8 +421,43 @@ Common print helpers and CSS were added for stable A4 output.
 - Digital document prints can show the company logo through a safe logo-serving route
 - Future work can move print alignment settings from constants into database-backed settings
 
+## Phase 20 Backup / Restore
+
+System backup and restore tools are available under `/system/backup/`.
+
+- Backup Now creates `vendor_accounts_backup_YYYYMMDD_HHMMSS.db`
+- Backup metadata is written next to the backup as JSON
+- Backup history is stored in `data/backup_history.json` when no database history table exists
+- Backup folder settings are stored in `data/system_settings.json`
+- Restore is Master Admin only
+- Restore always creates `safety_before_restore_YYYYMMDD_HHMMSS.db` before replacing the live database
+- The system keeps the latest 30 `vendor_accounts_backup_*.db` files and leaves safety backups alone
+- If the live DB path appears to be inside OneDrive, Google Drive, or Dropbox, the backup dashboard shows a warning
+- Backup files may be stored in synced folders, but the live database should stay in a local non-synced folder
+
+## Phase 21 Audit Log And Safety
+
+Audit tools are available under `/system/audit-log/`.
+
+- Login, logout, permission denial, license failure, report export/print, backup, and restore events are logged
+- Existing module create/edit/cancel/print actions continue writing into `user_activity_log`
+- Audit log is read-only and can be filtered or exported to CSV
+- Business records should not be hard-deleted; use cancel/close flows and reversal journals for posted records
+- Posted financial records remain protected from silent financial edits; cancel and recreate is the safe default
+
+## Phase 22 Validation And Bug Prevention
+
+Validation safety checks were added in a management command:
+
+```powershell
+python manage.py seed_smoke_test_data
+python manage.py test_validation_safety
+```
+
+The command checks duplicate document numbers, invalid invoice dates, negative totals, over-receipts, over-payments, unbalanced journals, missing linked accounts, invalid branch access, and expense voucher amount validation.
+
 ## Phase Notes
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Phase 18 adds the reporting framework and priority reports. Phase 19 adds print/PDF layout finalization helpers.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Phase 18 adds the reporting framework and priority reports. Phase 19 adds print/PDF layout finalization helpers. Phase 20 adds web backup/restore. Phase 21 adds audit log and safety logging. Phase 22 adds validation safety checks.

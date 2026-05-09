@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">System</span><h2>Audit Log</h2><p>Read-only trail of system and business activity.</p></div>
+    <div class="page-header-actions"><a class="btn btn-light" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}export=csv"><i class="bi bi-filetype-csv"></i> Export CSV</a></div>
+</section>
+
+<form method="get" class="app-card mb-3">
+    <div class="app-card-body">
+        <div class="form-grid four-col">
+            <div><label class="form-label">Date From</label><input class="form-control" type="date" name="date_from" value="{{ filters.date_from }}"></div>
+            <div><label class="form-label">Date To</label><input class="form-control" type="date" name="date_to" value="{{ filters.date_to }}"></div>
+            <div><label class="form-label">User</label><select class="form-select" name="user_id"><option value="">All</option>{% for user in users %}<option value="{{ user.id }}" {% if filters.user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.username }}</option>{% endfor %}</select></div>
+            <div><label class="form-label">Action</label><input class="form-control" name="action" value="{{ filters.action }}"></div>
+            <div><label class="form-label">Module</label><input class="form-control" name="module" value="{{ filters.module }}"></div>
+            <div><label class="form-label">Record Type</label><input class="form-control" name="record_type" value="{{ filters.record_type }}"></div>
+            <div class="full-span"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ filters.q }}"></div>
+        </div>
+        <div class="form-actions"><a class="btn btn-light" href="{{ request.path }}">Reset</a><button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button></div>
+    </div>
+</form>
+
+<section class="app-card">
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead><tr><th>Date</th><th>User</th><th>Action</th><th>Module</th><th>Record</th><th>Description</th><th></th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                <tr><td>{{ row.activity_datetime }}</td><td>{{ row.username|default:"-" }}</td><td><span class="soft-badge">{{ row.action_type }}</span></td><td>{{ row.module_name|default:"-" }}</td><td>{{ row.table_name|default:"-" }} #{{ row.record_id|default:"" }}</td><td>{{ row.description|truncatechars:120 }}</td><td><a class="btn btn-sm btn-light" href="{% url 'backup:audit_log_detail' row.id %}"><i class="bi bi-eye"></i></a></td></tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">No audit records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

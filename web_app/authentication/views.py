@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
+from core.audit_utils import log_login, log_logout, log_permission_denied
+
 from .auth_utils import (
     fetch_user_for_login,
     resolve_login_branch,
@@ -48,6 +50,7 @@ def login_view(request):
 
         store_login_session(request, user, branch)
         update_last_login(user["id"])
+        log_login(request, user["id"], user["company_id"], branch["id"])
         messages.success(request, "Login successful.")
         return redirect(request.GET.get("next") or "dashboard")
 
@@ -55,6 +58,7 @@ def login_view(request):
 
 
 def logout_view(request):
+    log_logout(request)
     request.session.flush()
     messages.success(request, "Logout successful.")
     return redirect("authentication:login")
@@ -66,5 +70,6 @@ def switch_branch_view(request, branch_id):
         branch_name = request.session.get("current_branch_name", "selected branch")
         messages.success(request, f"Branch switched to {branch_name}.")
     else:
+        log_permission_denied(request, "Branch Access", f"Branch switch denied for branch_id={branch_id}.")
         messages.error(request, "You are not assigned to the selected branch.")
     return redirect(request.META.get("HTTP_REFERER") or "dashboard")

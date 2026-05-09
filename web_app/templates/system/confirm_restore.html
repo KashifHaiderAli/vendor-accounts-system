@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Confirm</span><h2>Confirm Restore</h2><p>Review the selected backup before replacing the live database.</p></div>
+</section>
+
+<div class="alert alert-danger">This action replaces the live database. A safety backup will be created automatically first.</div>
+<section class="app-card">
+    <div class="app-card-body">
+        <p><strong>Backup:</strong><br>{{ backup_info.path }}</p>
+        <p><strong>Live DB:</strong><br>{{ live_db_path }}</p>
+        <p><strong>File Size:</strong> {{ backup_info.file_size }}</p>
+        <p><strong>Tables Found:</strong> {{ backup_info.tables|length }}</p>
+        <form method="post" action="{% url 'backup:restore_confirm' %}">
+            {% csrf_token %}
+            <div class="form-actions">
+                <a class="btn btn-light" href="{% url 'backup:restore' %}">Cancel</a>
+                <button class="btn btn-danger" type="submit"><i class="bi bi-exclamation-triangle"></i> Restore Database</button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
