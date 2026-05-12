@@ -9,7 +9,7 @@ from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
 from core.print_utils import build_print_context
 from masters.master_utils import create_linked_account
-from settings_module.services import get_company_settings, get_numbering_settings, get_tax_settings, log_user_activity, now_text
+from settings_module.services import get_company_settings, get_numbering_settings, log_user_activity, now_text
 
 
 PER_PAGE = 20
@@ -240,6 +240,23 @@ def item_exists(company_id, branch_id, item_id):
         return cursor.fetchone() is not None
 
 
+def get_item(company_id, branch_id, item_id):
+    if not item_id:
+        return None
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, item_code, item_name, default_sale_rate, default_tax_rate,
+                   warranty_or_service_description
+            FROM item_services
+            WHERE id = %s AND company_id = %s AND branch_id = %s AND is_active = 1
+            LIMIT 1
+            """,
+            [item_id, company_id, branch_id],
+        )
+        return dictfetchone(cursor)
+
+
 def payment_terms_exists(company_id, branch_id, payment_terms_id):
     if not payment_terms_id:
         return True
@@ -324,7 +341,6 @@ def generate_master_number(company_id, branch_id, prefix_field, table_name, code
 def default_form_data(company_id, branch_id):
     quotation_date = date.today()
     validity_days = 15
-    tax_settings = get_tax_settings(company_id, branch_id)
     return {
         "quotation_no": generate_document_number(company_id, branch_id, "quotation"),
         "quotation_date": quotation_date.isoformat(),
@@ -343,7 +359,7 @@ def default_form_data(company_id, branch_id):
         "validity_days": validity_days,
         "valid_till": (quotation_date + timedelta(days=validity_days)).isoformat(),
         "payment_terms_id": "",
-        "tax_option": "tax_exclusive" if int(tax_settings.get("default_tax_applicable") or 0) else "no_tax",
+        "tax_option": "tax_exclusive",
         "terms_conditions": "",
         "remarks": "",
         "status": "Draft",
@@ -351,7 +367,7 @@ def default_form_data(company_id, branch_id):
         "discount_total": "0.00",
         "tax_total": "0.00",
         "grand_total": "0.00",
-        "items": [empty_item_row(tax_settings.get("default_sales_tax_percent") or 0)],
+        "items": [empty_item_row()],
     }
 
 
@@ -524,7 +540,8 @@ def calculate_items(items, tax_option, company_id, branch_id):
     for row in items:
         errors = {}
         item_id = row.get("item_service_id") or ""
-        if item_id and not item_exists(company_id, branch_id, item_id):
+        item = get_item(company_id, branch_id, item_id)
+        if item_id and not item:
             errors["item_service_id"] = "Selected item/service was not found."
         description, error = validators.clean_text(row.get("description"), required=True, field_name="Description")
         if error:
@@ -541,7 +558,8 @@ def calculate_items(items, tax_option, company_id, branch_id):
         posted_discount, error = validators.validate_money(row.get("discount_amount") or 0, "Discount Amount", allow_negative=False)
         if error:
             errors["discount_amount"] = error
-        tax_percent, error = validators.validate_percentage(row.get("tax_percent") or 0, "Tax Percent")
+        tax_value = item.get("default_tax_rate") if item else row.get("tax_percent")
+        tax_percent, error = validators.validate_percentage(tax_value or 0, "Tax Percent")
         if error:
             errors["tax_percent"] = error
 
@@ -561,11 +579,11 @@ def calculate_items(items, tax_option, company_id, branch_id):
             net_amount = Decimal("0.00")
 
         if tax_option == "tax_exclusive":
-            tax_amount = (net_amount * tax_percent / Decimal("100")).quantize(Decimal("0.01"))
+            tax_amount = (gross * tax_percent / Decimal("100")).quantize(Decimal("0.01"))
             line_total = net_amount + tax_amount
         elif tax_option == "tax_inclusive" and tax_percent > 0:
             divisor = Decimal("100") + tax_percent
-            tax_amount = (net_amount * tax_percent / divisor).quantize(Decimal("0.01"))
+            tax_amount = (gross * tax_percent / divisor).quantize(Decimal("0.01"))
             line_total = net_amount
         else:
             tax_amount = Decimal("0.00")

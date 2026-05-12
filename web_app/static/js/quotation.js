@@ -38,21 +38,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         discountAmount = Math.min(discountAmount, gross);
         let net = Math.max(0, gross - discountAmount);
-        let taxPercent = taxOption?.value === "no_tax" ? 0 : numberValue(taxPercentInput);
+        let taxPercent = numberValue(taxPercentInput);
         let taxAmount = 0;
         let lineTotal = net;
 
         if (taxOption?.value === "tax_exclusive") {
-            taxAmount = net * taxPercent / 100;
+            taxAmount = gross * taxPercent / 100;
             lineTotal = net + taxAmount;
         } else if (taxOption?.value === "tax_inclusive" && taxPercent > 0) {
-            taxAmount = net * taxPercent / (100 + taxPercent);
+            taxAmount = gross * taxPercent / (100 + taxPercent);
             lineTotal = net;
         }
 
-        if (taxOption?.value === "no_tax") {
-            taxPercentInput.value = "0.00";
-        }
         taxAmountInput.value = money(taxAmount);
         lineTotalInput.value = money(lineTotal);
         return { gross, discountAmount, taxAmount, lineTotal };
@@ -94,7 +91,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 description.value = option.dataset.description;
             }
             if (option.dataset.rate) rate.value = money(Number.parseFloat(option.dataset.rate || "0"));
-            if (option.dataset.tax && taxOption?.value !== "no_tax") tax.value = money(Number.parseFloat(option.dataset.tax || "0"));
+            if (option.value) {
+                tax.value = money(Number.parseFloat(option.dataset.tax || "0"));
+            }
             recalcTotals();
         });
     };
