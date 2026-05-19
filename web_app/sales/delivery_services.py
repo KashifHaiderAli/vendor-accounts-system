@@ -404,7 +404,7 @@ def validate_items(items, company_id, branch_id):
         description, errors["description"] = validators.clean_text(raw.get("description"), required=True, field_name="Description")
         quantity, errors["quantity"] = validators.validate_decimal(raw.get("quantity"), "Quantity", min_value=0, allow_zero=False, required=True)
         quantity = quantity or Decimal("0")
-        if item_id and not errors:
+        if item_id and not any(errors.values()):
             try:
                 validate_available_stock(company_id, branch_id, item_id, quantity, "Delivery Challan")
             except ValueError as exc:

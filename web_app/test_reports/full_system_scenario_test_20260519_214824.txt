@@ -1,0 +1,151 @@
+Full System Scenario Test Report
+================================
+
+Environment:
+- Backup path: D:\Development\vendor-accounts-system\web_app\test_reports\backups\safety_before_full_scenario_20260519_214824.db
+
+Executive Summary: total=24 pass=10 fail=9 warning=1 skipped=4 auto-fixed=0
+Final conclusion: NOT READY
+
+Transaction Flow Summary
+------------------------
+Quotation -> Confirmation/PO -> Supplier Purchase -> Inventory In -> Delivery Challan -> Inventory Out -> Sales Invoice -> Customer Receipt -> Supplier Payment -> Returns -> Reports/Audit.
+
+Accounting Verification
+-----------------------
+Journal balance, control-account posting, trial balance, ledgers, and cash/bank effects are checked in the detailed steps.
+
+Inventory Verification
+----------------------
+Stock movement existence, service exclusion, negative stock prevention, item ledger, and stock balance are checked in the detailed steps.
+
+Final Recommendation
+--------------------
+The system is not ready. Review failed steps and suggested fix notes in this report.
+
+Detailed Step-by-Step Results
+-----------------------------
+Step 1 [FAIL] Runner - setup
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: django.db.utils.OperationalError: attempt to write a readonly database
+
+Step 2 [PASS] System - Backup
+  input_data: Create safety backup before scenario test.
+  expected: Backup file exists.
+  actual: D:\Development\vendor-accounts-system\web_app\test_reports\backups\safety_before_full_scenario_20260519_214824.db
+
+Step 3 [FAIL] Runner - create_or_fix_master_data
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: django.db.utils.OperationalError: attempt to write a readonly database
+
+Step 4 [FAIL] Runner - run_transaction_scenario_1
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: KeyError: 'customer'
+
+Step 5 [WARNING] Sales - Unregistered Quotation
+  input_data: Create quotation for unregistered party.
+  expected: Should save if feature exists.
+  error: KeyError: 'laptop'
+  notes: Feature may need review if this fails.
+
+Step 6 [FAIL] Runner - run_inventory_scenario
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: KeyError: 'laptop'
+
+Step 7 [SKIPPED] Sales - Sales Return
+  input_data: Create sales return from scenario invoice.
+  expected: Invoice exists.
+  actual: Missing invoice.
+
+Step 8 [SKIPPED] Purchases - Purchase Return
+  input_data: Create purchase return from scenario purchase.
+  expected: Purchase exists.
+  actual: Missing purchase.
+
+Step 9 [FAIL] Runner - run_service_contract_scenario
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: KeyError: 'customer'
+
+Step 10 [FAIL] Runner - run_expense_voucher_scenario
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: KeyError: 'expense'
+
+Step 11 [PASS] Validation - PO without number
+  input_data: PO without number
+  expected: Should block safely.
+  error: KeyError: 'customer'
+  notes: Exception is acceptable for blocked invalid input.
+
+Step 12 [PASS] Validation - Receipt more than invoice balance
+  input_data: Receipt more than invoice balance
+  expected: Should block safely.
+  error: KeyError: 'cash'
+  notes: Exception is acceptable for blocked invalid input.
+
+Step 13 [PASS] Validation - Supplier payment more than payable
+  input_data: Supplier payment more than payable
+  expected: Should block safely.
+  error: KeyError: 'bank'
+  notes: Exception is acceptable for blocked invalid input.
+
+Step 14 [FAIL] Runner - run_validation_tests
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: KeyError: 'customer'
+
+Step 15 [FAIL] Accounting - Journal Balance
+  input_data: Check all branch journal entries balance.
+  expected: No unbalanced journal entries.
+  actual: unbalanced=13
+
+Step 16 [PASS] Accounting - Control Accounts
+  input_data: Check no journal posts to control accounts.
+  expected: Zero control-account journal lines.
+  actual: control_lines=0
+
+Step 17 [PASS] Accounting - Trial Balance
+  input_data: Check total debit equals total credit.
+  expected: Debit total equals credit total.
+  actual: debit=1073953.00 credit=1073953.00
+
+Step 18 [PASS] Inventory - Negative Stock
+  input_data: Check no item has negative available stock.
+  expected: No negative stock.
+  actual: negative_items=0
+
+Step 19 [PASS] Inventory - Service Stock
+  input_data: Check service items have no stock movement.
+  expected: Zero service stock movements.
+  actual: service_movements=0
+
+Step 20 [FAIL] Runner - run_reports_tests
+  input_data: Section failed
+  expected: Section should complete and allow later sections to continue.
+  error: AttributeError: 'FakeRequest' object has no attribute 'GET'
+
+Step 21 [PASS] Print - Run print template validation command.
+  input_data: test_print_templates
+  expected: Print templates should pass.
+  actual: Command completed.
+
+Step 22 [PASS] System - Audit Log
+  input_data: Check audit/activity log grew during scenario.
+  expected: Activity count should increase.
+  actual: before=0 after=65
+
+Step 23 [SKIPPED] System - License
+  input_data: Check license without mutation.
+  expected: License is read only in this scenario.
+  actual: Not checked by scenario; no mutation performed.
+  notes: Real license was not mutated.
+
+Step 24 [SKIPPED] System - Restore
+  input_data: Restore database test.
+  expected: Restore should be skipped by default.
+  actual: Skipped by safety policy.

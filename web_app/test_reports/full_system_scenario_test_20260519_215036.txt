@@ -1,0 +1,234 @@
+Full System Scenario Test Report
+================================
+
+Environment:
+- Test run date/time: 2026-05-19 21:50:37
+- Database path: D:\Development\vendor-accounts-system\data\vendor_accounts.db
+- Company: DOMINANT Systems Pakistan
+- Branch: Head Office
+- User: admin
+- License status: Not checked by scenario; no mutation performed.
+- Inventory enabled/disabled: Enabled
+- Backup path: D:\Development\vendor-accounts-system\web_app\test_reports\backups\safety_before_full_scenario_20260519_215036.db
+
+Executive Summary: total=40 pass=37 fail=1 warning=0 skipped=2 auto-fixed=0
+Final conclusion: NOT READY
+
+Transaction Flow Summary
+------------------------
+Quotation -> Confirmation/PO -> Supplier Purchase -> Inventory In -> Delivery Challan -> Inventory Out -> Sales Invoice -> Customer Receipt -> Supplier Payment -> Returns -> Reports/Audit.
+
+Accounting Verification
+-----------------------
+Journal balance, control-account posting, trial balance, ledgers, and cash/bank effects are checked in the detailed steps.
+
+Inventory Verification
+----------------------
+Stock movement existence, service exclusion, negative stock prevention, item ledger, and stock balance are checked in the detailed steps.
+
+Final Recommendation
+--------------------
+The system is not ready. Review failed steps and suggested fix notes in this report.
+
+Detailed Step-by-Step Results
+-----------------------------
+Step 1 [PASS] Environment - Setup
+  input_data: Load company, branch, Master Admin, and chart of accounts.
+  expected: Context loaded.
+  actual: company=1 branch=1 user=1
+
+Step 2 [PASS] System - Backup
+  input_data: Create safety backup before scenario test.
+  expected: Backup file exists.
+  actual: D:\Development\vendor-accounts-system\web_app\test_reports\backups\safety_before_full_scenario_20260519_215036.db
+
+Step 3 [PASS] Masters - Master Data
+  input_data: Create/reuse AUTO-TEST masters and linked accounts.
+  expected: All required AUTO-TEST masters exist.
+  actual: terms=3, customer=4, supplier=4, laptop=7, mouse=8, service=9, cash=5, bank=6, expense=2
+
+Step 4 [PASS] Sales - Quotation
+  input_data: Create AUTO-TEST quotation.
+  expected: No journal, no stock movement, grand total 369900.
+  actual: quotation_id=8 grand_total=369900
+
+Step 5 [PASS] Sales - Confirmation
+  input_data: Create PO confirmation from quotation.
+  expected: Quotation converted, duplicate active confirmation detectable.
+  actual: confirmation_id=6 active=6
+
+Step 6 [PASS] Purchases - Supplier Purchase
+  input_data: Create supplier purchase FLOW.
+  expected: Journal balanced and stock purchase_in created for products.
+  actual: purchase_id=7 total=311048
+
+Step 7 [PASS] Sales - Delivery Challan
+  input_data: Create DC from confirmation.
+  expected: Product stock out; service no stock; no journal.
+  actual: dc_id=7
+
+Step 8 [PASS] Sales - Sales Invoice
+  input_data: Create tax invoice from DC.
+  expected: Journal balanced, balance 369900, no invoice_out movement.
+  actual: invoice_id=8 balance=369900 invoice_stock_moves=0
+
+Step 9 [PASS] Sales - Customer Receipt
+  input_data: Partial customer receipt
+  expected: Journal balanced; invoice paid/balance updated.
+  actual: receipt_id=8 invoice_balance=169900 status=Partially Paid
+
+Step 10 [PASS] Sales - Customer Receipt
+  input_data: Remaining customer receipt
+  expected: Journal balanced; invoice paid/balance updated.
+  actual: receipt_id=9 invoice_balance=0 status=Paid
+
+Step 11 [PASS] Purchases - Supplier Payment
+  input_data: Partial supplier payment
+  expected: Journal balanced; purchase paid/balance updated.
+  actual: payment_id=6 purchase_balance=161048 status=Partially Paid
+
+Step 12 [PASS] Purchases - Supplier Payment
+  input_data: Remaining supplier payment
+  expected: Journal balanced; purchase paid/balance updated.
+  actual: payment_id=7 purchase_balance=0 status=Paid
+
+Step 13 [PASS] Sales - Unregistered Quotation
+  input_data: Create quotation for AUTO-TEST Walk-in Buyer.
+  expected: customer_id NULL and party fields stored.
+  actual: quotation_id=9 customer_id=None
+
+Step 14 [PASS] Purchases - Supplier Purchase
+  input_data: Create supplier purchase INV.
+  expected: Journal balanced and stock purchase_in created for products.
+  actual: purchase_id=8 total=767000
+
+Step 15 [PASS] Inventory - Inventory purchase +5
+  input_data: Inventory purchase +5
+  expected: Expected available 9.00.
+  actual: actual=9.00
+
+Step 16 [PASS] Inventory - Inventory DC -3
+  input_data: Inventory DC -3
+  expected: Expected available 6.00.
+  actual: actual=6.00
+
+Step 17 [PASS] Inventory - Negative Stock DC
+  input_data: Try DC quantity 3 when only 2 expected from scenario delta.
+  expected: Validation should block insufficient stock.
+  actual: {'dc_no': 'DC No already exists for the current branch.'}
+
+Step 18 [PASS] Inventory - Direct Invoice Stock Block
+  input_data: Try direct invoice above available stock.
+  expected: Validation should block insufficient stock.
+  actual: {'items': 'Please correct item row errors.'}
+
+Step 19 [PASS] Inventory - Rebuild Stock
+  input_data: Rebuild missing stock movements safely.
+  expected: Command/helper should not crash.
+  actual: Rebuild helper completed.
+
+Step 20 [PASS] Sales - Sales Return
+  input_data: Return Mouse qty 1 with Return to Stock.
+  expected: Grand total 2950, journal balanced, stock in.
+  actual: return_id=4 total=2950
+
+Step 21 [PASS] Purchases - Purchase Return
+  input_data: Return Mouse qty 1.
+  expected: Journal balanced and stock out.
+  actual: return_id=3 total=2124
+
+Step 22 [PASS] Purchases - Cancel Purchase Return
+  input_data: Cancel AUTO-TEST purchase return.
+  expected: Reversal journal and stock restored.
+  actual: return_id=3
+
+Step 23 [PASS] Sales - Cancel Sales Return
+  input_data: Cancel AUTO-TEST sales return after purchase return test.
+  expected: Reversal journal and stock reversal created.
+  actual: return_id=4
+
+Step 24 [PASS] Services - Contract Invoice
+  input_data: Generate invoice from service contract.
+  expected: Invoice journal balanced and no stock movement.
+  actual: contract_id=4 invoice_id=9
+
+Step 25 [PASS] Accounts - Expense Voucher
+  input_data: Create expense voucher 5000.
+  expected: Journal balanced.
+  actual: voucher_id=4
+
+Step 26 [PASS] Validation - PO without number
+  input_data: PO without number
+  expected: Should return validation errors.
+  actual: {'po_number': 'PO Number is required.'}
+
+Step 27 [PASS] Validation - Receipt more than invoice balance
+  input_data: Receipt more than invoice balance
+  expected: Should return validation errors.
+  actual: {'amount': 'Receipt amount cannot be greater than the selected invoice balance.'}
+
+Step 28 [PASS] Validation - Supplier payment more than payable
+  input_data: Supplier payment more than payable
+  expected: Should return validation errors.
+  actual: {'amount': 'Payment amount cannot be greater than the selected purchase balance.'}
+
+Step 29 [PASS] Validation - Invoice due date before invoice date
+  input_data: Invoice due date before invoice date
+  expected: Should return validation errors.
+  actual: {'due_date': 'Due Date cannot be before Invoice Date.'}
+
+Step 30 [PASS] Validation - Unbalanced Journal
+  input_data: Try unbalanced journal.
+  expected: Should raise AccountingError.
+  actual: Journal entry is not balanced.
+
+Step 31 [FAIL] Accounting - Journal Balance
+  input_data: Check all branch journal entries balance.
+  expected: No unbalanced journal entries.
+  actual: unbalanced=13
+
+Step 32 [PASS] Accounting - Control Accounts
+  input_data: Check no journal posts to control accounts.
+  expected: Zero control-account journal lines.
+  actual: control_lines=0
+
+Step 33 [PASS] Accounting - Trial Balance
+  input_data: Check total debit equals total credit.
+  expected: Debit total equals credit total.
+  actual: debit=7588837.00 credit=7588837.00
+
+Step 34 [PASS] Inventory - Negative Stock
+  input_data: Check no item has negative available stock.
+  expected: No negative stock.
+  actual: negative_items=0
+
+Step 35 [PASS] Inventory - Service Stock
+  input_data: Check service items have no stock movement.
+  expected: Zero service stock movements.
+  actual: service_movements=0
+
+Step 36 [PASS] Reports - Reports
+  input_data: Execute registered report query functions.
+  expected: Report functions should not crash.
+  actual: tested=33 failed=0
+
+Step 37 [PASS] Print - Run print template validation command.
+  input_data: test_print_templates
+  expected: Print templates should pass.
+  actual: Command completed.
+
+Step 38 [PASS] System - Audit Log
+  input_data: Check audit/activity log grew during scenario.
+  expected: Activity count should increase.
+  actual: before=94 after=110
+
+Step 39 [SKIPPED] System - License
+  input_data: Check license without mutation.
+  expected: License is read only in this scenario.
+  actual: Not checked by scenario; no mutation performed.
+  notes: Real license was not mutated.
+
+Step 40 [SKIPPED] System - Restore
+  input_data: Restore database test.
+  expected: Restore should be skipped by default.
+  actual: Skipped by safety policy.

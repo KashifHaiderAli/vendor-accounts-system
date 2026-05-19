@@ -518,6 +518,26 @@ python manage.py test_inventory_validation
 
 Use `python manage.py rebuild_stock_movements --reset` only when you intentionally want to regenerate system stock movements from existing transactions.
 
+## Full System Scenario Test
+
+Run the complete scenario-based smoke test with:
+
+```powershell
+python manage.py run_full_system_scenario_test --report-format=html --verbose
+```
+
+The command creates/reuses `AUTO-TEST` records and generates detailed HTML/TXT reports in `web_app/test_reports/`.
+
+It checks the full business story:
+
+- Quotation, Confirmation/PO, Supplier Purchase, Delivery Challan, Sales Invoice
+- Customer Receipts, Supplier Payments, Sales/Purchase Returns, Service Contracts, Expense Vouchers
+- Accounting journals, trial balance, control-account safety, and linked accounts
+- Inventory stock in/out, negative-stock blocking, service-item stock exclusion, and rebuild helpers
+- Validation blocks, report query functions, print template checks, audit log growth, backup creation, and license/restore skip policy
+
+The report includes each step, input, expected result, actual result, PASS/FAIL/WARNING/SKIPPED status, errors, and safe auto-fix notes. It is intended for development/testing databases and is not recommended on a live database without a fresh backup.
+
 ## Chart Of Accounts Flags
 
 The Chart of Accounts uses two protection flags from the `accounts` table:
