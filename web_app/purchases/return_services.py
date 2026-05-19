@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import post_purchase_return_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.inventory_utils import post_purchase_return_stock, reverse_stock_movements, validate_available_stock
 from settings_module.services import get_numbering_settings, log_user_activity, now_text
 
 
@@ -239,6 +240,11 @@ def validate_and_calculate(data, company_id, branch_id, return_id=None):
             available = money(purchase_item.get("quantity")) - returned_quantity(purchase_item["id"])
             if quantity > available:
                 row_errors["quantity"] = f"Returned quantity cannot exceed available quantity {available}."
+        if row.get("item_service_id") and quantity and not row_errors:
+            try:
+                validate_available_stock(company_id, branch_id, row.get("item_service_id"), quantity, "Purchase Return")
+            except ValueError as exc:
+                row_errors["quantity"] = str(exc)
         base = money(quantity or 0) * money(rate or 0)
         tax_amount = (base * money(tax_percent or 0) / Decimal("100")).quantize(Decimal("0.01"))
         line_total = base + tax_amount
@@ -299,6 +305,7 @@ def save_return(company_id, branch_id, user_id, data, return_id=None):
                 )
             journal_id = post_purchase_return_entry(company_id, branch_id, data["supplier_account_id"], data["return_date"], saved_id, data["subtotal"], data["tax_total"], data["grand_total"], user_id)
             cursor.execute("UPDATE purchase_returns SET journal_entry_id=%s WHERE id=%s", [journal_id, saved_id])
+            post_purchase_return_stock(company_id, branch_id, saved_id, user_id)
             update_purchase_balance(cursor, data["supplier_purchase_id"], data["grand_total"], user_id, timestamp, subtract=True)
     return saved_id
 
@@ -349,6 +356,7 @@ def cancel_return(request, purchase_return):
     with transaction.atomic():
         reversal_id = reverse_journal_entry(purchase_return["journal_entry_id"], today_iso(), f"Cancel purchase return {purchase_return['purchase_return_no']}", user_id)
         with connection.cursor() as cursor:
+            reverse_stock_movements("purchase_return", purchase_return["id"], f"Cancel purchase return {purchase_return['purchase_return_no']}", user_id)
             cursor.execute("UPDATE journal_entries SET reference_type='purchase_return_cancel', reference_id=%s, description=%s, updated_at=%s WHERE id=%s", [purchase_return["id"], f"Cancellation reversal for purchase return {purchase_return['purchase_return_no']}", timestamp, reversal_id])
             cursor.execute("UPDATE purchase_returns SET status='Cancelled', updated_by_id=%s, updated_at=%s WHERE id=%s", [user_id, timestamp, purchase_return["id"]])
             update_purchase_balance(cursor, purchase_return["supplier_purchase_id"], purchase_return["grand_total"], user_id, timestamp, subtract=False)

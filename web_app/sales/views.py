@@ -525,6 +525,8 @@ def delivery_challan_form(request, challan_id=None, confirmation_id=None, quotat
                     )
                     messages.success(request, f"Delivery challan {'updated' if is_edit else 'created'} successfully.")
                     return redirect("sales:delivery_challan_detail", challan_id=saved_id)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
                 except DatabaseError:
                     messages.error(request, "Unable to save delivery challan. Please retry.")
             else:
@@ -755,6 +757,10 @@ def invoice_form(request, invoice_id=None, dc_id=None, confirmation_id=None, quo
                     log_user_activity(request, "CREATE" if not is_edit else "UPDATE", "Sales Invoices", "sales_invoices", saved_id, f"{'Created' if not is_edit else 'Updated'} invoice {form_data['invoice_no']}.")
                     messages.success(request, f"Invoice {'created' if not is_edit else 'updated'} successfully.")
                     return redirect("sales:invoice_detail", invoice_id=saved_id)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                except ValueError as exc:
+                    messages.error(request, str(exc))
                 except AccountingError as exc:
                     messages.error(request, f"Accounting posting failed: {exc}")
                 except DatabaseError:

@@ -8,6 +8,7 @@ from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core.logo_utils import get_company_logo_url, save_company_logo
 from core import validators as form_validators
+from core.inventory_utils import is_inventory_enabled, set_inventory_enabled, set_stock_reduce_on, stock_reduce_on
 
 from .services import (
     COMPANY_FIELDS,
@@ -112,6 +113,34 @@ def company_settings_view(request):
             "errors": errors,
             "error_summary": form_validators.collect_form_errors(errors),
             "logo_url": get_company_logo_url(company_id),
+        },
+    )
+
+
+@login_required_custom
+def inventory_settings_view(request):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    if not (user_has_permission(request, "company_settings", "edit") or int(request.session.get("is_master_user") or 0) == 1):
+        return render(request, "errors/403.html", status=403)
+
+    if request.method == "POST":
+        enabled = request.POST.get("enable_inventory_tracking") == "on"
+        reduce_on = request.POST.get("stock_reduce_on") or "delivery_challan"
+        set_inventory_enabled(enabled)
+        set_stock_reduce_on(reduce_on)
+        log_user_activity(request, "UPDATE", "Inventory Settings", "inventory_settings", None, "Updated inventory tracking settings.")
+        messages.success(request, "Inventory settings saved successfully.")
+        return redirect("settings_module:inventory")
+
+    return render(
+        request,
+        "settings/inventory_settings.html",
+        {
+            "page_title": "Inventory Settings",
+            "enable_inventory_tracking": is_inventory_enabled(company_id),
+            "stock_reduce_on": stock_reduce_on(),
         },
     )
 

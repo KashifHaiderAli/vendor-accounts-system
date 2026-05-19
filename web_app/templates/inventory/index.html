@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Inventory</span><h2>Inventory Dashboard</h2><p>Quantity tracking only; accounting journals are unchanged.</p></div><div class="page-header-actions"><a class="btn btn-primary" href="{% url 'inventory:adjustment_new' %}"><i class="bi bi-plus-lg"></i> Stock Adjustment</a></div></section>
+{% if not ready %}<div class="alert alert-warning">Inventory schema is not upgraded yet. Run <code>python manage.py upgrade_schema_inventory</code>.</div>{% endif %}
+<section class="dashboard-grid"><article class="stat-card"><span>Total Stock Value</span><strong>{{ total_value|floatformat:2 }}</strong><i class="bi bi-boxes"></i></article><article class="stat-card"><span>Low Stock Items</span><strong>{{ low_count }}</strong><i class="bi bi-exclamation-triangle"></i></article></section>
+<section class="module-grid"><a class="module-card" href="{% url 'inventory:stock_balance' %}"><i class="bi bi-clipboard-data"></i><h3>Stock Balance</h3><p>Available quantity and valuation.</p></a><a class="module-card" href="{% url 'inventory:item_ledger' %}"><i class="bi bi-list-columns"></i><h3>Item Ledger</h3><p>Movement history by product.</p></a><a class="module-card" href="{% url 'inventory:low_stock' %}"><i class="bi bi-arrow-down-circle"></i><h3>Low Stock</h3><p>Items at or below minimum level.</p></a></section>
+{% endblock %}
+

@@ -7,6 +7,7 @@ from django.db import connection, transaction
 
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.inventory_utils import inventory_ready, post_delivery_challan_stock, reverse_stock_movements, validate_available_stock
 from settings_module.services import get_numbering_settings, log_user_activity, now_text
 
 
@@ -403,6 +404,11 @@ def validate_items(items, company_id, branch_id):
         description, errors["description"] = validators.clean_text(raw.get("description"), required=True, field_name="Description")
         quantity, errors["quantity"] = validators.validate_decimal(raw.get("quantity"), "Quantity", min_value=0, allow_zero=False, required=True)
         quantity = quantity or Decimal("0")
+        if item_id and not errors:
+            try:
+                validate_available_stock(company_id, branch_id, item_id, quantity, "Delivery Challan")
+            except ValueError as exc:
+                errors["quantity"] = str(exc)
         errors = {key: value for key, value in errors.items() if value}
         if errors:
             has_error = True
@@ -473,6 +479,10 @@ def save_challan(company_id, branch_id, user_id, data, challan_id=None, signed_o
                 )
                 return challan_id
             if challan_id:
+                if inventory_ready():
+                    cursor.execute("SELECT id FROM stock_movements WHERE source_type='delivery_challan' AND source_id=%s LIMIT 1", [challan_id])
+                    if cursor.fetchone():
+                        raise ValueError("Stock-posted delivery challan item details cannot be edited. Cancel and recreate if stock quantities must change.")
                 cursor.execute(
                     """
                     UPDATE delivery_challans
@@ -499,6 +509,7 @@ def save_challan(company_id, branch_id, user_id, data, challan_id=None, signed_o
                 )
                 saved_id = cursor.lastrowid
             insert_items(cursor, saved_id, data["items"], timestamp)
+            post_delivery_challan_stock(company_id, branch_id, saved_id, user_id)
     return saved_id
 
 
@@ -538,15 +549,17 @@ def cancel_challan(request, challan):
         raise ValueError("This delivery challan is already cancelled.")
     timestamp = now_text()
     company_id, branch_id = get_scope(request)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            UPDATE delivery_challans
-            SET status = 'Cancelled', updated_by_id = %s, updated_at = %s
-            WHERE id = %s AND company_id = %s AND branch_id = %s
-            """,
-            [request.session.get("user_id"), timestamp, challan["id"], company_id, branch_id],
-        )
+    with transaction.atomic():
+        reverse_stock_movements("delivery_challan", challan["id"], f"Cancel delivery challan {challan['dc_no']}", request.session.get("user_id"))
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE delivery_challans
+                SET status = 'Cancelled', updated_by_id = %s, updated_at = %s
+                WHERE id = %s AND company_id = %s AND branch_id = %s
+                """,
+                [request.session.get("user_id"), timestamp, challan["id"], company_id, branch_id],
+            )
     log_user_activity(request, "CANCEL", "Delivery Challans", "delivery_challans", challan["id"], f"Cancelled delivery challan {challan['dc_no']}.")
 
 

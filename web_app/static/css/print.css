@@ -83,17 +83,35 @@ body {
     letter-spacing: 0;
 }
 
+.print-detail-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 3px 0 5px;
+    font-size: 10px;
+    line-height: 1.15;
+}
+
+.print-detail-grid td {
+    border: 1px solid #d1d5db;
+    padding: 2px 4px;
+    vertical-align: top;
+}
+
+.print-label {
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.print-value {
+    font-weight: 400;
+}
+
 .print-meta-grid,
 .print-party-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3px 14px;
-    margin: 6px 0;
-}
-
-.print-meta-grid div,
-.print-party-grid div {
-    min-height: 14px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px 8px;
+    margin: 3px 0 5px;
 }
 
 .muted {

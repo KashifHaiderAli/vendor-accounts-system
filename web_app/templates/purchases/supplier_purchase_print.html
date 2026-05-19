@@ -3,10 +3,11 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Supplier Purchase Voucher" document_no=purchase.purchase_no document_date=purchase.purchase_date %}
 <h1 class="print-document-title">Supplier Purchase Voucher</h1>
-<section class="print-party-grid">
-<div><strong>Supplier:</strong> {{ purchase.supplier_name|default:"-" }}</div><div><strong>Supplier Bill:</strong> {{ purchase.supplier_bill_no|default:"-" }}</div>
-<div><strong>Confirmation:</strong> {{ purchase.confirmation_no|default:"-" }}</div><div><strong>Status:</strong> {{ purchase.status|default:"Unpaid" }}</div>
-</section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Supplier:</span> <span class="print-value">{{ purchase.supplier_name }}</span></td><td><span class="print-label">Purchase No:</span> <span class="print-value">{{ purchase.purchase_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ purchase.purchase_date }}</span></td></tr>
+<tr><td><span class="print-label">Supplier Bill:</span> <span class="print-value">{{ purchase.supplier_bill_no }}</span></td><td><span class="print-label">Confirmation:</span> <span class="print-value">{{ purchase.confirmation_no }}</span></td><td><span class="print-label">Status:</span> <span class="print-value">{{ purchase.status|default:"Unpaid" }}</span></td></tr>
+</table>
 <table class="print-table"><thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.purchase_rate|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table>
 {% include "partials/document_totals.html" with subtotal=purchase.subtotal tax_total=purchase.tax_total grand_total=purchase.grand_total %}
 {% if purchase.remarks %}<section class="print-panel"><strong>Remarks:</strong> {{ purchase.remarks|linebreaksbr }}</section>{% endif %}

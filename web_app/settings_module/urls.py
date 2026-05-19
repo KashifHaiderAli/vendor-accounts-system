@@ -14,4 +14,5 @@ urlpatterns = [
     path("branches/<int:branch_id>/make-head-office/", views.branch_make_head_office_view, name="branch_make_head_office"),
     path("numbering/", views.numbering_settings_view, name="numbering"),
     path("tax/", views.tax_settings_view, name="tax"),
+    path("inventory/", views.inventory_settings_view, name="inventory"),
 ]

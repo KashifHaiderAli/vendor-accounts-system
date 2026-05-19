@@ -125,6 +125,10 @@ def purchase_form(request, purchase_id=None):
                     )
                     messages.success(request, f"Supplier purchase {'updated' if is_edit else 'created'} successfully.")
                     return redirect("purchases:supplier_purchase_detail", purchase_id=saved_id)
+                except ValueError as exc:
+                    messages.error(request, str(exc))
+                except ValueError as exc:
+                    messages.error(request, str(exc))
                 except AccountingError as exc:
                     messages.error(request, f"Accounting posting failed: {exc}")
                 except DatabaseError:

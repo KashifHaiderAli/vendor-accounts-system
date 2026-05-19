@@ -48,6 +48,19 @@ SIDEBAR_GROUPS = [
         ],
     },
     {
+        "label": "Inventory",
+        "icon": "bi-boxes",
+        "items": [
+            ("Inventory Dashboard", "inventory", "inventory:index"),
+            ("Stock Balance", "inventory", "inventory:stock_balance"),
+            ("Item Ledger", "inventory", "inventory:item_ledger"),
+            ("Stock In", "inventory", "inventory:stock_in"),
+            ("Stock Out", "inventory", "inventory:stock_out"),
+            ("Low Stock", "inventory", "inventory:low_stock"),
+            ("Stock Adjustments", "inventory", "inventory:adjustments"),
+        ],
+    },
+    {
         "label": "Accounts",
         "icon": "bi-journal-richtext",
         "items": [
@@ -90,6 +103,7 @@ SIDEBAR_GROUPS = [
             ("Role Management", "role_management", "masters:index"),
             ("Numbering Settings", "numbering_settings", "settings_module:numbering"),
             ("Tax Settings", "tax_settings", "settings_module:tax"),
+            ("Inventory Settings", "company_settings", "settings_module:inventory"),
         ],
     },
 ]
@@ -136,6 +150,8 @@ def build_sidebar_groups(request):
         visible_items = []
         for label, permission_code, url_name in group["items"]:
             if user_has_permission(request, permission_code, "view") or (
+                permission_code == "inventory" and is_admin_session(request)
+            ) or (
                 permission_code in {"audit_log", "backup_restore"} and is_admin_session(request)
             ):
                 url = reverse(url_name)

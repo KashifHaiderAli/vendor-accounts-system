@@ -11,14 +11,23 @@
 <main class="print-page">
     {% include "partials/print_header.html" with document_title=invoice.invoice_type_label document_no=invoice.invoice_no document_date=invoice.invoice_date %}
     <h1 class="print-document-title">{{ invoice.invoice_type_label|default:"Sales Invoice" }}</h1>
-    <section class="print-party-grid">
-        <div><strong>Customer:</strong> {{ invoice.company_name|default:"-" }}</div>
-        <div><strong>PO No:</strong> {{ invoice.po_number|default:"-" }}</div>
-        <div><strong>Address:</strong> {{ invoice.customer_address|default:"-" }}</div>
-        <div><strong>DC No:</strong> {{ invoice.dc_no|default:"-" }}</div>
-        <div><strong>NTN/STRN:</strong> {{ invoice.customer_ntn|default:"-" }} / {{ invoice.customer_strn|default:"-" }}</div>
-        <div><strong>Terms/Due:</strong> {{ invoice.payment_terms_name|default:"-" }} / {{ invoice.due_date|default:"-" }}</div>
-    </section>
+    {% include "partials/print_detail_grid.html" %}
+    <table class="print-detail-grid">
+        <tr>
+            <td><span class="print-label">Customer:</span> <span class="print-value">{{ invoice.company_name }}</span></td>
+            <td><span class="print-label">Invoice:</span> <span class="print-value">{{ invoice.invoice_no }}</span></td>
+            <td><span class="print-label">Date:</span> <span class="print-value">{{ invoice.invoice_date }}</span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><span class="print-label">Address:</span> <span class="print-value">{{ invoice.customer_address }}</span></td>
+            <td><span class="print-label">PO/DC:</span> <span class="print-value">{{ invoice.po_number }}{% if invoice.po_number and invoice.dc_no %} / {% endif %}{{ invoice.dc_no }}</span></td>
+        </tr>
+        <tr>
+            <td><span class="print-label">NTN/STRN:</span> <span class="print-value">{{ invoice.customer_ntn }}{% if invoice.customer_ntn and invoice.customer_strn %} / {% endif %}{{ invoice.customer_strn }}</span></td>
+            <td><span class="print-label">Terms:</span> <span class="print-value">{{ invoice.payment_terms_name }}</span></td>
+            <td><span class="print-label">Due/Status:</span> <span class="print-value">{{ invoice.due_date }}{% if invoice.due_date and invoice.status %} / {% endif %}{{ invoice.status }}</span></td>
+        </tr>
+    </table>
     <table class="print-table">
         <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead>
         <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.rate|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>

@@ -8,6 +8,7 @@ from django.db import connection
 from accounts_module.accounting_utils import ensure_default_chart_of_accounts
 from accounts_module import expense_services
 from authentication.auth_utils import dictfetchone
+from core.inventory_utils import column_exists, create_stock_movement, inventory_ready, rebuild_stock_movements_from_transactions
 from masters.master_utils import create_linked_account
 from purchases import payment_services, return_services as purchase_return_services, services as purchase_services
 from sales import delivery_services, invoice_services, receipt_services, return_services as sales_return_services, services as sales_services
@@ -71,7 +72,7 @@ class Command(BaseCommand):
         self.ensure_unregistered_quotation(company_id, branch_id, user_id, [item_1], stats)
         confirmation_po = self.ensure_po_confirmation(company_id, branch_id, user_id, quotation, stats)
         self.ensure_phone_confirmation(company_id, branch_id, user_id, customer_1, stats)
-        purchase = self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, item_1, confirmation_po, stats)
+        purchase = self.ensure_supplier_purchase(company_id, branch_id, user_id, supplier_1, [item_1, item_2], confirmation_po, stats)
         challan = self.ensure_delivery_challan(company_id, branch_id, user_id, confirmation_po, stats)
         invoice = self.ensure_sales_invoice(company_id, branch_id, user_id, challan, stats)
         self.ensure_customer_receipt(company_id, branch_id, user_id, invoice, cash_account, stats)
@@ -81,6 +82,7 @@ class Command(BaseCommand):
         contract = self.ensure_service_contract(company_id, branch_id, user_id, customer_1, stats)
         self.ensure_contract_invoice(company_id, branch_id, user_id, contract, stats)
         self.ensure_expense_voucher(company_id, branch_id, user_id, cash_account, stats)
+        self.ensure_inventory_data(company_id, branch_id, user_id, item_2, stats)
 
         for bucket, counter in stats.buckets.items():
             self.stdout.write(f"{bucket}: created={counter.created}, skipped={counter.skipped}")
@@ -201,6 +203,7 @@ class Command(BaseCommand):
     def ensure_item(self, company_id, branch_id, user_id, code, name, item_type, purchase_rate, sale_rate, tax_rate, stats):
         existing = self.first_row("SELECT id FROM item_services WHERE company_id = %s AND branch_id = %s AND item_code = %s LIMIT 1", [company_id, branch_id, code])
         if existing:
+            self.ensure_item_inventory_flags(existing["id"], item_type)
             stats.add("items", False)
             return existing["id"]
         timestamp = now_text()
@@ -217,8 +220,27 @@ class Command(BaseCommand):
                 [company_id, branch_id, code, name, item_type, purchase_rate, sale_rate, tax_rate, user_id, user_id, timestamp, timestamp],
             )
             record_id = cursor.lastrowid
+        self.ensure_item_inventory_flags(record_id, item_type)
         stats.add("items", True)
         return record_id
+
+    def ensure_item_inventory_flags(self, item_id, item_type):
+        if not column_exists("item_services", "track_inventory"):
+            return
+        track = 0 if str(item_type).lower() == "service" else 1
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE item_services
+                SET track_inventory=%s,
+                    unit=COALESCE(NULLIF(unit,''), 'Pcs'),
+                    minimum_stock_level=COALESCE(minimum_stock_level, 0),
+                    opening_stock=COALESCE(opening_stock, 0),
+                    opening_cost=COALESCE(opening_cost, default_purchase_rate, 0)
+                WHERE id=%s
+                """,
+                [track, item_id],
+            )
 
     def ensure_cash_bank(self, company_id, branch_id, user_id, name, account_type, stats):
         existing = self.first_row("SELECT id, account_id FROM cash_bank_accounts WHERE company_id = %s AND branch_id = %s AND lower(account_name) = lower(%s) LIMIT 1", [company_id, branch_id, name])
@@ -332,14 +354,17 @@ class Command(BaseCommand):
         stats.add("confirmations", True)
         return record_id
 
-    def ensure_supplier_purchase(self, company_id, branch_id, user_id, supplier_id, item_id, confirmation_id, stats):
+    def ensure_supplier_purchase(self, company_id, branch_id, user_id, supplier_id, item_ids, confirmation_id, stats):
         existing = self.first_row("SELECT id FROM supplier_purchases WHERE company_id = %s AND branch_id = %s AND supplier_bill_no = 'SMK-BILL-001' LIMIT 1", [company_id, branch_id])
         if existing:
             stats.add("purchases", False)
             return existing["id"]
         data = purchase_services.default_form_data(company_id, branch_id)
         data.update({"supplier_id": supplier_id, "supplier_bill_no": "SMK-BILL-001", "supplier_bill_date": today_text(), "confirmation_id": confirmation_id, "remarks": "Smoke supplier purchase."})
-        data["items"] = [{"item_service_id": item_id, "description": "Smoke Router Product", "quantity": "2", "purchase_rate": "1500", "tax_percent": "5"}]
+        data["items"] = [
+            {"item_service_id": item_ids[0], "description": "Smoke Router Product", "quantity": "6", "purchase_rate": "1500", "tax_percent": "5"},
+            {"item_service_id": item_ids[1], "description": "Smoke Switch Product", "quantity": "3", "purchase_rate": "2500", "tax_percent": "5"},
+        ]
         errors, cleaned = purchase_services.validate_and_calculate(data, company_id, branch_id)
         if errors:
             raise RuntimeError(f"Smoke supplier purchase validation failed: {errors}")
@@ -517,6 +542,37 @@ class Command(BaseCommand):
         record_id = expense_services.save_voucher(company_id, branch_id, user_id, cleaned)
         stats.add("expense_vouchers", True)
         return record_id
+
+    def ensure_inventory_data(self, company_id, branch_id, user_id, item_id, stats):
+        if not inventory_ready():
+            stats.add("inventory", False)
+            return None
+        rebuild_stock_movements_from_transactions(company_id, branch_id, user_id, reset=False)
+        existing = self.first_row("SELECT id FROM stock_adjustments WHERE company_id=%s AND branch_id=%s AND reason='Smoke stock adjustment.' LIMIT 1", [company_id, branch_id])
+        if existing:
+            stats.add("inventory", False)
+            return existing["id"]
+        timestamp = now_text()
+        adjustment_no = f"SMK-ADJ-{timestamp[:10].replace('-', '')}"
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO stock_adjustments (
+                    company_id, branch_id, adjustment_no, adjustment_date, adjustment_type, reason, status,
+                    created_by_id, updated_by_id, created_at, updated_at
+                )
+                VALUES (%s,%s,%s,%s,'Stock In','Smoke stock adjustment.','Posted',%s,%s,%s,%s)
+                """,
+                [company_id, branch_id, adjustment_no, today_text(), user_id, user_id, timestamp, timestamp],
+            )
+            adjustment_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO stock_adjustment_items (adjustment_id, item_service_id, quantity, unit_cost, remarks) VALUES (%s,%s,3,2500,'Smoke stock adjustment.')",
+                [adjustment_id, item_id],
+            )
+        create_stock_movement(company_id, branch_id, item_id, today_text(), "adjustment_in", "stock_adjustment", adjustment_id, adjustment_no, quantity_in=3, quantity_out=0, unit_cost=2500, remarks="Smoke stock adjustment.", created_by_id=user_id)
+        stats.add("inventory", True)
+        return adjustment_id
 
 
 def today_text():

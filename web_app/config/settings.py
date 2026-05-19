@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "masters",
     "sales",
     "purchases",
+    "inventory",
     "services",
     "accounts_module",
     "reports",

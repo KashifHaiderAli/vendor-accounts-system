@@ -45,7 +45,7 @@ class Command(BaseCommand):
             failures.append("static/css/print.css is missing.")
         else:
             css = print_css.read_text(encoding="utf-8")
-            required_css = ["@page", "size: A4", "margin: 8mm", ".print-footer", ".print-table"]
+            required_css = ["@page", "size: A4", "margin: 8mm", ".print-footer", ".print-table", ".print-detail-grid", ".print-label", ".print-value"]
             for marker in required_css:
                 if marker not in css:
                     failures.append(f"print.css is missing `{marker}`.")
@@ -66,6 +66,10 @@ class Command(BaseCommand):
                 failures.append(f"{template_name} does not reference css/print.css.")
             if template_name != "reports/print_report.html" and "print_footer.html" not in content and template_name != "sales/invoice_print_digital.html":
                 failures.append(f"{template_name} does not include the shared print footer.")
+            if template_name != "sales/invoice_print_digital.html" and "print_detail_grid.html" not in content:
+                failures.append(f"{template_name} does not include the compact detail grid partial.")
+            if "print-party-grid" in content or "print-meta-grid" in content:
+                failures.append(f"{template_name} still uses an old vertical/grid detail block.")
 
         for template_name in ITEM_TABLE_PRINT_TEMPLATES:
             path = base_dir / "templates" / template_name
@@ -78,6 +82,7 @@ class Command(BaseCommand):
         partials = [
             base_dir / "templates" / "partials" / "print_header.html",
             base_dir / "templates" / "partials" / "print_footer.html",
+            base_dir / "templates" / "partials" / "print_detail_grid.html",
             base_dir / "templates" / "partials" / "document_totals.html",
         ]
         for partial in partials:

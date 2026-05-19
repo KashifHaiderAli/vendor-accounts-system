@@ -1,5 +1,7 @@
 from django.urls import path
 
+from inventory import views as inventory_views
+
 from . import views
 
 
@@ -13,6 +15,8 @@ urlpatterns = [
     path("items/profit/", views.generic_report, {"report_key": "item_profit"}, name="item_profit"),
     path("items/history/", views.generic_report, {"report_key": "item_history"}, name="item_history"),
     path("items/services-sales/", views.generic_report, {"report_key": "service_sales"}, name="service_sales"),
+    path("inventory/stock-balance/", inventory_views.stock_balance, name="inventory_stock_balance"),
+    path("inventory/item-ledger/", inventory_views.item_ledger_view, name="inventory_item_ledger"),
     path("customers/ledger/", views.generic_report, {"report_key": "customer_ledger"}, name="customer_ledger"),
     path("customers/outstanding/", views.generic_report, {"report_key": "customer_outstanding"}, name="customer_outstanding"),
     path("customers/aging/", views.generic_report, {"report_key": "customer_aging"}, name="customer_aging"),

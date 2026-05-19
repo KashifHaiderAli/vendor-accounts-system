@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import AccountingError, post_sales_return_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.inventory_utils import column_exists, post_sales_return_stock, reverse_stock_movements
 from settings_module.services import get_numbering_settings, log_user_activity, now_text
 
 
@@ -171,6 +172,7 @@ def default_form_data(company_id, branch_id, invoice=None):
         "customer_id": invoice.get("customer_id") if invoice else "",
         "sales_invoice_id": invoice.get("id") if invoice else "",
         "return_reason": "",
+        "return_stock_action": "Return to Stock",
         "remarks": "",
         "status": "Posted",
         "subtotal": "0.00",
@@ -226,6 +228,7 @@ def parse_post(post):
         "customer_id": post.get("customer_id", ""),
         "sales_invoice_id": post.get("sales_invoice_id", ""),
         "return_reason": post.get("return_reason", ""),
+        "return_stock_action": post.get("return_stock_action", "Return to Stock"),
         "remarks": post.get("remarks", ""),
         "status": "Posted",
         "items": items,
@@ -252,6 +255,11 @@ def validate_and_calculate(data, company_id, branch_id, return_id=None):
     return_date, errors["return_date"] = validators.validate_date(data.get("return_date"), "Return Date", required=True)
     cleaned["return_date"] = return_date.isoformat() if return_date else ""
     cleaned["return_reason"], errors["return_reason"] = validators.clean_text(data.get("return_reason"), field_name="Return Reason")
+    action = data.get("return_stock_action") or "Return to Stock"
+    action_error = validators.validate_choice(action, ["Return to Stock", "Damaged / Not Saleable", "Do Not Affect Stock"], "Return Stock Action")
+    if action_error:
+        errors["return_stock_action"] = action_error
+    cleaned["return_stock_action"] = action
     cleaned["remarks"], errors["remarks"] = validators.clean_text(data.get("remarks"), field_name="Remarks")
     customer = get_customer(company_id, branch_id, data.get("customer_id"))
     if not customer:
@@ -325,16 +333,20 @@ def save_return(company_id, branch_id, user_id, data, return_id=None):
         return return_id
     with transaction.atomic():
         with connection.cursor() as cursor:
+            has_action = column_exists("sales_returns", "return_stock_action")
+            action_column = ", return_stock_action" if has_action else ""
+            action_placeholder = ", %s" if has_action else ""
+            action_value = [data.get("return_stock_action") or "Return to Stock"] if has_action else []
             cursor.execute(
-                """
+                f"""
                 INSERT INTO sales_returns (
                     company_id, branch_id, sales_return_no, return_date, customer_id, sales_invoice_id,
-                    return_reason, subtotal, discount_total, tax_total, grand_total, refund_amount,
+                    return_reason{action_column}, subtotal, discount_total, tax_total, grand_total, refund_amount,
                     status, journal_entry_id, remarks, created_by_id, updated_by_id, created_at, updated_at
                 )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NULL,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s{action_placeholder},%s,%s,%s,%s,%s,%s,NULL,%s,%s,%s,%s,%s)
                 """,
-                [company_id, branch_id, data["sales_return_no"], data["return_date"], data["customer_id"], data["sales_invoice_id"], data.get("return_reason"), str(data["subtotal"]), str(data["discount_total"]), str(data["tax_total"]), str(data["grand_total"]), "0.00", "Posted", data.get("remarks"), user_id, user_id, timestamp, timestamp],
+                [company_id, branch_id, data["sales_return_no"], data["return_date"], data["customer_id"], data["sales_invoice_id"], data.get("return_reason")] + action_value + [str(data["subtotal"]), str(data["discount_total"]), str(data["tax_total"]), str(data["grand_total"]), "0.00", "Posted", data.get("remarks"), user_id, user_id, timestamp, timestamp],
             )
             saved_id = cursor.lastrowid
             for item in data["items"]:
@@ -352,6 +364,7 @@ def save_return(company_id, branch_id, user_id, data, return_id=None):
                 )
             journal_id = post_sales_return_entry(company_id, branch_id, data["customer_account_id"], data["return_date"], saved_id, data["subtotal"], data["discount_total"], data["tax_total"], data["grand_total"], user_id)
             cursor.execute("UPDATE sales_returns SET journal_entry_id=%s WHERE id=%s", [journal_id, saved_id])
+            post_sales_return_stock(company_id, branch_id, saved_id, user_id)
             update_invoice_balance(cursor, data["sales_invoice_id"], data["grand_total"], user_id, timestamp, subtract=True)
     return saved_id
 
@@ -402,6 +415,7 @@ def cancel_return(request, sales_return):
     with transaction.atomic():
         reversal_id = reverse_journal_entry(sales_return["journal_entry_id"], today_iso(), f"Cancel sales return {sales_return['sales_return_no']}", user_id)
         with connection.cursor() as cursor:
+            reverse_stock_movements("sales_return", sales_return["id"], f"Cancel sales return {sales_return['sales_return_no']}", user_id)
             cursor.execute("UPDATE journal_entries SET reference_type='sales_return_cancel', reference_id=%s, description=%s, updated_at=%s WHERE id=%s", [sales_return["id"], f"Cancellation reversal for sales return {sales_return['sales_return_no']}", timestamp, reversal_id])
             cursor.execute("UPDATE sales_returns SET status='Cancelled', updated_by_id=%s, updated_at=%s WHERE id=%s", [user_id, timestamp, sales_return["id"]])
             update_invoice_balance(cursor, sales_return["sales_invoice_id"], sales_return["grand_total"], user_id, timestamp, subtract=False)

@@ -3,11 +3,12 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Customer Confirmation / PO" document_no=confirmation.confirmation_no document_date=confirmation.confirmation_date %}
 <h1 class="print-document-title">Customer Confirmation / PO Record</h1>
-<section class="print-party-grid">
-<div><strong>Customer / Party:</strong> {{ confirmation.display_party_name|default:"-" }}</div><div><strong>Type:</strong> {{ confirmation.confirmation_type|default:"-" }}</div>
-<div><strong>PO No:</strong> {{ confirmation.po_number|default:"-" }}</div><div><strong>PO Date / Amount:</strong> {{ confirmation.po_date|default:"-" }} / {{ confirmation.po_amount|floatformat:2 }}</div>
-<div><strong>Quotation:</strong> {{ confirmation.quotation_no|default:"-" }}</div><div><strong>Total:</strong> {{ confirmation.total_amount|floatformat:2 }}</div>
-</section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Customer / Party:</span> <span class="print-value">{{ confirmation.display_party_name }}</span></td><td><span class="print-label">Confirmation:</span> <span class="print-value">{{ confirmation.confirmation_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ confirmation.confirmation_date }}</span></td></tr>
+<tr><td><span class="print-label">Type:</span> <span class="print-value">{{ confirmation.confirmation_type }}</span></td><td><span class="print-label">PO No:</span> <span class="print-value">{{ confirmation.po_number }}</span></td><td><span class="print-label">PO Date/Amount:</span> <span class="print-value">{{ confirmation.po_date }}{% if confirmation.po_date and confirmation.po_amount %} / {% endif %}{{ confirmation.po_amount|floatformat:2 }}</span></td></tr>
+<tr><td><span class="print-label">Quotation:</span> <span class="print-value">{{ confirmation.quotation_no }}</span></td><td><span class="print-label">Total:</span> <span class="print-value">{{ confirmation.total_amount|floatformat:2 }}</span></td><td><span class="print-label">Status:</span> <span class="print-value">{{ confirmation.status }}</span></td></tr>
+</table>
 <section class="print-grid"><div class="print-panel"><strong>Confirmation Note</strong><br>{{ confirmation.confirmation_note|default:"-"|linebreaksbr }}</div><div class="print-panel"><strong>Remarks</strong><br>{{ confirmation.remarks|default:"-"|linebreaksbr }}</div></section>
 <section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">Approved By</div></section>
 {% include "partials/print_footer.html" %}

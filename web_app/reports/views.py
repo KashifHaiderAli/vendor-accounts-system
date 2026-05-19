@@ -19,6 +19,7 @@ REPORT_CATEGORIES = [
     ("Sales Reports", "bi-receipt", "Quotations, confirmations, challans, invoices, returns, receipts, and tax.", "reports:sales_invoices", ("sales_reports", "sales_invoices")),
     ("Purchase Reports", "bi-bag-check", "Purchases, purchase returns, supplier payments, tax, and profit views.", "reports:purchase_report", ("purchase_reports", "supplier_purchases")),
     ("Item / Product Reports", "bi-box-seam", "Item sales, purchases, profit, transaction history, and service sales.", "reports:item_reports", ("sales_reports", "purchase_reports")),
+    ("Inventory Reports", "bi-boxes", "Stock balance, item ledger, stock in/out, low stock, and valuation.", "inventory:stock_balance", ("sales_reports", "purchase_reports")),
     ("Service Reports", "bi-briefcase", "Contracts, expiring contracts, billing due, and invoice history.", "reports:service_contracts", ("service_reports", "service_contracts")),
     ("Accounting Reports", "bi-journal-richtext", "Cash book, bank book, ledger, trial balance, profit and loss, and balance sheet.", "reports:trial_balance", ("accounting_reports", "accounting_reports")),
     ("System / Audit Reports", "bi-shield-check", "Activity, login/logout, print, export, backup/restore, and validation logs.", "reports:system_reports", ("audit_log", "audit_log")),
@@ -355,6 +356,7 @@ def generic_report(request, report_key):
             "rows": display_rows(columns, data),
             "raw_rows": data,
             "summary": summary,
+            "print_detail": report_print_detail(definition["title"], filters, allowed_branches, summary),
             "filters": filters,
             "allowed_branches": allowed_branches,
             "print_mode": request.GET.get("print") == "1",
@@ -384,6 +386,7 @@ def placeholder_report(request, report_key):
             "rows": display_rows(columns, data),
             "raw_rows": data,
             "summary": {"Status": "Placeholder"},
+            "print_detail": report_print_detail(title, reports.report_filters(request, company_id, branch_id), allowed_branches, {"Status": "Placeholder"}),
             "filters": reports.report_filters(request, company_id, branch_id),
             "allowed_branches": allowed_branches,
             "print_mode": request.GET.get("print") == "1",
@@ -422,3 +425,29 @@ def display_rows(columns, data):
             }
         )
     return display
+
+
+def report_print_detail(title, filters, allowed_branches, summary):
+    branch_name = selected_lookup_name(allowed_branches, filters.get("branch_id")) or "Current Branch"
+    party = selected_lookup_name(filters.get("customers") or [], filters.get("customer_id"))
+    if not party:
+        party = selected_lookup_name(filters.get("suppliers") or [], filters.get("supplier_id"))
+    period = " to ".join([value for value in [filters.get("date_from"), filters.get("date_to")] if value]) or "All Dates"
+    return {
+        "party": party,
+        "period": period,
+        "branch": branch_name,
+        "opening_balance": summary.get("Opening Balance", ""),
+        "closing_balance": summary.get("Closing Balance", ""),
+        "title": title,
+    }
+
+
+def selected_lookup_name(rows, selected_id):
+    if not selected_id:
+        return ""
+    selected = str(selected_id)
+    for row in rows:
+        if str(row.get("id")) == selected:
+            return row.get("name") or row.get("branch_name") or ""
+    return ""

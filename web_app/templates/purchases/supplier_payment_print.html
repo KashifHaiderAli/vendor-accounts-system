@@ -3,11 +3,12 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Supplier Payment Voucher" document_no=payment.payment_no document_date=payment.payment_date %}
 <h1 class="print-document-title">Supplier Payment Voucher</h1>
-<section class="print-party-grid">
-<div><strong>Supplier:</strong> {{ payment.supplier_name|default:"-" }}</div><div><strong>Payment Mode:</strong> {{ payment.payment_mode|default:"-" }}</div>
-<div><strong>Cash/Bank:</strong> {{ payment.cash_bank_name|default:"-" }}</div><div><strong>Reference:</strong> {{ payment.cheque_reference_no|default:"-" }}</div>
-<div><strong>Purchase:</strong> {{ payment.purchase_no|default:"Advance / Unadjusted" }}</div><div><strong>Amount:</strong> {{ payment.amount|floatformat:2 }}</div>
-</section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Supplier:</span> <span class="print-value">{{ payment.supplier_name }}</span></td><td><span class="print-label">Payment No:</span> <span class="print-value">{{ payment.payment_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ payment.payment_date }}</span></td></tr>
+<tr><td><span class="print-label">Payment Mode:</span> <span class="print-value">{{ payment.payment_mode }}</span></td><td><span class="print-label">Cash/Bank:</span> <span class="print-value">{{ payment.cash_bank_name }}</span></td><td><span class="print-label">Reference:</span> <span class="print-value">{{ payment.cheque_reference_no }}</span></td></tr>
+<tr><td colspan="2"><span class="print-label">Adjusted Purchase:</span> <span class="print-value">{{ payment.purchase_no|default:"Advance / Unadjusted" }}</span></td><td><span class="print-label">Amount:</span> <span class="print-value">{{ payment.amount|floatformat:2 }}</span></td></tr>
+</table>
 <section class="print-panel"><strong>Amount in words:</strong> TODO<br><strong>Remarks:</strong> {{ payment.remarks|default:"-"|linebreaksbr }}</section>
 <section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">Authorized Signature</div></section>
 {% include "partials/print_footer.html" %}

@@ -22,6 +22,19 @@
             <div class="muted">{{ current_date }}</div>
         </div>
     </header>
+    {% include "partials/print_detail_grid.html" %}
+    <table class="print-detail-grid">
+        <tr>
+            <td><span class="print-label">Party:</span> <span class="print-value">{{ print_detail.party|default:"All" }}</span></td>
+            <td><span class="print-label">Period:</span> <span class="print-value">{{ print_detail.period }}</span></td>
+            <td><span class="print-label">Branch:</span> <span class="print-value">{{ print_detail.branch }}</span></td>
+        </tr>
+        <tr>
+            <td><span class="print-label">Opening Balance:</span> <span class="print-value">{{ print_detail.opening_balance }}</span></td>
+            <td><span class="print-label">Closing Balance:</span> <span class="print-value">{{ print_detail.closing_balance }}</span></td>
+            <td><span class="print-label">Print Date:</span> <span class="print-value">{{ current_date }}</span></td>
+        </tr>
+    </table>
     {% include "reports/report_base.html" %}
     {% include "partials/print_footer.html" with company=print_company %}
 </main>

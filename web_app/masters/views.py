@@ -115,6 +115,11 @@ CONFIGS = {
             "default_purchase_rate",
             "default_sale_rate",
             "default_tax_rate",
+            "track_inventory",
+            "unit",
+            "minimum_stock_level",
+            "opening_stock",
+            "opening_cost",
             "warranty_or_service_description",
             "is_active",
             "remarks",
@@ -469,6 +474,11 @@ def default_form_data(key):
             "default_purchase_rate": "0",
             "default_sale_rate": "0",
             "default_tax_rate": "0",
+            "track_inventory": 1,
+            "unit": "",
+            "minimum_stock_level": "0",
+            "opening_stock": "0",
+            "opening_cost": "0",
         }
     if key == "cash_bank":
         return {**defaults, "account_type": "Cash"}
@@ -523,6 +533,11 @@ def parse_form_data(request, key):
             "default_purchase_rate": clean_text(request, "default_purchase_rate") or "0",
             "default_sale_rate": clean_text(request, "default_sale_rate") or "0",
             "default_tax_rate": clean_text(request, "default_tax_rate") or "0",
+            "track_inventory": clean_bool(request, "track_inventory", True),
+            "unit": clean_text(request, "unit"),
+            "minimum_stock_level": clean_text(request, "minimum_stock_level") or "0",
+            "opening_stock": clean_text(request, "opening_stock") or "0",
+            "opening_cost": clean_text(request, "opening_cost") or "0",
             "warranty_or_service_description": clean_text(request, "warranty_or_service_description"),
             "is_active": clean_bool(request, "is_active", True),
             "remarks": clean_text(request, "remarks"),
@@ -604,7 +619,7 @@ def validate_form_data(config, key, data, company_id, branch_id, record_id=None)
         if email_error:
             errors["email"] = email_error
 
-    for field in ["credit_limit", "opening_balance", "default_purchase_rate", "default_sale_rate"]:
+    for field in ["credit_limit", "opening_balance", "default_purchase_rate", "default_sale_rate", "minimum_stock_level", "opening_stock", "opening_cost"]:
         if field in data:
             amount, error = form_validators.validate_money(data[field], field_label(field), allow_negative=False)
             if error:
@@ -633,6 +648,8 @@ def validate_form_data(config, key, data, company_id, branch_id, record_id=None)
             errors["item_type"] = choice_error
         else:
             data["item_type"] = data["item_type"].title()
+            if data["item_type"] == "Service":
+                data["track_inventory"] = 0
 
     if key == "cash_bank":
         choice_error = form_validators.validate_choice(data.get("account_type"), ["Cash", "Bank"], "Account Type")
@@ -698,6 +715,7 @@ def field_limits(key):
             "item_code": 50,
             "item_name": 200,
             "category": 100,
+            "unit": 50,
         },
         "cash_bank": {
             "account_name": 150,

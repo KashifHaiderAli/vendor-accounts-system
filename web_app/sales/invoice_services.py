@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import AccountingError, post_sales_invoice_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.inventory_utils import post_sales_invoice_stock, reverse_stock_movements, validate_available_stock
 from core.print_utils import build_print_context
 from settings_module.services import get_company_settings, get_numbering_settings, get_tax_settings, log_user_activity, now_text
 
@@ -501,6 +502,14 @@ def validate_and_calculate(data, company_id, branch_id, invoice_id=None):
         errors["items"] = item_error
     if totals["grand_total"] <= 0:
         errors["grand_total"] = "Grand Total must be greater than zero."
+    if not cleaned.get("delivery_challan_id"):
+        for row in rows:
+            if row.get("item_service_id") and not row.get("errors"):
+                try:
+                    validate_available_stock(company_id, branch_id, row["item_service_id"], row["quantity"], "Sales Invoice")
+                except ValueError as exc:
+                    row.setdefault("errors", {})["quantity"] = str(exc)
+                    errors["items"] = "Please correct item row errors."
     cleaned["received_amount"] = "0.00"
     cleaned["balance_amount"] = format_money(totals["grand_total"])
     cleaned["subtotal"] = format_money(totals["subtotal"])
@@ -586,6 +595,7 @@ def save_invoice(company_id, branch_id, user_id, data, invoice_id=None):
             insert_items(cursor, saved_id, data["items"], timestamp)
             journal_id = post_sales_invoice_entry(company_id, branch_id, data["customer_account_id"], data["invoice_date"], saved_id, data["subtotal"], data["discount_total"], data["tax_total"], data["grand_total"], user_id)
             cursor.execute("UPDATE sales_invoices SET journal_entry_id=%s WHERE id=%s", [journal_id, saved_id])
+            post_sales_invoice_stock(company_id, branch_id, saved_id, user_id)
             if data.get("delivery_challan_id"):
                 cursor.execute("UPDATE delivery_challans SET status='Invoiced', updated_by_id=%s, updated_at=%s WHERE id=%s", [user_id, timestamp, data["delivery_challan_id"]])
             if data.get("confirmation_id"):
@@ -685,6 +695,7 @@ def cancel_invoice(request, invoice):
             with connection.cursor() as cursor:
                 cursor.execute("UPDATE journal_entries SET reference_type='sales_invoice_cancel', reference_id=%s WHERE id=%s", [invoice["id"], reversal_id])
         with connection.cursor() as cursor:
+            reverse_stock_movements("sales_invoice", invoice["id"], f"Cancel sales invoice {invoice['invoice_no']}", request.session.get("user_id"))
             cursor.execute("UPDATE sales_invoices SET status='Cancelled', updated_by_id=%s, updated_at=%s WHERE id=%s AND company_id=%s AND branch_id=%s", [request.session.get("user_id"), timestamp, invoice["id"], company_id, branch_id])
             if invoice.get("delivery_challan_id") and not active_invoice_for_source(company_id, branch_id, "delivery_challan_id", invoice["delivery_challan_id"], invoice["id"]):
                 dc_status = "Signed Received" if source_dc_signed(invoice["delivery_challan_id"]) else "Printed"

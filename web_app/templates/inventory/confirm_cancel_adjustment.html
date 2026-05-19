@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Inventory</span><h2>Cancel Adjustment</h2><p>{{ adjustment.adjustment_no }}</p></div></section>
+<section class="app-card"><div class="app-card-body"><p>This will create reverse stock movements and keep the original adjustment as history.</p><form method="post">{% csrf_token %}<button class="btn btn-outline-danger">Cancel Adjustment</button><a class="btn btn-light" href="{% url 'inventory:adjustment_detail' adjustment.id %}">Back</a></form></div></section>
+{% endblock %}
+

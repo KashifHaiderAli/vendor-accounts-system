@@ -3,7 +3,12 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Credit Note / Sales Return" document_no=sales_return.sales_return_no document_date=sales_return.return_date %}
 <h1 class="print-document-title">Credit Note / Sales Return</h1>
-<section class="print-party-grid"><div><strong>Customer:</strong> {{ sales_return.customer_name|default:"-" }}</div><div><strong>Invoice:</strong> {{ sales_return.invoice_no|default:"-" }}</div><div><strong>Reason:</strong> {{ sales_return.return_reason|default:"-" }}</div><div><strong>Status:</strong> {{ sales_return.status|default:"Posted" }}</div></section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Customer:</span> <span class="print-value">{{ sales_return.customer_name }}</span></td><td><span class="print-label">Return No:</span> <span class="print-value">{{ sales_return.sales_return_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ sales_return.return_date }}</span></td></tr>
+<tr><td><span class="print-label">Invoice No:</span> <span class="print-value">{{ sales_return.invoice_no }}</span></td><td colspan="2"><span class="print-label">Reason:</span> <span class="print-value">{{ sales_return.return_reason }}</span></td></tr>
+<tr><td><span class="print-label">Status:</span> <span class="print-value">{{ sales_return.status|default:"Posted" }}</span></td><td colspan="2"></td></tr>
+</table>
 <table class="print-table"><thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.rate|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table>
 {% include "partials/document_totals.html" with subtotal=sales_return.subtotal discount_total=sales_return.discount_total tax_total=sales_return.tax_total grand_total=sales_return.grand_total %}
 {% if sales_return.remarks %}<section class="print-panel"><strong>Remarks:</strong> {{ sales_return.remarks|linebreaksbr }}</section>{% endif %}

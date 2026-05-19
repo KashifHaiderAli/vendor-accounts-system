@@ -3,11 +3,12 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Expense Voucher" document_no=voucher.voucher_no document_date=voucher.voucher_date %}
 <h1 class="print-document-title">Expense Voucher</h1>
-<section class="print-party-grid">
-<div><strong>Expense Head:</strong> {{ voucher.expense_name|default:"-" }}</div><div><strong>Payment Mode:</strong> {{ voucher.payment_mode|default:"-" }}</div>
-<div><strong>Cash/Bank:</strong> {{ voucher.cash_bank_name|default:"-" }}</div><div><strong>Reference:</strong> {{ voucher.cheque_reference_no|default:"-" }}</div>
-<div><strong>Amount:</strong> {{ voucher.amount|floatformat:2 }}</div><div><strong>Tax / Total:</strong> {{ voucher.tax_amount|floatformat:2 }} / {{ voucher.total_amount|floatformat:2 }}</div>
-</section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Voucher No:</span> <span class="print-value">{{ voucher.voucher_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ voucher.voucher_date }}</span></td><td><span class="print-label">Status:</span> <span class="print-value">{{ voucher.status }}</span></td></tr>
+<tr><td><span class="print-label">Expense Head:</span> <span class="print-value">{{ voucher.expense_name }}</span></td><td><span class="print-label">Cash/Bank:</span> <span class="print-value">{{ voucher.cash_bank_name }}</span></td><td><span class="print-label">Payment Mode:</span> <span class="print-value">{{ voucher.payment_mode }}</span></td></tr>
+<tr><td><span class="print-label">Reference:</span> <span class="print-value">{{ voucher.cheque_reference_no }}</span></td><td><span class="print-label">Amount:</span> <span class="print-value">{{ voucher.amount|floatformat:2 }}</span></td><td><span class="print-label">Tax/Total:</span> <span class="print-value">{{ voucher.tax_amount|floatformat:2 }} / {{ voucher.total_amount|floatformat:2 }}</span></td></tr>
+</table>
 <section class="print-panel"><strong>Remarks:</strong> {{ voucher.remarks|default:"-"|linebreaksbr }}</section>
 <section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">Authorized Signature</div></section>
 {% include "partials/print_footer.html" %}

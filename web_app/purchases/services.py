@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import AccountingError, post_supplier_purchase_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.inventory_utils import post_supplier_purchase_stock, reverse_stock_movements
 from settings_module.services import get_numbering_settings, log_user_activity, now_text
 
 
@@ -479,6 +480,7 @@ def save_purchase(company_id, branch_id, user_id, data, purchase_id=None):
                 user_id,
             )
             cursor.execute("UPDATE supplier_purchases SET journal_entry_id = %s WHERE id = %s", [journal_id, saved_id])
+            post_supplier_purchase_stock(company_id, branch_id, saved_id, user_id)
     return saved_id
 
 
@@ -524,6 +526,7 @@ def cancel_purchase(request, purchase):
                     "UPDATE journal_entries SET reference_type = 'supplier_purchase_cancel', reference_id = %s WHERE id = %s",
                     [purchase["id"], reversal_id],
                 )
+        reverse_stock_movements("supplier_purchase", purchase["id"], f"Cancel supplier purchase {purchase['purchase_no']}", request.session.get("user_id"))
         with connection.cursor() as cursor:
             cursor.execute(
                 """

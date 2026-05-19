@@ -3,11 +3,12 @@
 <body>{% include "partials/print_actions.html" %}<main class="print-page">
 {% include "partials/print_header.html" with document_title="Service Contract Summary" document_no=contract.contract_no document_date=print_date %}
 <h1 class="print-document-title">Service Contract Summary</h1>
-<section class="print-party-grid">
-<div><strong>Customer:</strong> {{ contract.customer_name|default:"-" }}</div><div><strong>Service:</strong> {{ contract.service_type|default:"-" }}</div>
-<div><strong>Start:</strong> {{ contract.start_date }}</div><div><strong>End:</strong> {{ contract.end_date|default:"-" }}</div>
-<div><strong>Billing:</strong> {{ contract.billing_cycle }}</div><div><strong>Amount:</strong> {{ contract.contract_amount|floatformat:2 }}</div>
-</section>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Customer:</span> <span class="print-value">{{ contract.customer_name }}</span></td><td><span class="print-label">Contract No:</span> <span class="print-value">{{ contract.contract_no }}</span></td><td><span class="print-label">Service:</span> <span class="print-value">{{ contract.service_type }}</span></td></tr>
+<tr><td><span class="print-label">Start:</span> <span class="print-value">{{ contract.start_date }}</span></td><td><span class="print-label">End:</span> <span class="print-value">{{ contract.end_date }}</span></td><td><span class="print-label">Billing:</span> <span class="print-value">{{ contract.billing_cycle }}</span></td></tr>
+<tr><td><span class="print-label">Amount:</span> <span class="print-value">{{ contract.contract_amount|floatformat:2 }}</span></td><td><span class="print-label">Next Billing:</span> <span class="print-value">{{ contract.next_billing_date }}</span></td><td><span class="print-label">Status:</span> <span class="print-value">{{ contract.status }}</span></td></tr>
+</table>
 <section class="print-panel">{{ contract.contract_details|default:"-"|linebreaksbr }}</section>
 {% if contract.remarks %}<section class="print-panel"><strong>Remarks:</strong> {{ contract.remarks|linebreaksbr }}</section>{% endif %}
 <section class="signature-grid"><div class="signature-line">Customer Signature</div><div class="signature-line">Authorized Signature</div></section>

@@ -419,7 +419,7 @@ Additional business and audit reports are available from the same reporting fram
 - Accounting Reports: expense report, income report, tax summary, and account ledger
 - System / Audit Reports: user activity, login/logout, document prints, report exports, backup/restore, and validation failures
 
-Item reports are transaction/history/profit reports only. This system does not implement inventory or stock tracking, so product history is not a stock ledger and does not show stock balances.
+Item reports are transaction/history/profit reports only. Stock balances are handled by the Inventory Control System described below.
 
 Run the expanded report query smoke test:
 
@@ -448,6 +448,8 @@ Business document detail pages now expose three print choices:
 Company address, phone, email, website, NTN, and STRN are shown once in the document footer. Headers no longer repeat the full company address.
 
 Print layouts use narrow A4 margins, compact table padding, and smaller row heights so normal invoices, quotations, delivery challans, returns, vouchers, and contracts can fit at least 10 detail rows comfortably.
+
+Customer, party, and document metadata is shown in a compact tabular detail block, normally three columns across and about three rows deep. Long values such as address, subject, or reason can span columns so the item table starts higher on the page.
 
 Tax is still calculated and stored normally, but item detail tables on print/PDF formats no longer show per-row tax columns. Tax appears in the totals section only.
 
@@ -492,6 +494,30 @@ python manage.py test_validation_safety
 
 The command checks duplicate document numbers, invalid invoice dates, negative totals, over-receipts, over-payments, unbalanced journals, missing linked accounts, invalid branch access, and expense voucher amount validation.
 
+## Inventory Control System
+
+The inventory module tracks product quantities only. It does not change accounting journals, inventory valuation accounting, COGS posting, serial numbers, warehouses, batches, or expiry.
+
+- Product items can track inventory; service items never affect stock.
+- Stock increases from supplier purchases, sales returns marked `Return to Stock`, opening stock, and stock adjustments in.
+- Stock decreases from delivery challans, direct sales invoices without a delivery challan, purchase returns, and stock adjustments out.
+- Invoices created from delivery challans do not reduce stock again.
+- Negative stock is blocked for delivery challans, direct invoices, purchase returns, and stock adjustments out.
+- Cancelling a purchase is blocked if that purchase stock has already been issued.
+- Inventory settings live under Settings -> Inventory Settings.
+- Inventory pages live under `/inventory/`.
+- Report shortcuts are available at `/reports/inventory/stock-balance/` and `/reports/inventory/item-ledger/`.
+
+Existing databases must be upgraded with raw SQL helpers, not Django migrations:
+
+```powershell
+python manage.py upgrade_schema_inventory
+python manage.py rebuild_stock_movements
+python manage.py test_inventory_validation
+```
+
+Use `python manage.py rebuild_stock_movements --reset` only when you intentionally want to regenerate system stock movements from existing transactions.
+
 ## Chart Of Accounts Flags
 
 The Chart of Accounts uses two protection flags from the `accounts` table:
@@ -511,4 +537,4 @@ python manage.py fix_account_flags
 
 Phase 2 provides only the Django project foundation, shared layout, dashboard placeholder, login placeholder, and module route placeholders.
 
-Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Phase 18 adds the reporting framework and priority reports. Phase 19 adds print/PDF layout finalization helpers. Phase 20 adds web backup/restore. Phase 21 adds audit log and safety logging. Phase 22 adds validation safety checks.
+Phase 3 adds custom authentication, role permissions, branch session handling, and license checking. Phase 4 adds settings management. Phase 5 adds master data maintenance. Phase 6 adds the hidden journal engine and read-only accounting screens. Phase 6.5 adds validation and safety hardening. Phase 7 adds quotations. Phase 8 adds customer confirmations. Phase 9 adds supplier purchases. Phase 10 adds delivery challans. Phase 11 adds sales invoices. Phase 12 adds customer receipts. Phase 13 adds supplier payments. Phase 14 adds sales and purchase returns. Phase 15 adds service contracts. Phase 16 adds expense vouchers. Phase 17 replaces the placeholder dashboard with live branch metrics. Phase 18 adds the reporting framework and priority reports. Phase 19 adds print/PDF layout finalization helpers. Phase 20 adds web backup/restore. Phase 21 adds audit log and safety logging. Phase 22 adds validation safety checks. The inventory phase adds quantity-only stock control and inventory reports without changing accounting flow.
