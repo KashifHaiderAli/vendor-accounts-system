@@ -64,8 +64,10 @@ SIDEBAR_GROUPS = [
             ("Supplier Reports", "supplier_reports", "reports:supplier_payable"),
             ("Sales Reports", "sales_reports", "reports:sales_invoices"),
             ("Purchase Reports", "purchase_reports", "reports:purchase_report"),
+            ("Item / Product Reports", "sales_reports", "reports:item_reports"),
             ("Service Reports", "service_reports", "reports:service_contracts"),
             ("Accounting Reports", "accounting_reports", "reports:trial_balance"),
+            ("Tax Summary", "accounting_reports", "reports:tax_summary"),
         ],
     },
     {
@@ -74,6 +76,7 @@ SIDEBAR_GROUPS = [
         "items": [
             ("Backup / Restore", "backup_restore", "backup:dashboard"),
             ("Audit Log", "audit_log", "backup:audit_log"),
+            ("System Reports", "audit_log", "reports:system_reports"),
             ("License Status", "licensing", "licensing:index"),
         ],
     },

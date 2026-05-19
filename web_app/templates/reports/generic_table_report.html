@@ -44,6 +44,14 @@
                 <input class="form-control" id="status" name="status" value="{{ filters.status }}" placeholder="Any">
             </div>
             <div>
+                <label class="form-label" for="invoice_type">Invoice Type</label>
+                <input class="form-control" id="invoice_type" name="invoice_type" value="{{ filters.invoice_type }}" placeholder="Any">
+            </div>
+            <div>
+                <label class="form-label" for="payment_mode">Payment Mode</label>
+                <input class="form-control" id="payment_mode" name="payment_mode" value="{{ filters.payment_mode }}" placeholder="Any">
+            </div>
+            <div>
                 <label class="form-label" for="customer_id">Customer</label>
                 <select class="form-select" id="customer_id" name="customer_id">
                     <option value="">All / Select</option>
@@ -58,6 +66,24 @@
                     <option value="">All / Select</option>
                     {% for supplier in filters.suppliers %}
                     <option value="{{ supplier.id }}" {% if filters.supplier_id == supplier.id|stringformat:"s" %}selected{% endif %}>{{ supplier.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="item_service_id">Item / Service</label>
+                <select class="form-select" id="item_service_id" name="item_service_id">
+                    <option value="">All / Select</option>
+                    {% for item in filters.items %}
+                    <option value="{{ item.id }}" {% if filters.item_service_id == item.id|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="expense_head_id">Expense Head</label>
+                <select class="form-select" id="expense_head_id" name="expense_head_id">
+                    <option value="">All / Select</option>
+                    {% for head in filters.expense_heads %}
+                    <option value="{{ head.id }}" {% if filters.expense_head_id == head.id|stringformat:"s" %}selected{% endif %}>{{ head.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -78,6 +104,23 @@
                     <option value="{{ account.id }}" {% if filters.cash_bank_account_id == account.id|stringformat:"s" %}selected{% endif %}>{{ account.name }}</option>
                     {% endfor %}
                 </select>
+            </div>
+            <div>
+                <label class="form-label" for="user_id">User</label>
+                <select class="form-select" id="user_id" name="user_id">
+                    <option value="">All / Select</option>
+                    {% for user in filters.users %}
+                    <option value="{{ user.id }}" {% if filters.user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="action">Action</label>
+                <input class="form-control" id="action" name="action" value="{{ filters.action }}" placeholder="Any">
+            </div>
+            <div>
+                <label class="form-label" for="module">Module</label>
+                <input class="form-control" id="module" name="module" value="{{ filters.module }}" placeholder="Any">
             </div>
         </div>
         <div class="form-actions">

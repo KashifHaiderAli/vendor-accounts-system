@@ -411,6 +411,22 @@ python manage.py test_reports_queries
 
 CSV export is available from each report screen. The PDF button opens the print-friendly HTML view so the browser can print or save as PDF without adding a heavy Windows-sensitive PDF dependency.
 
+## Phase 18.5 Additional Reports
+
+Additional business and audit reports are available from the same reporting framework:
+
+- Item / Product Reports: item-wise sales, purchases, profit, transaction history, and service-wise sales
+- Accounting Reports: expense report, income report, tax summary, and account ledger
+- System / Audit Reports: user activity, login/logout, document prints, report exports, backup/restore, and validation failures
+
+Item reports are transaction/history/profit reports only. This system does not implement inventory or stock tracking, so product history is not a stock ledger and does not show stock balances.
+
+Run the expanded report query smoke test:
+
+```powershell
+python manage.py test_reports_queries
+```
+
 ## Phase 19 Print Finalization
 
 Common print helpers and CSS were added for stable A4 output.

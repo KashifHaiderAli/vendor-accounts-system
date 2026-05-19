@@ -18,8 +18,10 @@ REPORT_CATEGORIES = [
     ("Supplier Reports", "bi-truck", "Supplier ledgers, payable, aging, purchases, and payments.", "reports:supplier_payable", ("supplier_reports", "suppliers")),
     ("Sales Reports", "bi-receipt", "Quotations, confirmations, challans, invoices, returns, receipts, and tax.", "reports:sales_invoices", ("sales_reports", "sales_invoices")),
     ("Purchase Reports", "bi-bag-check", "Purchases, purchase returns, supplier payments, tax, and profit views.", "reports:purchase_report", ("purchase_reports", "supplier_purchases")),
+    ("Item / Product Reports", "bi-box-seam", "Item sales, purchases, profit, transaction history, and service sales.", "reports:item_reports", ("sales_reports", "purchase_reports")),
     ("Service Reports", "bi-briefcase", "Contracts, expiring contracts, billing due, and invoice history.", "reports:service_contracts", ("service_reports", "service_contracts")),
     ("Accounting Reports", "bi-journal-richtext", "Cash book, bank book, ledger, trial balance, profit and loss, and balance sheet.", "reports:trial_balance", ("accounting_reports", "accounting_reports")),
+    ("System / Audit Reports", "bi-shield-check", "Activity, login/logout, print, export, backup/restore, and validation logs.", "reports:system_reports", ("audit_log", "audit_log")),
 ]
 
 
@@ -110,6 +112,36 @@ REPORTS = {
         "function": reports.supplier_payment_report,
         "columns": [col("payment_no", "Payment No"), col("payment_date", "Date"), col("supplier", "Supplier"), col("payment_mode", "Mode"), col("cash_bank", "Cash/Bank"), col("cheque_reference_no", "Reference"), col("amount", "Amount", "money"), col("adjusted_purchase", "Purchase")],
     },
+    "item_sales": {
+        "title": "Item-wise Sales Report",
+        "permission": ("sales_reports", "sales_invoices"),
+        "function": reports.item_sales_report,
+        "columns": [col("item_code", "Item Code"), col("item_name", "Item / Service"), col("item_type", "Type"), col("qty_sold", "Qty Sold", "money"), col("gross_amount", "Gross", "money"), col("discount", "Discount", "money"), col("tax", "Tax", "money"), col("net_total", "Net Total", "money")],
+    },
+    "item_purchases": {
+        "title": "Item-wise Purchase Report",
+        "permission": ("purchase_reports", "supplier_purchases"),
+        "function": reports.item_purchase_report,
+        "columns": [col("item_code", "Item Code"), col("item_name", "Item / Service"), col("item_type", "Type"), col("qty_purchased", "Qty Purchased", "money"), col("purchase_amount", "Purchase Amount", "money"), col("tax", "Tax", "money"), col("net_total", "Net Total", "money")],
+    },
+    "item_profit": {
+        "title": "Item-wise Profit Report",
+        "permission": ("sales_reports", "purchase_reports"),
+        "function": reports.item_profit_report,
+        "columns": [col("item", "Item"), col("qty_sold", "Qty Sold", "money"), col("sales_amount", "Sales Amount", "money"), col("purchase_cost", "Purchase Cost", "money"), col("gross_profit", "Gross Profit", "money"), col("profit_percent", "Profit %", "money"), col("cost_note", "Cost Note")],
+    },
+    "item_history": {
+        "title": "Item Transaction History",
+        "permission": ("sales_reports", "purchase_reports"),
+        "function": reports.item_history_report,
+        "columns": [col("date", "Date"), col("type", "Type"), col("document_no", "Document No"), col("party", "Party"), col("qty_in", "Qty In", "money"), col("qty_out", "Qty Out", "money"), col("rate", "Rate", "money"), col("amount", "Amount", "money")],
+    },
+    "service_sales": {
+        "title": "Service-wise Sales Report",
+        "permission": ("sales_reports", "sales_invoices"),
+        "function": reports.service_sales_report,
+        "columns": [col("service", "Service"), col("qty_count", "Qty / Count", "money"), col("sales_amount", "Sales Amount", "money"), col("tax", "Tax", "money"), col("net_total", "Net Total", "money")],
+    },
     "cash_book": {
         "title": "Cash Book",
         "permission": ("accounting_reports", "accounting_reports"),
@@ -145,6 +177,93 @@ REPORTS = {
         "permission": ("accounting_reports", "accounting_reports"),
         "function": reports.balance_sheet,
         "columns": [col("section", "Section"), col("amount", "Amount", "money")],
+    },
+    "expense_report": {
+        "title": "Expense Report",
+        "permission": ("accounting_reports", "expense_heads"),
+        "function": reports.expense_report,
+        "columns": [col("voucher_no", "Voucher No"), col("voucher_date", "Date"), col("expense_head", "Expense Head"), col("cash_bank", "Cash/Bank"), col("payment_mode", "Mode"), col("amount", "Amount", "money"), col("tax", "Tax", "money"), col("total", "Total", "money"), col("status", "Status"), col("remarks", "Remarks")],
+    },
+    "income_report": {
+        "title": "Income Report",
+        "permission": ("accounting_reports", "sales_invoices"),
+        "function": reports.income_report,
+        "columns": [col("invoice_no", "Invoice No"), col("invoice_date", "Date"), col("customer", "Customer"), col("invoice_type", "Type"), col("subtotal", "Subtotal", "money"), col("discount_total", "Discount", "money"), col("tax_total", "Tax", "money"), col("grand_total", "Grand Total", "money"), col("status", "Status")],
+    },
+    "tax_summary": {
+        "title": "Tax Summary Report",
+        "permission": ("accounting_reports", "accounting_reports"),
+        "function": reports.tax_summary_report,
+        "columns": [col("section", "Tax Section"), col("amount", "Amount", "money")],
+    },
+    "account_ledger": {
+        "title": "Account Ledger",
+        "permission": ("accounting_reports", "accounting_reports"),
+        "function": reports.account_ledger_report,
+        "columns": [col("date", "Date"), col("entry_no", "Entry No"), col("account", "Account"), col("description", "Description"), col("debit", "Debit", "money"), col("credit", "Credit", "money"), col("balance", "Balance", "money")],
+    },
+    "system_activity": {
+        "title": "User Activity Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.user_activity_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("action", "Action"), col("module", "Module"), col("record_type", "Record Type"), col("record_id", "Record ID"), col("description", "Description"), col("ip", "IP")],
+    },
+    "system_login_logout": {
+        "title": "Login / Logout Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.login_logout_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("action", "Action"), col("ip", "IP"), col("description", "User Agent / Details")],
+    },
+    "system_prints": {
+        "title": "Document Print Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.print_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("module", "Module"), col("record_type", "Document Type"), col("record_id", "Document ID"), col("description", "Description")],
+    },
+    "system_exports": {
+        "title": "Report Export Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.export_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("module", "Report Name"), col("action", "Format"), col("description", "Description")],
+    },
+    "system_backup_restore": {
+        "title": "Backup / Restore Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.backup_restore_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("action", "Action"), col("module", "Module"), col("description", "File / Path / Status")],
+    },
+    "system_validation_failures": {
+        "title": "Validation Failure Report",
+        "permission": ("audit_log", "audit_log"),
+        "function": reports.validation_failure_report,
+        "columns": [col("datetime", "Date/Time"), col("user", "User"), col("action", "Action"), col("module", "Module"), col("record_type", "Record Type"), col("record_id", "Record ID"), col("description", "Description"), col("ip", "IP")],
+    },
+}
+
+
+REPORT_GROUPS = {
+    "items": {
+        "title": "Item / Product Reports",
+        "description": "Transaction, sales, purchase, and profit reports. No stock balance is shown because inventory is not implemented.",
+        "links": [
+            ("Item-wise Sales", "bi-receipt", "reports:item_sales", ("sales_reports", "sales_invoices")),
+            ("Item-wise Purchases", "bi-bag-check", "reports:item_purchases", ("purchase_reports", "supplier_purchases")),
+            ("Item-wise Profit", "bi-graph-up-arrow", "reports:item_profit", ("sales_reports", "purchase_reports")),
+            ("Item Transaction History", "bi-clock-history", "reports:item_history", ("sales_reports", "purchase_reports")),
+            ("Service-wise Sales", "bi-tools", "reports:service_sales", ("sales_reports", "sales_invoices")),
+        ],
+    },
+    "system": {
+        "title": "System / Audit Reports",
+        "description": "Read-only audit reports for activity, login/logout, document prints, exports, backup/restore, and validation failures.",
+        "links": [
+            ("User Activity", "bi-activity", "reports:system_activity", ("audit_log", "audit_log")),
+            ("Login / Logout", "bi-box-arrow-in-right", "reports:system_login_logout", ("audit_log", "audit_log")),
+            ("Document Prints", "bi-printer", "reports:system_prints", ("audit_log", "audit_log")),
+            ("Report Exports", "bi-file-earmark-arrow-down", "reports:system_exports", ("audit_log", "audit_log")),
+            ("Backup / Restore", "bi-database-check", "reports:system_backup_restore", ("audit_log", "audit_log")),
+            ("Validation Failures", "bi-exclamation-triangle", "reports:system_validation_failures", ("audit_log", "audit_log")),
+        ],
     },
 }
 
@@ -184,9 +303,25 @@ def index(request):
         ("Sales Invoices", "bi-receipt", "reports:sales_invoices", ("sales_reports", "sales_invoices")),
         ("Purchases", "bi-bag-check", "reports:purchase_report", ("purchase_reports", "supplier_purchases")),
         ("Trial Balance", "bi-scale", "reports:trial_balance", ("accounting_reports", "accounting_reports")),
+        ("Item-wise Profit", "bi-graph-up-arrow", "reports:item_profit", ("sales_reports", "purchase_reports")),
+        ("Tax Summary", "bi-percent", "reports:tax_summary", ("accounting_reports", "accounting_reports")),
     ]
     context["priority_links"] = [item for item in priority if has_report_permission(request, item[3])]
     return render(request, "reports/index.html", context)
+
+
+@login_required_custom
+def report_group(request, group_key):
+    group = REPORT_GROUPS.get(group_key)
+    if not group:
+        return render(request, "errors/404.html", status=404)
+    links = [link for link in group["links"] if has_report_permission(request, link[3])]
+    if not links:
+        return render(request, "errors/403.html", status=403)
+    context = build_page_context(group["title"], group["description"])
+    context["group"] = group
+    context["links"] = links
+    return render(request, "reports/category.html", context)
 
 
 @login_required_custom
@@ -266,6 +401,9 @@ def placeholder_report(request, report_key):
 
 def has_report_permission(request, permissions):
     primary, fallback = permissions
+    if primary == "audit_log":
+        role_name = str(request.session.get("role_name") or "").lower()
+        return int(request.session.get("is_master_user") or 0) == 1 or "admin" in role_name or user_has_permission(request, "audit_log", "view")
     return user_has_permission(request, primary, "view") or user_has_permission(request, fallback, "view")
 
 
