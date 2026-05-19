@@ -13,7 +13,7 @@
 <main class="print-page">
     <header class="print-header">
         <div>
-            {% if logo_url %}<img class="print-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
+            {% if show_logo and logo_url %}<img class="print-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
             <div class="company-name">{{ current_company_name }}</div>
             <div class="muted">{{ current_branch_name }}</div>
         </div>
@@ -23,6 +23,7 @@
         </div>
     </header>
     {% include "reports/report_base.html" %}
+    {% include "partials/print_footer.html" with company=print_company %}
 </main>
 </body>
 </html>

@@ -1,64 +1,14 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>{{ confirmation.confirmation_no }} - Confirmation</title>
-    <style>
-        body { font-family: Arial, sans-serif; color: #111827; margin: 32px; }
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #111827; padding-bottom: 16px; margin-bottom: 24px; }
-        .company h1 { margin: 0 0 6px; font-size: 24px; }
-        .meta { text-align: right; font-size: 13px; }
-        h2 { text-align: center; margin: 18px 0; letter-spacing: 0.04em; }
-        table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; }
-        th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
-        th { background: #f3f4f6; text-align: left; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-        .box { border: 1px solid #d1d5db; padding: 14px; min-height: 90px; }
-        .label { color: #6b7280; font-size: 12px; text-transform: uppercase; }
-        .value { font-weight: 700; margin-top: 3px; }
-        .signature { margin-top: 56px; display: flex; justify-content: space-between; }
-        @media print { body { margin: 18mm; } .no-print { display: none; } }
-    </style>
-</head>
-<body>
-    <div class="no-print" style="margin-bottom:16px;"><button onclick="window.print()">Print</button></div>
-    <div class="header">
-        <div class="company">
-            <h1>{{ company.company_name|default:"Company" }}</h1>
-            <div>{{ branch.branch_name|default:"" }}</div>
-            <div>{{ company.address|default:"" }}</div>
-            <div>{{ company.phone|default:"" }}{% if company.email %} · {{ company.email }}{% endif %}</div>
-        </div>
-        <div class="meta">
-            <strong>Prepared:</strong> {{ confirmation.created_by_name|default:"-" }}<br>
-            <strong>Print Date:</strong> {{ print_date }}
-        </div>
-    </div>
-
-    <h2>CUSTOMER CONFIRMATION / PO RECORD</h2>
-
-    <table>
-        <tr><th>Confirmation No</th><td>{{ confirmation.confirmation_no }}</td><th>Confirmation Date</th><td>{{ confirmation.confirmation_date }}</td></tr>
-        <tr><th>Customer / Party</th><td>{{ confirmation.display_party_name }}</td><th>Status</th><td>{{ confirmation.status|default:"Open" }}</td></tr>
-        <tr><th>Confirmation Type</th><td>{{ confirmation.confirmation_type|default:"-" }}</td><th>Total Amount</th><td>{{ confirmation.total_amount|floatformat:2 }}</td></tr>
-        <tr><th>Related Quotation</th><td>{{ confirmation.quotation_no|default:"-" }}</td><th>Quotation Date</th><td>{{ confirmation.quotation_date|default:"-" }}</td></tr>
-        <tr><th>PO Number</th><td>{{ confirmation.po_number|default:"-" }}</td><th>PO Date / Amount</th><td>{{ confirmation.po_date|default:"-" }} / {{ confirmation.po_amount|floatformat:2 }}</td></tr>
-    </table>
-
-    <div class="grid">
-        <div class="box">
-            <div class="label">Confirmation Note</div>
-            <div>{{ confirmation.confirmation_note|default:"-"|linebreaksbr }}</div>
-        </div>
-        <div class="box">
-            <div class="label">Remarks</div>
-            <div>{{ confirmation.remarks|default:"-"|linebreaksbr }}</div>
-        </div>
-    </div>
-
-    <div class="signature">
-        <div>Prepared By: ____________________</div>
-        <div>Approved By: ____________________</div>
-    </div>
-</body>
-</html>
+{% load static %}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ confirmation.confirmation_no }}</title><link rel="stylesheet" href="{% static 'css/print.css' %}"></head>
+<body>{% include "partials/print_actions.html" %}<main class="print-page">
+{% include "partials/print_header.html" with document_title="Customer Confirmation / PO" document_no=confirmation.confirmation_no document_date=confirmation.confirmation_date %}
+<h1 class="print-document-title">Customer Confirmation / PO Record</h1>
+<section class="print-party-grid">
+<div><strong>Customer / Party:</strong> {{ confirmation.display_party_name|default:"-" }}</div><div><strong>Type:</strong> {{ confirmation.confirmation_type|default:"-" }}</div>
+<div><strong>PO No:</strong> {{ confirmation.po_number|default:"-" }}</div><div><strong>PO Date / Amount:</strong> {{ confirmation.po_date|default:"-" }} / {{ confirmation.po_amount|floatformat:2 }}</div>
+<div><strong>Quotation:</strong> {{ confirmation.quotation_no|default:"-" }}</div><div><strong>Total:</strong> {{ confirmation.total_amount|floatformat:2 }}</div>
+</section>
+<section class="print-grid"><div class="print-panel"><strong>Confirmation Note</strong><br>{{ confirmation.confirmation_note|default:"-"|linebreaksbr }}</div><div class="print-panel"><strong>Remarks</strong><br>{{ confirmation.remarks|default:"-"|linebreaksbr }}</div></section>
+<section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">Approved By</div></section>
+{% include "partials/print_footer.html" %}
+</main></body></html>

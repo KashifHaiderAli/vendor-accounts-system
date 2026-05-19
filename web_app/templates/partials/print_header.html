@@ -1,0 +1,24 @@
+{% if show_logo and logo_url %}
+<header class="print-header">
+    <div>
+        <img class="print-logo" src="{{ logo_url }}" alt="Company logo">
+        <div class="company-name">{{ company.company_name|default:"Company" }}</div>
+    </div>
+    <div class="print-title">
+        <strong>{{ document_title }}</strong><br>
+        <span>{{ document_no|default:"" }}</span><br>
+        <span>{{ document_date|default:"" }}</span>
+    </div>
+</header>
+{% else %}
+<header class="print-header">
+    <div>
+        <strong>{{ document_title }}</strong><br>
+        <span>{{ document_no|default:"" }}</span>
+    </div>
+    <div class="print-title">
+        <strong>Date</strong><br>
+        <span>{{ document_date|default:"" }}</span>
+    </div>
+</header>
+{% endif %}

@@ -358,7 +358,7 @@ def generic_report(request, report_key):
             "filters": filters,
             "allowed_branches": allowed_branches,
             "print_mode": request.GET.get("print") == "1",
-            **build_print_context(company_id),
+            **build_print_context(company_id, request, definition["title"]),
         }
     )
     template = "reports/print_report.html" if context["print_mode"] else "reports/generic_table_report.html"
@@ -387,7 +387,7 @@ def placeholder_report(request, report_key):
             "filters": reports.report_filters(request, company_id, branch_id),
             "allowed_branches": allowed_branches,
             "print_mode": request.GET.get("print") == "1",
-            **build_print_context(company_id),
+            **build_print_context(company_id, request, title),
         }
     )
     if request.GET.get("export") == "csv":

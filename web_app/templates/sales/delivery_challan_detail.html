@@ -5,7 +5,9 @@
     <div><span class="soft-badge">Delivery Challan</span><h2>{{ challan.dc_no }}</h2><p>{{ challan.party_name|default:"Party" }} · {{ challan.dc_date }}</p></div>
     <div class="page-header-actions">
         <a class="btn btn-light" href="{% url 'sales:delivery_challans' %}"><i class="bi bi-arrow-left"></i> Back</a>
-        <a class="btn btn-light" href="{% url 'sales:delivery_challan_print' challan.id %}"><i class="bi bi-printer"></i> Print</a>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_print' challan.id %}?logo=0"><i class="bi bi-printer"></i> Print Without Logo</a>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_print' challan.id %}?logo=1"><i class="bi bi-image"></i> Print With Logo</a>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_print' challan.id %}?logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>
         {% if can_edit %}<a class="btn btn-light" href="{% url 'sales:delivery_challan_upload_signed' challan.id %}"><i class="bi bi-file-earmark-check"></i> Signed Copy</a>{% endif %}
         {% if can_edit %}<a class="btn btn-primary" href="{% url 'sales:delivery_challan_edit' challan.id %}"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
     </div>

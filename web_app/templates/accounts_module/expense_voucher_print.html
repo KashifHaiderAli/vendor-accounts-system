@@ -1,1 +1,14 @@
-<!doctype html><html><head><meta charset="utf-8"><title>{{ voucher.voucher_no }}</title><style>body{font-family:Arial;margin:32px}.header{display:flex;justify-content:space-between;border-bottom:1px solid #ddd}.box{border:1px solid #ddd;border-radius:8px;padding:14px;margin-top:16px}.right{text-align:right}@media print{button{display:none}}</style></head><body><button onclick="print()">Print</button><div class="header"><div><h2>{{ company.company_name }}</h2><p>{{ branch.branch_name }}</p></div></div><h1>Expense Voucher</h1><div class="box"><strong>No:</strong> {{ voucher.voucher_no }}<br><strong>Date:</strong> {{ voucher.voucher_date }}<br><strong>Expense:</strong> {{ voucher.expense_name }}<br><strong>Cash/Bank:</strong> {{ voucher.cash_bank_name }}<br><strong>Mode:</strong> {{ voucher.payment_mode }} · {{ voucher.cheque_reference_no|default:"-" }}</div><div class="box right"><p>Amount: {{ voucher.amount|floatformat:2 }}</p><p>Tax: {{ voucher.tax_amount|floatformat:2 }}</p><h2>Total: {{ voucher.total_amount|floatformat:2 }}</h2></div><div class="box">{{ voucher.remarks|default:"-"|linebreaksbr }}</div><div style="margin-top:80px;display:flex;justify-content:space-between"><span>Prepared By</span><span>Authorized Signature</span></div></body></html>
+{% load static %}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ voucher.voucher_no }}</title><link rel="stylesheet" href="{% static 'css/print.css' %}"></head>
+<body>{% include "partials/print_actions.html" %}<main class="print-page">
+{% include "partials/print_header.html" with document_title="Expense Voucher" document_no=voucher.voucher_no document_date=voucher.voucher_date %}
+<h1 class="print-document-title">Expense Voucher</h1>
+<section class="print-party-grid">
+<div><strong>Expense Head:</strong> {{ voucher.expense_name|default:"-" }}</div><div><strong>Payment Mode:</strong> {{ voucher.payment_mode|default:"-" }}</div>
+<div><strong>Cash/Bank:</strong> {{ voucher.cash_bank_name|default:"-" }}</div><div><strong>Reference:</strong> {{ voucher.cheque_reference_no|default:"-" }}</div>
+<div><strong>Amount:</strong> {{ voucher.amount|floatformat:2 }}</div><div><strong>Tax / Total:</strong> {{ voucher.tax_amount|floatformat:2 }} / {{ voucher.total_amount|floatformat:2 }}</div>
+</section>
+<section class="print-panel"><strong>Remarks:</strong> {{ voucher.remarks|default:"-"|linebreaksbr }}</section>
+<section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">Authorized Signature</div></section>
+{% include "partials/print_footer.html" %}
+</main></body></html>

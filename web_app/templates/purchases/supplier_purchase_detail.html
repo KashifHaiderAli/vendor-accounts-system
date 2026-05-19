@@ -5,7 +5,7 @@
     <div><span class="soft-badge">Supplier Purchase</span><h2>{{ purchase.purchase_no }}</h2><p>{{ purchase.supplier_name|default:"Supplier" }} · {{ purchase.grand_total|floatformat:2 }}</p></div>
     <div class="page-header-actions">
         <a class="btn btn-light" href="{% url 'purchases:supplier_purchases' %}"><i class="bi bi-arrow-left"></i> Back</a>
-        {% if can_print %}<a class="btn btn-light" href="{% url 'purchases:supplier_purchase_print' purchase.id %}"><i class="bi bi-printer"></i> Print</a>{% endif %}
+        {% if can_print %}<a class="btn btn-light" href="{% url 'purchases:supplier_purchase_print' purchase.id %}?logo=0"><i class="bi bi-printer"></i> Print Without Logo</a><a class="btn btn-light" href="{% url 'purchases:supplier_purchase_print' purchase.id %}?logo=1"><i class="bi bi-image"></i> Print With Logo</a><a class="btn btn-light" href="{% url 'purchases:supplier_purchase_print' purchase.id %}?logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>{% endif %}
         {% if can_edit %}<a class="btn btn-primary" href="{% url 'purchases:supplier_purchase_edit' purchase.id %}"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
     </div>
 </section>

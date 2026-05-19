@@ -1,0 +1,6 @@
+<div class="totals-box">
+    <div class="row"><span>Subtotal</span><strong>{{ subtotal|floatformat:2 }}</strong></div>
+    {% if discount_total %}<div class="row"><span>Discount</span><strong>{{ discount_total|floatformat:2 }}</strong></div>{% endif %}
+    <div class="row"><span>Tax Total</span><strong>{{ tax_total|floatformat:2 }}</strong></div>
+    <div class="row"><span>Grand Total</span><strong>{{ grand_total|floatformat:2 }}</strong></div>
+</div>

@@ -10,7 +10,9 @@
     <div class="page-header-actions">
         <a class="btn btn-light" href="{% url 'reports:index' %}"><i class="bi bi-arrow-left"></i> Reports</a>
         <a class="btn btn-light" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}export=csv"><i class="bi bi-filetype-csv"></i> CSV</a>
-        <a class="btn btn-primary" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1"><i class="bi bi-printer"></i> Print / PDF</a>
+        <a class="btn btn-light" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=0"><i class="bi bi-printer"></i> Print Without Logo</a>
+        <a class="btn btn-light" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=1"><i class="bi bi-image"></i> Print With Logo</a>
+        <a class="btn btn-primary" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>
     </div>
 </section>
 

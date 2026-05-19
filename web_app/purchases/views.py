@@ -8,6 +8,7 @@ from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core import validators
+from core.print_utils import build_print_context
 from settings_module.services import log_user_activity
 
 from . import payment_services, return_services, services
@@ -209,7 +210,9 @@ def print_purchase(request, purchase_id):
         messages.error(request, "Supplier purchase was not found.")
         return redirect("purchases:supplier_purchases")
     log_user_activity(request, "PRINT", "Supplier Purchases", "supplier_purchases", purchase_id, f"Printed supplier purchase {purchase['purchase_no']}.")
-    return render(request, "purchases/supplier_purchase_print.html", services.get_print_context(company_id, branch_id, purchase_id))
+    context = services.get_print_context(company_id, branch_id, purchase_id)
+    context.update(build_print_context(company_id, request, "Supplier Purchase"))
+    return render(request, "purchases/supplier_purchase_print.html", context)
 
 
 @permission_required_custom("supplier_payments", "view")
@@ -367,7 +370,9 @@ def print_supplier_payment(request, payment_id):
         messages.error(request, "Supplier payment was not found.")
         return redirect("purchases:supplier_payments")
     payment_services.mark_printed(request, payment)
-    return render(request, "purchases/supplier_payment_print.html", payment_services.get_print_context(company_id, branch_id, payment_id))
+    context = payment_services.get_print_context(company_id, branch_id, payment_id)
+    context.update(build_print_context(company_id, request, "Supplier Payment Voucher"))
+    return render(request, "purchases/supplier_payment_print.html", context)
 
 
 @permission_required_custom("purchase_returns", "view")
@@ -483,7 +488,9 @@ def print_purchase_return(request, return_id):
         messages.error(request, "Purchase return was not found.")
         return redirect("purchases:returns")
     return_services.mark_printed(request, purchase_return)
-    return render(request, "purchases/purchase_return_print.html", return_services.get_print_context(company_id, branch_id, return_id))
+    context = return_services.get_print_context(company_id, branch_id, return_id)
+    context.update(build_print_context(company_id, request, "Debit Note / Purchase Return"))
+    return render(request, "purchases/purchase_return_print.html", context)
 
 
 def require_scope(request):

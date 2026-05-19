@@ -9,7 +9,9 @@
     </div>
     <div class="page-header-actions">
         <a class="btn btn-light" href="{% url 'sales:confirmations' %}"><i class="bi bi-arrow-left"></i> Back</a>
-        <a class="btn btn-light" href="{% url 'sales:confirmation_print' confirmation.id %}"><i class="bi bi-printer"></i> Print</a>
+        <a class="btn btn-light" href="{% url 'sales:confirmation_print' confirmation.id %}?logo=0"><i class="bi bi-printer"></i> Print Without Logo</a>
+        <a class="btn btn-light" href="{% url 'sales:confirmation_print' confirmation.id %}?logo=1"><i class="bi bi-image"></i> Print With Logo</a>
+        <a class="btn btn-light" href="{% url 'sales:confirmation_print' confirmation.id %}?logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>
         {% if can_edit %}<a class="btn btn-primary" href="{% url 'sales:confirmation_edit' confirmation.id %}"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
     </div>
 </section>

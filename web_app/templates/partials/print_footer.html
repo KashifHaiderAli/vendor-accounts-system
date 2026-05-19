@@ -1,0 +1,9 @@
+<footer class="print-footer">
+    {% if company.address %}{{ company.address }}{% endif %}
+    {% if company.phone %} · Phone: {{ company.phone }}{% endif %}
+    {% if company.mobile %} · Mobile: {{ company.mobile }}{% endif %}
+    {% if company.email %} · Email: {{ company.email }}{% endif %}
+    {% if company.website %} · {{ company.website }}{% endif %}
+    {% if company.ntn %} · NTN: {{ company.ntn }}{% endif %}
+    {% if company.strn %} · STRN: {{ company.strn }}{% endif %}
+</footer>

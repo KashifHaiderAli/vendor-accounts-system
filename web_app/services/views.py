@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core.print_utils import build_print_context
 from settings_module.services import log_user_activity
 
 from . import contract_services
@@ -106,7 +107,9 @@ def print_contract(request, contract_id):
         messages.error(request, "Service contract was not found.")
         return redirect("services:contracts")
     contract_services.mark_printed(request, contract)
-    return render(request, "services/contract_print.html", contract_services.get_print_context(company_id, branch_id, contract_id))
+    context = contract_services.get_print_context(company_id, branch_id, contract_id)
+    context.update(build_print_context(company_id, request, "Service Contract Summary"))
+    return render(request, "services/contract_print.html", context)
 
 
 @login_required_custom

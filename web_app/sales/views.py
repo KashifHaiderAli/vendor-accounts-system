@@ -8,6 +8,7 @@ from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core import validators
+from core.print_utils import build_print_context
 from settings_module.services import log_user_activity
 
 from . import delivery_services, invoice_services, receipt_services, return_services, services
@@ -423,7 +424,9 @@ def print_confirmation(request, confirmation_id):
         messages.error(request, "Confirmation was not found.")
         return redirect("sales:confirmations")
     services.mark_confirmation_printed(request, confirmation)
-    return render(request, "sales/confirmation_print.html", services.get_confirmation_print_context(company_id, branch_id, confirmation_id))
+    context = services.get_confirmation_print_context(company_id, branch_id, confirmation_id)
+    context.update(build_print_context(company_id, request, "Customer Confirmation / PO"))
+    return render(request, "sales/confirmation_print.html", context)
 
 
 @permission_required_custom("delivery_challans", "view")
@@ -604,7 +607,9 @@ def print_delivery_challan(request, challan_id):
         messages.error(request, "Delivery challan was not found.")
         return redirect("sales:delivery_challans")
     delivery_services.mark_printed(request, challan)
-    return render(request, "sales/delivery_challan_print.html", delivery_services.get_print_context(company_id, branch_id, challan_id))
+    context = delivery_services.get_print_context(company_id, branch_id, challan_id)
+    context.update(build_print_context(company_id, request, "Delivery Challan"))
+    return render(request, "sales/delivery_challan_print.html", context)
 
 
 @login_required_custom
@@ -847,7 +852,9 @@ def render_invoice_print(request, invoice_id, digital=False):
         return redirect("sales:invoices")
     invoice_services.mark_printed(request, invoice, digital=digital)
     template = "sales/invoice_print_digital.html" if digital else "sales/invoice_print_preprinted.html"
-    return render(request, template, invoice_services.get_print_context(company_id, branch_id, invoice_id))
+    context = invoice_services.get_print_context(company_id, branch_id, invoice_id)
+    context.update(build_print_context(company_id, request, "Digital Invoice" if digital else "Sales Invoice", force_logo=digital, force_pdf=digital))
+    return render(request, template, context)
 
 
 @permission_required_custom("customer_receipts", "view")
@@ -1005,7 +1012,9 @@ def print_receipt(request, receipt_id):
         messages.error(request, "Customer receipt was not found.")
         return redirect("sales:receipts")
     receipt_services.mark_printed(request, receipt)
-    return render(request, "sales/receipt_print.html", receipt_services.get_print_context(company_id, branch_id, receipt_id))
+    context = receipt_services.get_print_context(company_id, branch_id, receipt_id)
+    context.update(build_print_context(company_id, request, "Customer Receipt Voucher"))
+    return render(request, "sales/receipt_print.html", context)
 
 
 @permission_required_custom("sales_returns", "view")
@@ -1121,7 +1130,9 @@ def print_sales_return(request, return_id):
         messages.error(request, "Sales return was not found.")
         return redirect("sales:returns")
     return_services.mark_printed(request, sales_return)
-    return render(request, "sales/sales_return_print.html", return_services.get_print_context(company_id, branch_id, return_id))
+    context = return_services.get_print_context(company_id, branch_id, return_id)
+    context.update(build_print_context(company_id, request, "Credit Note / Sales Return"))
+    return render(request, "sales/sales_return_print.html", context)
 
 
 def render_print_response(request, quotation_id, action_label):
@@ -1134,6 +1145,7 @@ def render_print_response(request, quotation_id, action_label):
         return redirect("sales:quotations")
     services.mark_printed(request, quotation, action_label)
     context = services.get_print_context(company_id, branch_id, quotation_id)
+    context.update(build_print_context(company_id, request, "Quotation", force_logo=action_label == "Viewed PDF", force_pdf=action_label == "Viewed PDF"))
     return render(request, "sales/quotation_print.html", context)
 
 

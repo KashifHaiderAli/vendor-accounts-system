@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 
 from authentication.auth_utils import dictfetchall, dictfetchone, user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core.print_utils import build_print_context
 from masters.master_utils import paginate
 from settings_module.services import log_user_activity
 
@@ -250,7 +251,9 @@ def print_expense_voucher(request, voucher_id):
         company = dictfetchone(cursor)
         cursor.execute("SELECT * FROM branches WHERE id=%s LIMIT 1", [branch_id])
         branch = dictfetchone(cursor)
-    return render(request, "accounts_module/expense_voucher_print.html", {"voucher": voucher, "company": company, "branch": branch})
+    context = {"voucher": voucher, "company": company, "branch": branch}
+    context.update(build_print_context(company_id, request, "Expense Voucher"))
+    return render(request, "accounts_module/expense_voucher_print.html", context)
 
 
 def can_view_accounting(request):

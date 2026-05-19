@@ -1,40 +1,15 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>{{ contract.contract_no }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; color: #111827; margin: 32px; }
-        .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid #d1d5db; padding-bottom: 12px; }
-        .brand { display: flex; gap: 12px; align-items: flex-start; }
-        .brand img { max-height: 58px; max-width: 150px; object-fit: contain; }
-        .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 14px; margin-top: 16px; }
-        .signature { margin-top: 56px; border-top: 1px solid #6b7280; width: 240px; text-align: center; padding-top: 6px; }
-        @media print { button { display: none; } }
-    </style>
-</head>
-<body>
-<button onclick="print()">Print</button>
-<div class="header">
-    <div class="brand">
-        {% if logo_url %}<img src="{{ logo_url }}" alt="">{% endif %}
-        <div>
-            <h2>{{ company.company_name }}</h2>
-            <p>{{ branch.branch_name }}</p>
-        </div>
-    </div>
-    <div>{{ print_date }}</div>
-</div>
-<h1>Service Contract</h1>
-<div class="box">
-    <strong>No:</strong> {{ contract.contract_no }}<br>
-    <strong>Customer:</strong> {{ contract.customer_name }}<br>
-    <strong>Service:</strong> {{ contract.service_type }}<br>
-    <strong>Period:</strong> {{ contract.start_date }} to {{ contract.end_date|default:"-" }}<br>
-    <strong>Billing:</strong> {{ contract.billing_cycle }} · {{ contract.contract_amount|floatformat:2 }}
-</div>
-<div class="box">{{ contract.contract_details|default:"-"|linebreaksbr }}</div>
-<div class="box"><strong>Remarks:</strong><br>{{ contract.remarks|default:"-"|linebreaksbr }}</div>
-<div class="signature">Authorized Signature</div>
-</body>
-</html>
+{% load static %}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ contract.contract_no }}</title><link rel="stylesheet" href="{% static 'css/print.css' %}"></head>
+<body>{% include "partials/print_actions.html" %}<main class="print-page">
+{% include "partials/print_header.html" with document_title="Service Contract Summary" document_no=contract.contract_no document_date=print_date %}
+<h1 class="print-document-title">Service Contract Summary</h1>
+<section class="print-party-grid">
+<div><strong>Customer:</strong> {{ contract.customer_name|default:"-" }}</div><div><strong>Service:</strong> {{ contract.service_type|default:"-" }}</div>
+<div><strong>Start:</strong> {{ contract.start_date }}</div><div><strong>End:</strong> {{ contract.end_date|default:"-" }}</div>
+<div><strong>Billing:</strong> {{ contract.billing_cycle }}</div><div><strong>Amount:</strong> {{ contract.contract_amount|floatformat:2 }}</div>
+</section>
+<section class="print-panel">{{ contract.contract_details|default:"-"|linebreaksbr }}</section>
+{% if contract.remarks %}<section class="print-panel"><strong>Remarks:</strong> {{ contract.remarks|linebreaksbr }}</section>{% endif %}
+<section class="signature-grid"><div class="signature-line">Customer Signature</div><div class="signature-line">Authorized Signature</div></section>
+{% include "partials/print_footer.html" %}
+</main></body></html>

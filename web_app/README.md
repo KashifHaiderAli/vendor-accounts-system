@@ -437,6 +437,26 @@ Common print helpers and CSS were added for stable A4 output.
 - Digital document prints can show the company logo through a safe logo-serving route
 - Future work can move print alignment settings from constants into database-backed settings
 
+## Client Print / PDF Layout Update
+
+Business document detail pages now expose three print choices:
+
+- Print Without Logo: compact A4 output without logo/header block
+- Print With Logo: compact A4 output with logo when `companies.logo_path` points to an existing file
+- PDF / Digital Copy: print-friendly digital output with logo enabled, intended for browser Save as PDF
+
+Company address, phone, email, website, NTN, and STRN are shown once in the document footer. Headers no longer repeat the full company address.
+
+Print layouts use narrow A4 margins, compact table padding, and smaller row heights so normal invoices, quotations, delivery challans, returns, vouchers, and contracts can fit at least 10 detail rows comfortably.
+
+Tax is still calculated and stored normally, but item detail tables on print/PDF formats no longer show per-row tax columns. Tax appears in the totals section only.
+
+Run the print template check:
+
+```powershell
+python manage.py test_print_templates
+```
+
 ## Phase 20 Backup / Restore
 
 System backup and restore tools are available under `/system/backup/`.
