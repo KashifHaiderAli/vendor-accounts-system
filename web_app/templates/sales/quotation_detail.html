@@ -59,7 +59,7 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td>{{ item.description }}</td>
-                    <td class="text-end">{{ item.quantity|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.quantity|format_quantity }}</td>
                     <td class="text-end">{{ item.rate|floatformat:2 }}</td>
                     <td class="text-end">{{ item.discount_amount|floatformat:2 }}</td>
                     <td class="text-end">{{ item.tax_amount|floatformat:2 }}</td>

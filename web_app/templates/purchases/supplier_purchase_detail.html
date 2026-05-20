@@ -29,7 +29,7 @@
     <div class="app-card-body table-responsive">
         <table class="table app-table align-middle">
             <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Tax %</th><th class="text-end">Tax</th><th class="text-end">Total</th></tr></thead>
-            <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td><td class="text-end">{{ item.purchase_rate|floatformat:2 }}</td><td class="text-end">{{ item.tax_percent|floatformat:2 }}</td><td class="text-end">{{ item.tax_amount|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+            <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td><td class="text-end">{{ item.purchase_rate|floatformat:2 }}</td><td class="text-end">{{ item.tax_percent|floatformat:2 }}</td><td class="text-end">{{ item.tax_amount|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>
         </table>
     </div>
     <div class="app-card-body border-top">

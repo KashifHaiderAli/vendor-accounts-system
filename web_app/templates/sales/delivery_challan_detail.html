@@ -32,7 +32,7 @@
     <div class="app-card-body table-responsive">
         <table class="table app-table align-middle">
             <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Quantity</th></tr></thead>
-            <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+            <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td></tr>{% endfor %}</tbody>
         </table>
     </div>
 </section>

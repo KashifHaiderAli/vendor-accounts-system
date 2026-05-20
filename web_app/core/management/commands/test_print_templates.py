@@ -6,6 +6,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.template.loader import get_template
 
+from core.format_utils import format_quantity
+
 
 DOCUMENT_PRINT_TEMPLATES = [
     "sales/quotation_print.html",
@@ -78,6 +80,16 @@ class Command(BaseCommand):
             content = path.read_text(encoding="utf-8")
             if "<th" in content and ("Tax</th>" in content or "Tax %" in content or "tax_amount" in content):
                 failures.append(f"{template_name} appears to show item-row tax columns.")
+
+        quotation_print = base_dir / "templates" / "sales" / "quotation_print.html"
+        if quotation_print.exists():
+            content = quotation_print.read_text(encoding="utf-8")
+            if "document_totals.html" not in content or "tax_total=quotation.tax_total" not in content:
+                failures.append("sales/quotation_print.html does not pass quotation.tax_total to document totals.")
+            if "format_quantity" not in content:
+                failures.append("sales/quotation_print.html does not use format_quantity for item quantity.")
+        if format_quantity("1.00") != "1" or format_quantity("2.50") != "2.5":
+            failures.append("format_quantity helper is not formatting whole/decimal quantities correctly.")
 
         partials = [
             base_dir / "templates" / "partials" / "print_header.html",

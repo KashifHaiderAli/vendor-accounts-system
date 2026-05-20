@@ -453,10 +453,15 @@ Customer, party, and document metadata is shown in a compact tabular detail bloc
 
 Tax is still calculated and stored normally, but item detail tables on print/PDF formats no longer show per-row tax columns. Tax appears in the totals section only.
 
+Quantities are displayed without unnecessary decimal places. For example, `1.00` displays as `1`, while `2.50` displays as `2.5`.
+
+Quotation print/PDF output shows `Tax Total` in the totals section when quotation tax is saved, while keeping the item detail table free of per-row tax columns.
+
 Run the print template check:
 
 ```powershell
 python manage.py test_print_templates
+python manage.py test_quantity_and_quotation_tax
 ```
 
 ## Phase 20 Backup / Restore
