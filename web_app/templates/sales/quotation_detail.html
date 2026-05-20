@@ -53,7 +53,7 @@
     <div class="app-card-header"><div><h3>Items</h3><p>Server-calculated quotation totals.</p></div></div>
     <div class="app-card-body table-responsive">
         <table class="table app-table align-middle">
-            <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Discount</th><th class="text-end">Tax</th><th class="text-end">Amount</th></tr></thead>
+            <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Discount</th><th class="text-end">Amount</th></tr></thead>
             <tbody>
                 {% for item in items %}
                 <tr>
@@ -62,7 +62,6 @@
                     <td class="text-end">{{ item.quantity|format_quantity }}</td>
                     <td class="text-end">{{ item.rate|floatformat:2 }}</td>
                     <td class="text-end">{{ item.discount_amount|floatformat:2 }}</td>
-                    <td class="text-end">{{ item.tax_amount|floatformat:2 }}</td>
                     <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}

@@ -405,7 +405,7 @@ def parse_quotation_post(post):
         "validity_days": post.get("validity_days", "").strip(),
         "valid_till": post.get("valid_till", "").strip(),
         "payment_terms_id": post.get("payment_terms_id") or "",
-        "tax_option": post.get("tax_option", "").strip() or "no_tax",
+        "tax_option": post.get("tax_option", "").strip() or "tax_exclusive",
         "terms_conditions": post.get("terms_conditions", "").strip(),
         "remarks": post.get("remarks", "").strip(),
         "status": post.get("status", "").strip() or "Draft",
@@ -559,7 +559,13 @@ def calculate_items(items, tax_option, company_id, branch_id):
         posted_discount, error = validators.validate_money(row.get("discount_amount") or 0, "Discount Amount", allow_negative=False)
         if error:
             errors["discount_amount"] = error
-        tax_value = item.get("default_tax_rate") if item else row.get("tax_percent")
+        posted_tax = row.get("tax_percent")
+        if posted_tax not in ("", None):
+            tax_value = posted_tax
+        elif item:
+            tax_value = item.get("default_tax_rate")
+        else:
+            tax_value = 0
         tax_percent, error = validators.validate_percentage(tax_value or 0, "Tax Percent")
         if error:
             errors["tax_percent"] = error

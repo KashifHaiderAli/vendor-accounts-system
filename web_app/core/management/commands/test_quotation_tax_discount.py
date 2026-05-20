@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import connection
+from django.http import QueryDict
 from django.template.loader import render_to_string
 
 from accounts_module.accounting_utils import ensure_default_chart_of_accounts
@@ -33,6 +34,7 @@ class Command(BaseCommand):
         self.ensure_numbering(company_id, branch_id)
         customer_id = self.ensure_customer(company_id, branch_id, user_id)
         item_id = self.ensure_item(company_id, branch_id, user_id)
+        self.set_item_tax(item_id, "0")
 
         line = calculate_line_total("1", "130000", "5", "0", "4.5", "tax_exclusive")
         checks = [
@@ -43,39 +45,45 @@ class Command(BaseCommand):
             ("line_total", line["line_total"] == Decimal("129057.50")),
         ]
 
-        data = quotation_services.default_form_data(company_id, branch_id)
-        data.update(
-            {
-                "customer_mode": "existing",
-                "customer_id": customer_id,
-                "subject": f"AUTO-TEST Tax After Discount {now_text()}",
-                "tax_option": "tax_exclusive",
-                "status": "Draft",
-            }
-        )
-        data["items"] = [
-            {
-                "item_service_id": item_id,
-                "description": "AUTO-TEST Discount Tax Product",
-                "quantity": "1",
-                "rate": "130000",
-                "discount_percent": "5",
-                "discount_amount": "0",
-                "tax_percent": "4.5",
-            }
-        ]
-        errors, cleaned = quotation_services.validate_and_calculate(data, company_id, branch_id)
+        post = self.build_quotation_post(company_id, branch_id, customer_id, item_id, include_tax_option=True)
+        parsed = quotation_services.parse_quotation_post(post)
+        errors, cleaned = quotation_services.validate_and_calculate(parsed, company_id, branch_id)
         if errors:
             self.stdout.write(self.style.ERROR(f"FAIL: quotation validation failed: {errors}"))
             return
         quotation_id = quotation_services.save_quotation(company_id, branch_id, user_id, cleaned)
         quotation = quotation_services.get_quotation(company_id, branch_id, quotation_id)
+        quotation_items = quotation_services.get_quotation_items(quotation_id)
+        saved_item = quotation_items[0] if quotation_items else {}
+        self.stdout.write(f"DEBUG: parsed tax_option = {parsed.get('tax_option')}")
+        self.stdout.write(f"DEBUG: parsed row tax_percent = {parsed.get('items', [{}])[0].get('tax_percent') if parsed.get('items') else ''}")
+        self.stdout.write(f"DEBUG: cleaned row tax_percent = {cleaned.get('items', [{}])[0].get('tax_percent') if cleaned.get('items') else ''}")
+        self.stdout.write(f"DEBUG: saved quotation tax_total = {quotation.get('tax_total')}")
+        self.stdout.write(f"DEBUG: saved quotation item tax_percent/tax_amount = {saved_item.get('tax_percent')}/{saved_item.get('tax_amount')}")
         checks.extend(
             [
                 ("quotation subtotal", Decimal(str(quotation["subtotal"])) == Decimal("130000")),
                 ("quotation discount_total", Decimal(str(quotation["discount_total"])) == Decimal("6500")),
                 ("quotation tax_total", Decimal(str(quotation["tax_total"])) == Decimal("5557.50")),
                 ("quotation grand_total", Decimal(str(quotation["grand_total"])) == Decimal("129057.50")),
+                ("posted tax overrides item default", Decimal(str(saved_item.get("tax_percent") or 0)) == Decimal("4.5")),
+                ("saved quotation item tax amount", Decimal(str(saved_item.get("tax_amount") or 0)) == Decimal("5557.50")),
+            ]
+        )
+
+        missing_option_post = self.build_quotation_post(company_id, branch_id, customer_id, item_id, include_tax_option=False)
+        missing_option_parsed = quotation_services.parse_quotation_post(missing_option_post)
+        checks.append(("missing tax_option defaults tax_exclusive", missing_option_parsed.get("tax_option") == "tax_exclusive"))
+        missing_errors, missing_cleaned = quotation_services.validate_and_calculate(missing_option_parsed, company_id, branch_id)
+        if missing_errors:
+            self.stdout.write(self.style.ERROR(f"FAIL: missing-tax-option quotation validation failed: {missing_errors}"))
+            return
+        missing_id = quotation_services.save_quotation(company_id, branch_id, user_id, missing_cleaned)
+        missing_quote = quotation_services.get_quotation(company_id, branch_id, missing_id)
+        checks.extend(
+            [
+                ("missing tax_option saved tax_total", Decimal(str(missing_quote["tax_total"])) == Decimal("5557.50")),
+                ("missing tax_option saved grand_total", Decimal(str(missing_quote["grand_total"])) == Decimal("129057.50")),
             ]
         )
 
@@ -191,3 +199,44 @@ class Command(BaseCommand):
             if column_exists("item_services", "track_inventory"):
                 cursor.execute("UPDATE item_services SET track_inventory=0 WHERE id=%s", [item_id])
             return item_id
+
+    def set_item_tax(self, item_id, tax_percent):
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE item_services SET default_tax_rate=%s WHERE id=%s", [tax_percent, item_id])
+
+    def build_quotation_post(self, company_id, branch_id, customer_id, item_id, include_tax_option=True):
+        defaults = quotation_services.default_form_data(company_id, branch_id)
+        post = QueryDict("", mutable=True)
+        post.update(
+            {
+                "quotation_no": defaults["quotation_no"],
+                "quotation_date": defaults["quotation_date"],
+                "customer_mode": "existing",
+                "customer_id": str(customer_id),
+                "customer_name": "",
+                "customer_phone": "",
+                "customer_mobile": "",
+                "customer_email": "",
+                "customer_address": "",
+                "customer_ntn": "",
+                "customer_strn": "",
+                "contact_person": "",
+                "subject": f"AUTO-TEST Tax After Discount {now_text()}",
+                "validity_days": str(defaults["validity_days"]),
+                "valid_till": defaults["valid_till"],
+                "payment_terms_id": "",
+                "terms_conditions": "",
+                "remarks": "",
+                "status": "Draft",
+            }
+        )
+        if include_tax_option:
+            post["tax_option"] = "tax_exclusive"
+        post.setlist("item_service_id[]", [str(item_id)])
+        post.setlist("description[]", ["AUTO-TEST Discount Tax Product"])
+        post.setlist("quantity[]", ["1"])
+        post.setlist("rate[]", ["130000"])
+        post.setlist("discount_percent[]", ["5"])
+        post.setlist("discount_amount[]", ["0"])
+        post.setlist("tax_percent[]", ["4.5"])
+        return post

@@ -462,6 +462,8 @@ Quotation and invoice tax are calculated after discount:
 - Exclusive tax: `base = qty * rate`, `discounted = base - discount`, `tax = discounted * tax% / 100`, `grand = discounted + tax`
 - Inclusive tax: `gross = qty * rate`, `discounted_gross = gross - discount`, `tax = discounted_gross * tax% / (100 + tax%)`, `grand = discounted_gross`
 
+On quotation entry, the posted row tax percent is saved and used first. The product master `default_tax_rate` is only used when the row tax is blank, and a missing form tax option defaults to `tax_exclusive` rather than silently disabling tax.
+
 Run the print template check:
 
 ```powershell
