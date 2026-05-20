@@ -43,10 +43,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let lineTotal = net;
 
         if (taxOption?.value === "tax_exclusive") {
-            taxAmount = gross * taxPercent / 100;
+            taxAmount = net * taxPercent / 100;
             lineTotal = net + taxAmount;
         } else if (taxOption?.value === "tax_inclusive" && taxPercent > 0) {
-            taxAmount = gross * taxPercent / (100 + taxPercent);
+            taxAmount = net * taxPercent / (100 + taxPercent);
             lineTotal = net;
         }
 

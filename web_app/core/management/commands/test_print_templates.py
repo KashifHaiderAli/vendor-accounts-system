@@ -90,6 +90,14 @@ class Command(BaseCommand):
                 failures.append("sales/quotation_print.html does not use format_quantity for item quantity.")
         if format_quantity("1.00") != "1" or format_quantity("2.50") != "2.5":
             failures.append("format_quantity helper is not formatting whole/decimal quantities correctly.")
+        try:
+            from core.calculation_utils import calculate_line_total
+
+            line = calculate_line_total("1", "130000", "5", "0", "4.5", "tax_exclusive")
+            if str(line["tax_amount"]) != "5557.50" or str(line["line_total"]) != "129057.50":
+                failures.append("quotation tax calculation helper is not calculating tax after discount.")
+        except Exception as exc:
+            failures.append(f"quotation tax calculation helper check failed: {exc}")
 
         partials = [
             base_dir / "templates" / "partials" / "print_header.html",

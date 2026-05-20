@@ -7,6 +7,7 @@ from django.db import connection, transaction
 
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.calculation_utils import calculate_line_total
 from core.print_utils import build_print_context
 from masters.master_utils import create_linked_account
 from settings_module.services import get_company_settings, get_numbering_settings, log_user_activity, now_text
@@ -570,26 +571,17 @@ def calculate_items(items, tax_option, company_id, branch_id):
         tax_percent = Decimal("0") if tax_option == "no_tax" else (tax_percent or Decimal("0"))
 
         gross = (quantity * rate).quantize(Decimal("0.01"))
-        discount_amount = (gross * discount_percent / Decimal("100")).quantize(Decimal("0.01")) if discount_percent > 0 else posted_discount
-        if discount_amount > gross:
+        if posted_discount > gross:
             errors["discount_amount"] = "Discount Amount cannot exceed Quantity x Rate."
-        net_amount = gross - discount_amount
-        if net_amount < 0:
+        line = calculate_line_total(quantity, rate, discount_percent, posted_discount, tax_percent, tax_option)
+        discount_amount = line["discount_amount"]
+        tax_amount = line["tax_amount"]
+        line_total = line["line_total"]
+        subtotal_value = line["taxable_amount"] if tax_option == "tax_inclusive" else line["line_base"]
+        if line_total < 0:
             errors["line_total"] = "Line total cannot be negative."
-            net_amount = Decimal("0.00")
 
-        if tax_option == "tax_exclusive":
-            tax_amount = (gross * tax_percent / Decimal("100")).quantize(Decimal("0.01"))
-            line_total = net_amount + tax_amount
-        elif tax_option == "tax_inclusive" and tax_percent > 0:
-            divisor = Decimal("100") + tax_percent
-            tax_amount = (gross * tax_percent / divisor).quantize(Decimal("0.01"))
-            line_total = net_amount
-        else:
-            tax_amount = Decimal("0.00")
-            line_total = net_amount
-
-        totals["subtotal"] += gross
+        totals["subtotal"] += subtotal_value
         totals["discount_total"] += discount_amount
         totals["tax_total"] += tax_amount
         totals["grand_total"] += line_total

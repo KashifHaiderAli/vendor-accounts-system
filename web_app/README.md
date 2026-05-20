@@ -457,11 +457,17 @@ Quantities are displayed without unnecessary decimal places. For example, `1.00`
 
 Quotation print/PDF output shows `Tax Total` in the totals section when quotation tax is saved, while keeping the item detail table free of per-row tax columns.
 
+Quotation and invoice tax are calculated after discount:
+
+- Exclusive tax: `base = qty * rate`, `discounted = base - discount`, `tax = discounted * tax% / 100`, `grand = discounted + tax`
+- Inclusive tax: `gross = qty * rate`, `discounted_gross = gross - discount`, `tax = discounted_gross * tax% / (100 + tax%)`, `grand = discounted_gross`
+
 Run the print template check:
 
 ```powershell
 python manage.py test_print_templates
 python manage.py test_quantity_and_quotation_tax
+python manage.py test_quotation_tax_discount
 ```
 
 ## Phase 20 Backup / Restore

@@ -8,6 +8,7 @@ from django.db import connection, transaction
 from accounts_module.accounting_engine import AccountingError, post_sales_invoice_entry, reverse_journal_entry
 from authentication.auth_utils import dictfetchall, dictfetchone
 from core import validators
+from core.calculation_utils import calculate_line_total
 from core.inventory_utils import post_sales_invoice_stock, reverse_stock_movements, validate_available_stock
 from core.print_utils import build_print_context
 from settings_module.services import get_company_settings, get_numbering_settings, get_tax_settings, log_user_activity, now_text
@@ -545,13 +546,12 @@ def calculate_items(items, company_id, branch_id):
         posted_discount = posted_discount or Decimal("0")
         tax_percent = tax_percent or Decimal("0")
         base = (quantity * rate).quantize(Decimal("0.01"))
-        discount = (base * discount_percent / Decimal("100")).quantize(Decimal("0.01")) if discount_percent > 0 else posted_discount
-        if discount > base:
+        if posted_discount > base:
             errors["discount_amount"] = "Discount Amount cannot exceed Quantity x Rate."
-            discount = base
-        taxable = base - discount
-        tax_amount = (taxable * tax_percent / Decimal("100")).quantize(Decimal("0.01"))
-        line_total = taxable + tax_amount
+        line = calculate_line_total(quantity, rate, discount_percent, posted_discount, tax_percent, "tax_exclusive")
+        discount = line["discount_amount"]
+        tax_amount = line["tax_amount"]
+        line_total = line["line_total"]
         errors = {k: v for k, v in errors.items() if v}
         if errors:
             has_error = True
