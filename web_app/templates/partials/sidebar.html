@@ -18,7 +18,14 @@
         {% for group in sidebar_groups %}
         <details class="sidebar-group {% if group.active %}sidebar-group-active{% endif %}" {% if group.active or forloop.counter <= 2 %}open{% endif %}>
             <summary>
+                {% if group.url %}
+                <a class="sidebar-group-link" href="{{ group.url }}" onclick="event.stopPropagation();">
+                    <i class="bi {{ group.icon }}"></i>
+                    <span>{{ group.label }}</span>
+                </a>
+                {% else %}
                 <span><i class="bi {{ group.icon }}"></i> {{ group.label }}</span>
+                {% endif %}
                 <i class="bi bi-chevron-down"></i>
             </summary>
             <div class="sidebar-subnav">

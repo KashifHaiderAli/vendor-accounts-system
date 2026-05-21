@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
 from django.db import connection
@@ -89,6 +90,28 @@ class Command(BaseCommand):
 
         rendered = render_to_string("sales/quotation_print.html", quotation_services.get_print_context(company_id, branch_id, quotation_id))
         tax_column = re.search(r"<th[^>]*>\s*Tax(?:\s*%|\s*Total)?\s*</th>", rendered, flags=re.IGNORECASE)
+        web_root = Path(__file__).resolve().parents[3]
+        js_path = web_root / "static" / "js" / "quotation.js"
+        form_path = web_root / "templates" / "sales" / "quotation_form.html"
+        js_text = js_path.read_text(encoding="utf-8")
+        form_text = form_path.read_text(encoding="utf-8")
+        stale_patterns = [
+            "gross * taxPercent / 100",
+            "base * taxPercent / 100",
+            "line_base * tax",
+            "lineBase * tax",
+        ]
+        scanned_files = [
+            (js_path, js_text),
+            *[(path, path.read_text(encoding="utf-8")) for path in (web_root / "templates" / "sales").glob("quotation*.html")],
+        ]
+        stale_hits = []
+        for path, text in scanned_files:
+            for pattern in stale_patterns:
+                if pattern in text:
+                    stale_hits.append(f"{path.relative_to(web_root)} contains {pattern}")
+        for hit in stale_hits:
+            self.stdout.write(self.style.ERROR(f"FAIL: stale frontend formula found: {hit}"))
         checks.extend(
             [
                 ("print contains Tax Total", "Tax Total" in rendered),
@@ -96,6 +119,30 @@ class Command(BaseCommand):
                 ("print contains grand total", "129057.50" in rendered),
                 ("print has no item tax column", tax_column is None),
                 ("quantity formatting", format_quantity("1.00") == "1"),
+                ("quotation.js loaded with cache buster", "{% static 'js/quotation.js' %}?v=20260520_qtax_discount_fix" in form_text),
+                ("quotation.js loaded once", form_text.count("quotation.js") == 1),
+                ("no stale quotation frontend formula", not stale_hits),
+                ("tax option selector exists", 'name="tax_option" id="taxOption"' in form_text),
+                ("quotation item body selector exists", 'id="quotationItemsBody"' in form_text),
+                ("quotation row class exists", 'class="quotation-item-row"' in form_text),
+                ("quantity input selector exists", 'name="quantity[]"' in form_text),
+                ("rate input selector exists", 'name="rate[]"' in form_text),
+                ("discount percent input selector exists", 'name="discount_percent[]"' in form_text),
+                ("discount amount input selector exists", 'name="discount_amount[]"' in form_text),
+                ("tax percent input selector exists", 'name="tax_percent[]"' in form_text),
+                ("tax amount display selector exists", 'name="tax_amount_display[]"' in form_text),
+                ("line total display selector exists", 'name="line_total_display[]"' in form_text),
+                ("subtotal display selector exists", 'id="subtotalDisplay"' in form_text),
+                ("discount display selector exists", 'id="discountDisplay"' in form_text),
+                ("tax display selector exists", 'id="taxDisplay"' in form_text),
+                ("grand display selector exists", 'id="grandDisplay"' in form_text),
+                ("frontend console version marker", "quotation.js loaded: qtax_discount_fix_20260520" in js_text),
+                ("frontend line debug marker", "Quotation line calc" in js_text),
+                ("frontend clear calculateLine function", "function calculateLine(quantity, rate, discountPercent, discountAmount, taxPercent, option)" in js_text),
+                ("frontend tax after discount formula", "tax = discounted * taxPercent / 100" in js_text),
+                ("frontend inclusive tax formula", "tax = discounted * taxPercent / (100 + taxPercent)" in js_text),
+                ("frontend no tax branch", 'taxOption?.value === "no_tax"' in js_text),
+                ("frontend discount amount sync", "discountAmountInput.value = money(line.discount)" in js_text),
             ]
         )
 

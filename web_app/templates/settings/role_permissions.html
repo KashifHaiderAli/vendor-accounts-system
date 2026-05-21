@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Manage Permissions</h2>
+        <p>{{ role.role_name }} permission flags by module.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'settings_module:role_management' %}"><i class="bi bi-arrow-left"></i> Roles</a>
+    </div>
+</section>
+
+<form method="post" class="app-card">
+    {% csrf_token %}
+    <div class="app-card-body">
+        {% for module_name, permissions in permission_groups %}
+        <section class="mb-4">
+            <div class="app-card-header px-0">
+                <div>
+                    <h3>{{ module_name|title }}</h3>
+                    <p>Select permission flags for this module.</p>
+                </div>
+                <div class="page-header-actions">
+                    <button class="btn btn-sm btn-light permission-bulk" type="button" data-target="module-{{ forloop.counter }}" data-state="1">Select All</button>
+                    <button class="btn btn-sm btn-light permission-bulk" type="button" data-target="module-{{ forloop.counter }}" data-state="0">Clear All</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="app-table">
+                    <thead>
+                        <tr>
+                            <th>Permission</th>
+                            {% for action in actions %}
+                            <th class="text-center">{{ action|title }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for permission in permissions %}
+                        <tr class="module-{{ forloop.parentloop.counter }}">
+                            <td><strong>{{ permission.permission_name }}</strong><br><span class="text-muted">{{ permission.permission_code }}</span></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_view" {% if permission.can_view %}checked{% endif %}></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_add" {% if permission.can_add %}checked{% endif %}></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_edit" {% if permission.can_edit %}checked{% endif %}></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_delete" {% if permission.can_delete %}checked{% endif %}></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_print" {% if permission.can_print %}checked{% endif %}></td>
+                            <td class="text-center"><input class="form-check-input" type="checkbox" name="perm_{{ permission.permission_id }}_export" {% if permission.can_export %}checked{% endif %}></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% empty %}
+        <div class="empty-state">No permissions found.</div>
+        {% endfor %}
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'settings_module:role_management' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Permissions</button>
+        </div>
+    </div>
+</form>
+
+<script>
+document.querySelectorAll(".permission-bulk").forEach((button) => {
+    button.addEventListener("click", () => {
+        const checked = button.dataset.state === "1";
+        document.querySelectorAll(`.${button.dataset.target} input[type="checkbox"]`).forEach((box) => {
+            box.checked = checked;
+        });
+    });
+});
+</script>
+{% endblock %}

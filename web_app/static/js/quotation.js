@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("quotation.js loaded: qtax_discount_fix_20260520");
+
     const body = document.querySelector("#quotationItemsBody");
     const addButton = document.querySelector("#addQuotationRow");
     const template = document.querySelector("#quotationRowTemplate");
@@ -18,7 +20,35 @@ document.addEventListener("DOMContentLoaded", () => {
         return Number.isFinite(value) ? value : 0;
     };
 
-    const money = (value) => (Math.round(value * 100) / 100).toFixed(2);
+    const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+    const money = (value) => roundMoney(value).toFixed(2);
+    const quantityText = (value) => {
+        const rounded = roundMoney(value);
+        return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/0+$/, "").replace(/\.$/, "");
+    };
+
+    function calculateLine(quantity, rate, discountPercent, discountAmount, taxPercent, option) {
+        const base = quantity * rate;
+        let discount = discountPercent > 0 ? base * discountPercent / 100 : discountAmount;
+        discount = Math.min(Math.max(discount, 0), base);
+        const discounted = Math.max(0, base - discount);
+
+        let tax = 0;
+        let lineTotal = discounted;
+
+        if (option === "tax_exclusive") {
+            tax = discounted * taxPercent / 100;
+            lineTotal = discounted + tax;
+        } else if (option === "tax_inclusive" && taxPercent > 0) {
+            tax = discounted * taxPercent / (100 + taxPercent);
+            lineTotal = discounted;
+        } else {
+            tax = 0;
+            lineTotal = discounted;
+        }
+
+        return { base, discount, discounted, tax, lineTotal };
+    }
 
     const recalcRow = (row) => {
         const quantity = numberValue(row.querySelector("[name='quantity[]']"));
@@ -29,30 +59,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const taxAmountInput = row.querySelector("[name='tax_amount_display[]']");
         const lineTotalInput = row.querySelector("[name='line_total_display[]']");
 
-        const gross = quantity * rate;
         const discountPercent = numberValue(discountPercentInput);
-        let discountAmount = numberValue(discountAmountInput);
-        if (discountPercent > 0) {
-            discountAmount = gross * discountPercent / 100;
-            discountAmountInput.value = money(discountAmount);
-        }
-        discountAmount = Math.min(discountAmount, gross);
-        let net = Math.max(0, gross - discountAmount);
-        let taxPercent = numberValue(taxPercentInput);
-        let taxAmount = 0;
-        let lineTotal = net;
+        const discountAmount = numberValue(discountAmountInput);
+        const taxPercent = taxOption?.value === "no_tax" ? 0 : numberValue(taxPercentInput);
+        const line = calculateLine(quantity, rate, discountPercent, discountAmount, taxPercent, taxOption?.value || "tax_exclusive");
 
-        if (taxOption?.value === "tax_exclusive") {
-            taxAmount = net * taxPercent / 100;
-            lineTotal = net + taxAmount;
-        } else if (taxOption?.value === "tax_inclusive" && taxPercent > 0) {
-            taxAmount = net * taxPercent / (100 + taxPercent);
-            lineTotal = net;
+        if (discountPercent > 0 || discountAmount > line.base) {
+            discountAmountInput.value = money(line.discount);
         }
-
-        taxAmountInput.value = money(taxAmount);
-        lineTotalInput.value = money(lineTotal);
-        return { gross, discountAmount, taxAmount, lineTotal };
+        taxAmountInput.value = money(line.tax);
+        lineTotalInput.value = money(line.lineTotal);
+        const quantityDisplay = row.querySelector("[data-quantity-display]");
+        if (quantityDisplay) quantityDisplay.textContent = quantityText(quantity);
+        console.log("Quotation line calc", line);
+        return line;
     };
 
     const recalcTotals = () => {
@@ -62,9 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let grand = 0;
         body.querySelectorAll(".quotation-item-row").forEach((row) => {
             const line = recalcRow(row);
-            subtotal += line.gross;
-            discount += line.discountAmount;
-            tax += line.taxAmount;
+            subtotal += line.base;
+            discount += line.discount;
+            tax += line.tax;
             grand += line.lineTotal;
         });
         document.querySelector("#subtotalDisplay").textContent = money(subtotal);

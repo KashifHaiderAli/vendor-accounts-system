@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>{{ page_title }}</h2>
+        <p>Use the custom users table. New and reset users receive temporary password Temp@12345.</p>
+    </div>
+</section>
+
+<form method="post" class="app-card settings-form-card">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>User Details</h3>
+            <p>Assign a role and one or more branches.</p>
+        </div>
+        <i class="bi bi-person-gear"></i>
+    </div>
+    {% include "masters/partials/form_errors.html" %}
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div>
+                <label class="form-label" for="username">Username</label>
+                <input class="form-control {% if errors.username %}is-invalid{% endif %}" id="username" name="username" maxlength="80" required value="{{ form_data.username|default:'' }}">
+                {% if errors.username %}<div class="invalid-feedback">{{ errors.username }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="full_name">Full Name</label>
+                <input class="form-control {% if errors.full_name %}is-invalid{% endif %}" id="full_name" name="full_name" maxlength="150" required value="{{ form_data.full_name|default:'' }}">
+                {% if errors.full_name %}<div class="invalid-feedback">{{ errors.full_name }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="email">Email</label>
+                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" type="email" maxlength="254" value="{{ form_data.email|default:'' }}">
+                {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="mobile">Mobile</label>
+                <input class="form-control {% if errors.mobile %}is-invalid{% endif %}" id="mobile" name="mobile" maxlength="30" value="{{ form_data.mobile|default:'' }}">
+                {% if errors.mobile %}<div class="invalid-feedback">{{ errors.mobile }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="role_id">Role</label>
+                <select class="form-select {% if errors.role_id %}is-invalid{% endif %}" id="role_id" name="role_id" required>
+                    <option value="">Select role</option>
+                    {% for role in roles %}
+                    <option value="{{ role.id }}" {% if form_data.role_id|stringformat:"s" == role.id|stringformat:"s" %}selected{% endif %}>{{ role.role_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.role_id %}<div class="invalid-feedback">{{ errors.role_id }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="password">Password {% if is_edit %}(leave blank to keep){% endif %}</label>
+                <input class="form-control {% if errors.password %}is-invalid{% endif %}" id="password" name="password" type="password" minlength="8" placeholder="{% if is_edit %}Keep current password{% else %}Temp@12345 if blank{% endif %}">
+                {% if errors.password %}<div class="invalid-feedback">{{ errors.password }}</div>{% endif %}
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="branch_ids">Branch Access</label>
+                <select class="form-select {% if errors.branch_ids %}is-invalid{% endif %}" id="branch_ids" name="branch_ids" multiple size="5">
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" in selected_branches %}selected{% endif %}>{{ branch.branch_code }} - {{ branch.branch_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.branch_ids %}<div class="invalid-feedback d-block">{{ errors.branch_ids }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="default_branch_id">Default Branch</label>
+                <select class="form-select" id="default_branch_id" name="default_branch_id">
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if form_data.default_branch_id|stringformat:"s" == branch.id|stringformat:"s" %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="settings-switches">
+                <div class="form-check form-switch">
+                    <input class="form-check-input {% if errors.is_active %}is-invalid{% endif %}" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                    {% if errors.is_active %}<div class="invalid-feedback d-block">{{ errors.is_active }}</div>{% endif %}
+                </div>
+                {% if is_master_session %}
+                <div class="form-check form-switch">
+                    <input class="form-check-input {% if errors.is_master_user %}is-invalid{% endif %}" id="is_master_user" name="is_master_user" type="checkbox" {% if form_data.is_master_user %}checked{% endif %}>
+                    <label class="form-check-label" for="is_master_user">Master Admin</label>
+                    {% if errors.is_master_user %}<div class="invalid-feedback d-block">{{ errors.is_master_user }}</div>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'settings_module:users_roles' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save User</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

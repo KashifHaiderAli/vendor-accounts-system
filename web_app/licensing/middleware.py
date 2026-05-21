@@ -1,12 +1,12 @@
-from datetime import date
-
 from django.contrib import messages
 from django.db import connection
 from django.shortcuts import redirect
 
+from authentication.auth_utils import dictfetchall
 from core.audit_utils import log_license_failure
 
 from .hardware_fingerprint import get_hardware_fingerprint
+from .license_utils import evaluate_license_record
 
 
 class LicenseValidationMiddleware:
@@ -36,6 +36,7 @@ class LicenseValidationMiddleware:
         exempt_prefixes = (
             "/login/",
             "/logout/",
+            "/license/",
             "/license-expired/",
             "/static/",
         )
@@ -44,37 +45,22 @@ class LicenseValidationMiddleware:
 
 def has_valid_license(company_id) -> bool:
     fingerprint = get_hardware_fingerprint()
-    today = date.today()
 
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT license_type, start_date, expiry_date, is_lifetime, is_active
+            SELECT license_type, hardware_fingerprint, license_key, start_date, expiry_date, is_lifetime, is_active
             FROM license_records
             WHERE company_id = %s
               AND is_active = 1
-              AND hardware_fingerprint = %s
             ORDER BY is_lifetime DESC, expiry_date DESC, id DESC
             """,
-            [company_id, fingerprint],
+            [company_id],
         )
-        rows = cursor.fetchall()
+        rows = dictfetchall(cursor)
 
-    for license_type, start_date, expiry_date, is_lifetime, is_active in rows:
-        if int(is_active or 0) != 1:
-            continue
-        if int(is_lifetime or 0) == 1:
-            return True
-        if str(license_type).lower() not in {"trial", "annual"}:
-            continue
-        if not start_date or not expiry_date:
-            continue
-        try:
-            start = date.fromisoformat(str(start_date)[:10])
-            expiry = date.fromisoformat(str(expiry_date)[:10])
-        except ValueError:
-            continue
-        if start <= today <= expiry:
+    for row in rows:
+        if evaluate_license_record(row, fingerprint).valid:
             return True
 
     return False

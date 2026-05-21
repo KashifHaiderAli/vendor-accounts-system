@@ -96,8 +96,11 @@ def report_filters(request, company_id, branch_id):
     return {
         "date_from": request.GET.get("date_from", "").strip(),
         "date_to": request.GET.get("date_to", "").strip(),
+        "as_of_date": request.GET.get("as_of_date", "").strip(),
         "q": request.GET.get("q", "").strip(),
         "status": request.GET.get("status", "").strip(),
+        "confirmation_type": request.GET.get("confirmation_type", "").strip(),
+        "reference_type": request.GET.get("reference_type", "").strip(),
         "customer_id": request.GET.get("customer_id", "").strip(),
         "supplier_id": request.GET.get("supplier_id", "").strip(),
         "account_id": request.GET.get("account_id", "").strip(),
@@ -110,13 +113,13 @@ def report_filters(request, company_id, branch_id):
         "action": request.GET.get("action", "").strip(),
         "module": request.GET.get("module", "").strip(),
         "branch_id": str(branch_id or ""),
-        "customers": lookup_rows("customers", company_id, branch_id, "company_name"),
-        "suppliers": lookup_rows("suppliers", company_id, branch_id, "supplier_name"),
-        "items": lookup_rows("item_services", company_id, branch_id, "item_name"),
+        "customers": get_filter_customers(company_id, branch_id),
+        "suppliers": get_filter_suppliers(company_id, branch_id),
+        "items": get_filter_items(company_id, branch_id),
         "expense_heads": lookup_rows("expense_heads", company_id, branch_id, "expense_name"),
-        "accounts": lookup_rows("accounts", company_id, branch_id, "account_name", include_company_level=True),
-        "cash_bank_accounts": lookup_rows("cash_bank_accounts", company_id, branch_id, "account_name"),
-        "users": lookup_users(company_id),
+        "accounts": get_filter_accounts(company_id, branch_id),
+        "cash_bank_accounts": get_filter_cash_bank_accounts(company_id, branch_id),
+        "users": get_filter_users(company_id),
     }
 
 
@@ -137,6 +140,80 @@ def lookup_users(company_id):
         "SELECT id, full_name AS name FROM users WHERE company_id=%s AND is_active=1 ORDER BY full_name",
         [company_id],
     )
+
+
+def get_filter_customers(company_id, branch_id):
+    if not table_exists("customers"):
+        return []
+    return rows(
+        """
+        SELECT id, COALESCE(NULLIF(customer_code,''), '-') || ' - ' || company_name AS name
+        FROM customers
+        WHERE company_id=%s AND branch_id=%s AND is_active=1
+        ORDER BY company_name
+        """,
+        [company_id, branch_id],
+    )
+
+
+def get_filter_suppliers(company_id, branch_id):
+    if not table_exists("suppliers"):
+        return []
+    return rows(
+        """
+        SELECT id, COALESCE(NULLIF(supplier_code,''), '-') || ' - ' || supplier_name AS name
+        FROM suppliers
+        WHERE company_id=%s AND branch_id=%s AND is_active=1
+        ORDER BY supplier_name
+        """,
+        [company_id, branch_id],
+    )
+
+
+def get_filter_items(company_id, branch_id):
+    if not table_exists("item_services"):
+        return []
+    return rows(
+        """
+        SELECT id, COALESCE(NULLIF(item_code,''), '-') || ' - ' || item_name AS name
+        FROM item_services
+        WHERE company_id=%s AND branch_id=%s AND is_active=1
+        ORDER BY item_name
+        """,
+        [company_id, branch_id],
+    )
+
+
+def get_filter_accounts(company_id, branch_id):
+    if not table_exists("accounts"):
+        return []
+    return rows(
+        """
+        SELECT id, COALESCE(NULLIF(account_code,''), '-') || ' - ' || account_name AS name
+        FROM accounts
+        WHERE company_id=%s AND (branch_id=%s OR branch_id IS NULL)
+        ORDER BY account_code, account_name
+        """,
+        [company_id, branch_id],
+    )
+
+
+def get_filter_cash_bank_accounts(company_id, branch_id):
+    if not table_exists("cash_bank_accounts"):
+        return []
+    return rows(
+        """
+        SELECT id, account_name AS name
+        FROM cash_bank_accounts
+        WHERE company_id=%s AND branch_id=%s AND is_active=1
+        ORDER BY account_name
+        """,
+        [company_id, branch_id],
+    )
+
+
+def get_filter_users(company_id):
+    return lookup_users(company_id)
 
 
 def customer_name_expr(alias="c"):
@@ -224,36 +301,79 @@ def customer_aging(company_id, branch_id, filters):
 def customer_statement(company_id, branch_id, filters):
     customer_id = filters.get("customer_id")
     if not customer_id:
-        return [], {"Closing Balance": "0.00"}
+        return [], {"Opening Balance": "0.00", "Closing Balance": "0.00"}
     params = [company_id, branch_id, customer_id]
+    opening = Decimal("0.00")
+    if filters.get("date_from"):
+        opening += money(scalar(
+            """
+            SELECT COALESCE(SUM(grand_total),0)
+            FROM sales_invoices
+            WHERE company_id=%s AND branch_id=%s AND customer_id=%s AND status <> 'Cancelled' AND invoice_date < %s
+            """,
+            [company_id, branch_id, customer_id, filters["date_from"]],
+        ))
+        opening -= money(scalar(
+            """
+            SELECT COALESCE(SUM(amount),0)
+            FROM customer_receipts
+            WHERE company_id=%s AND branch_id=%s AND customer_id=%s AND receipt_date < %s
+            """,
+            [company_id, branch_id, customer_id, filters["date_from"]],
+        ))
+        opening -= money(scalar(
+            """
+            SELECT COALESCE(SUM(grand_total),0)
+            FROM sales_returns
+            WHERE company_id=%s AND branch_id=%s AND customer_id=%s AND status <> 'Cancelled' AND return_date < %s
+            """,
+            [company_id, branch_id, customer_id, filters["date_from"]],
+        ))
     date_clause_invoice, invoice_params = bounded_date_clause(filters, "invoice_date")
-    date_clause_receipt, receipt_params = bounded_date_clause(filters, "receipt_date")
-    date_clause_return, return_params = bounded_date_clause(filters, "return_date")
+    date_clause_receipt, receipt_params = bounded_date_clause(filters, "cr.receipt_date")
+    date_clause_return, return_params = bounded_date_clause(filters, "sr.return_date")
     data = rows(
         f"""
-        SELECT invoice_date AS date, 'Invoice' AS type, invoice_no AS ref_no, 'Sales invoice' AS description,
+        SELECT invoice_date AS date, 'Invoice' AS type, invoice_no AS ref_no, invoice_no AS against_invoice, 'Sales invoice' AS description,
                grand_total AS debit, 0 AS credit
         FROM sales_invoices
         WHERE company_id=%s AND branch_id=%s AND customer_id=%s AND status <> 'Cancelled' {date_clause_invoice}
         UNION ALL
-        SELECT receipt_date AS date, 'Receipt' AS type, receipt_no AS ref_no, 'Customer receipt' AS description,
-               0 AS debit, amount AS credit
-        FROM customer_receipts
-        WHERE company_id=%s AND branch_id=%s AND customer_id=%s {date_clause_receipt}
+        SELECT cr.receipt_date AS date, 'Receipt' AS type, cr.receipt_no AS ref_no, si.invoice_no AS against_invoice, 'Customer receipt' AS description,
+               0 AS debit, cr.amount AS credit
+        FROM customer_receipts cr
+        LEFT JOIN sales_invoices si ON si.id=cr.adjusted_invoice_id
+        WHERE cr.company_id=%s AND cr.branch_id=%s AND cr.customer_id=%s {date_clause_receipt}
         UNION ALL
-        SELECT return_date AS date, 'Sales Return' AS type, sales_return_no AS ref_no, COALESCE(return_reason, 'Sales return') AS description,
-               0 AS debit, grand_total AS credit
-        FROM sales_returns
-        WHERE company_id=%s AND branch_id=%s AND customer_id=%s AND status <> 'Cancelled' {date_clause_return}
+        SELECT sr.return_date AS date, 'Sales Return' AS type, sr.sales_return_no AS ref_no, si.invoice_no AS against_invoice, COALESCE(sr.return_reason, 'Sales return') AS description,
+               0 AS debit, sr.grand_total AS credit
+        FROM sales_returns sr
+        LEFT JOIN sales_invoices si ON si.id=sr.sales_invoice_id
+        WHERE sr.company_id=%s AND sr.branch_id=%s AND sr.customer_id=%s AND sr.status <> 'Cancelled' {date_clause_return}
         ORDER BY date, ref_no
         """,
         params + invoice_params + params + receipt_params + params + return_params,
     )
-    running = Decimal("0.00")
+    running = opening
     for item in data:
         running += money(item.get("debit")) - money(item.get("credit"))
         item["balance"] = running
-    return data, {"Closing Balance": running}
+    invoice_summary = rows(
+        """
+        SELECT si.invoice_no, si.invoice_date, si.grand_total,
+               COALESCE(si.received_amount,0) AS received,
+               COALESCE(SUM(sr.grand_total),0) AS returns_credits,
+               si.balance_amount AS balance,
+               si.status
+        FROM sales_invoices si
+        LEFT JOIN sales_returns sr ON sr.sales_invoice_id=si.id AND sr.status <> 'Cancelled'
+        WHERE si.company_id=%s AND si.branch_id=%s AND si.customer_id=%s AND si.status <> 'Cancelled'
+        GROUP BY si.id, si.invoice_no, si.invoice_date, si.grand_total, si.received_amount, si.balance_amount, si.status
+        ORDER BY si.invoice_date, si.invoice_no
+        """,
+        [company_id, branch_id, customer_id],
+    )
+    return data, {"Opening Balance": opening, "Closing Balance": running, "Invoice Summary Rows": len(invoice_summary)}
 
 
 def supplier_ledger(company_id, branch_id, filters):
@@ -323,36 +443,79 @@ def supplier_aging(company_id, branch_id, filters):
 def supplier_statement(company_id, branch_id, filters):
     supplier_id = filters.get("supplier_id")
     if not supplier_id:
-        return [], {"Closing Balance": "0.00"}
+        return [], {"Opening Balance": "0.00", "Closing Balance": "0.00"}
     params = [company_id, branch_id, supplier_id]
+    opening = Decimal("0.00")
+    if filters.get("date_from"):
+        opening += money(scalar(
+            """
+            SELECT COALESCE(SUM(grand_total),0)
+            FROM supplier_purchases
+            WHERE company_id=%s AND branch_id=%s AND supplier_id=%s AND status <> 'Cancelled' AND purchase_date < %s
+            """,
+            [company_id, branch_id, supplier_id, filters["date_from"]],
+        ))
+        opening -= money(scalar(
+            """
+            SELECT COALESCE(SUM(amount),0)
+            FROM supplier_payments
+            WHERE company_id=%s AND branch_id=%s AND supplier_id=%s AND payment_date < %s
+            """,
+            [company_id, branch_id, supplier_id, filters["date_from"]],
+        ))
+        opening -= money(scalar(
+            """
+            SELECT COALESCE(SUM(grand_total),0)
+            FROM purchase_returns
+            WHERE company_id=%s AND branch_id=%s AND supplier_id=%s AND status <> 'Cancelled' AND return_date < %s
+            """,
+            [company_id, branch_id, supplier_id, filters["date_from"]],
+        ))
     purchase_clause, purchase_params = bounded_date_clause(filters, "purchase_date")
-    payment_clause, payment_params = bounded_date_clause(filters, "payment_date")
-    return_clause, return_params = bounded_date_clause(filters, "return_date")
+    payment_clause, payment_params = bounded_date_clause(filters, "pay.payment_date")
+    return_clause, return_params = bounded_date_clause(filters, "pr.return_date")
     data = rows(
         f"""
-        SELECT purchase_date AS date, 'Purchase' AS type, purchase_no AS ref_no, 'Supplier purchase' AS description,
+        SELECT purchase_date AS date, 'Purchase' AS type, purchase_no AS ref_no, purchase_no AS against_purchase, supplier_bill_no, 'Supplier purchase' AS description,
                0 AS debit, grand_total AS credit
         FROM supplier_purchases
         WHERE company_id=%s AND branch_id=%s AND supplier_id=%s AND status <> 'Cancelled' {purchase_clause}
         UNION ALL
-        SELECT payment_date AS date, 'Payment' AS type, payment_no AS ref_no, 'Supplier payment' AS description,
-               amount AS debit, 0 AS credit
-        FROM supplier_payments
-        WHERE company_id=%s AND branch_id=%s AND supplier_id=%s {payment_clause}
+        SELECT pay.payment_date AS date, 'Payment' AS type, pay.payment_no AS ref_no, sp.purchase_no AS against_purchase, sp.supplier_bill_no, 'Supplier payment' AS description,
+               pay.amount AS debit, 0 AS credit
+        FROM supplier_payments pay
+        LEFT JOIN supplier_purchases sp ON sp.id=pay.adjusted_purchase_id
+        WHERE pay.company_id=%s AND pay.branch_id=%s AND pay.supplier_id=%s {payment_clause}
         UNION ALL
-        SELECT return_date AS date, 'Purchase Return' AS type, purchase_return_no AS ref_no, COALESCE(return_reason, 'Purchase return') AS description,
-               grand_total AS debit, 0 AS credit
-        FROM purchase_returns
-        WHERE company_id=%s AND branch_id=%s AND supplier_id=%s AND status <> 'Cancelled' {return_clause}
+        SELECT pr.return_date AS date, 'Purchase Return' AS type, pr.purchase_return_no AS ref_no, sp.purchase_no AS against_purchase, sp.supplier_bill_no, COALESCE(pr.return_reason, 'Purchase return') AS description,
+               pr.grand_total AS debit, 0 AS credit
+        FROM purchase_returns pr
+        LEFT JOIN supplier_purchases sp ON sp.id=pr.supplier_purchase_id
+        WHERE pr.company_id=%s AND pr.branch_id=%s AND pr.supplier_id=%s AND pr.status <> 'Cancelled' {return_clause}
         ORDER BY date, ref_no
         """,
         params + purchase_params + params + payment_params + params + return_params,
     )
-    running = Decimal("0.00")
+    running = opening
     for item in data:
         running += money(item.get("credit")) - money(item.get("debit"))
         item["balance"] = running
-    return data, {"Closing Balance": running}
+    purchase_summary = rows(
+        """
+        SELECT sp.purchase_no, sp.supplier_bill_no, sp.purchase_date, sp.grand_total,
+               COALESCE(sp.paid_amount,0) AS paid,
+               COALESCE(SUM(pr.grand_total),0) AS returns_debits,
+               sp.balance_amount AS balance,
+               sp.status
+        FROM supplier_purchases sp
+        LEFT JOIN purchase_returns pr ON pr.supplier_purchase_id=sp.id AND pr.status <> 'Cancelled'
+        WHERE sp.company_id=%s AND sp.branch_id=%s AND sp.supplier_id=%s AND sp.status <> 'Cancelled'
+        GROUP BY sp.id, sp.purchase_no, sp.supplier_bill_no, sp.purchase_date, sp.grand_total, sp.paid_amount, sp.balance_amount, sp.status
+        ORDER BY sp.purchase_date, sp.purchase_no
+        """,
+        [company_id, branch_id, supplier_id],
+    )
+    return data, {"Opening Balance": opening, "Closing Balance": running, "Purchase Summary Rows": len(purchase_summary)}
 
 
 def sales_invoice_report(company_id, branch_id, filters):
@@ -874,6 +1037,493 @@ def validation_failure_report(company_id, branch_id, filters):
     if not data:
         return [{"datetime": "", "user": "", "action": "", "module": "", "record_type": "", "record_id": "", "description": "No validation failures logged yet.", "ip": ""}], summary
     return data, summary
+
+
+def customer_sales_summary(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["si.company_id=%s", "si.branch_id=%s", "si.status <> 'Cancelled'"]
+    clauses.extend(date_filters_from_values(filters, "si.invoice_date", params))
+    if filters.get("customer_id"):
+        clauses.append("si.customer_id=%s")
+        params.append(filters["customer_id"])
+    apply_search(clauses, params, filters.get("q"), ["c.company_name"])
+    data = rows(
+        f"""
+        SELECT c.company_name AS customer, COUNT(si.id) AS invoice_count,
+               SUM(COALESCE(si.grand_total,0)) AS sales_total,
+               SUM(COALESCE(si.tax_total,0)) AS tax_total,
+               SUM(COALESCE(si.received_amount,0)) AS received,
+               SUM(COALESCE(si.balance_amount,0)) AS balance
+        FROM sales_invoices si
+        JOIN customers c ON c.id=si.customer_id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY c.id, c.company_name
+        ORDER BY c.company_name
+        """,
+        params,
+    )
+    return data, totals(data, ["invoice_count", "sales_total", "tax_total", "received", "balance"])
+
+
+def customer_receipts_summary(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["cr.company_id=%s", "cr.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "cr.receipt_date", params))
+    if filters.get("customer_id"):
+        clauses.append("cr.customer_id=%s")
+        params.append(filters["customer_id"])
+    apply_search(clauses, params, filters.get("q"), ["c.company_name", "cr.receipt_no"])
+    data = rows(
+        f"""
+        SELECT c.company_name AS customer, COUNT(cr.id) AS receipt_count,
+               SUM(COALESCE(cr.amount,0)) AS total_received
+        FROM customer_receipts cr
+        JOIN customers c ON c.id=cr.customer_id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY c.id, c.company_name
+        ORDER BY c.company_name
+        """,
+        params,
+    )
+    return data, totals(data, ["receipt_count", "total_received"])
+
+
+def supplier_purchase_summary(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["sp.company_id=%s", "sp.branch_id=%s", "sp.status <> 'Cancelled'"]
+    clauses.extend(date_filters_from_values(filters, "sp.purchase_date", params))
+    if filters.get("supplier_id"):
+        clauses.append("sp.supplier_id=%s")
+        params.append(filters["supplier_id"])
+    apply_search(clauses, params, filters.get("q"), ["s.supplier_name"])
+    data = rows(
+        f"""
+        SELECT s.supplier_name AS supplier, COUNT(sp.id) AS purchase_count,
+               SUM(COALESCE(sp.grand_total,0)) AS purchase_total,
+               SUM(COALESCE(sp.tax_total,0)) AS tax_total,
+               SUM(COALESCE(sp.paid_amount,0)) AS paid,
+               SUM(COALESCE(sp.balance_amount,0)) AS balance
+        FROM supplier_purchases sp
+        JOIN suppliers s ON s.id=sp.supplier_id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY s.id, s.supplier_name
+        ORDER BY s.supplier_name
+        """,
+        params,
+    )
+    return data, totals(data, ["purchase_count", "purchase_total", "tax_total", "paid", "balance"])
+
+
+def supplier_payment_summary(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["sp.company_id=%s", "sp.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "sp.payment_date", params))
+    if filters.get("supplier_id"):
+        clauses.append("sp.supplier_id=%s")
+        params.append(filters["supplier_id"])
+    apply_search(clauses, params, filters.get("q"), ["s.supplier_name", "sp.payment_no"])
+    data = rows(
+        f"""
+        SELECT s.supplier_name AS supplier, COUNT(sp.id) AS payment_count,
+               SUM(COALESCE(sp.amount,0)) AS total_paid
+        FROM supplier_payments sp
+        JOIN suppliers s ON s.id=sp.supplier_id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY s.id, s.supplier_name
+        ORDER BY s.supplier_name
+        """,
+        params,
+    )
+    return data, totals(data, ["payment_count", "total_paid"])
+
+
+def quotation_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["q.company_id=%s", "q.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "q.quotation_date", params))
+    if filters.get("status"):
+        clauses.append("q.status=%s")
+        params.append(filters["status"])
+    if filters.get("customer_id"):
+        clauses.append("q.customer_id=%s")
+        params.append(filters["customer_id"])
+    party = quotation_party_expr()
+    apply_search(clauses, params, filters.get("q"), ["q.quotation_no", party, "q.subject"])
+    data = rows(
+        f"""
+        SELECT q.quotation_no, q.quotation_date AS date, {party} AS customer_party,
+               q.subject, q.valid_till, q.grand_total, q.status
+        FROM quotations q
+        LEFT JOIN customers c ON c.id=q.customer_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY q.quotation_date DESC, q.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["grand_total"])
+
+
+def confirmation_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["cc.company_id=%s", "cc.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "cc.confirmation_date", params))
+    if filters.get("status"):
+        clauses.append("cc.status=%s")
+        params.append(filters["status"])
+    party = "COALESCE(c.company_name, q.customer_name, '')" if column_exists("quotations", "customer_name") else "COALESCE(c.company_name, '')"
+    apply_search(clauses, params, filters.get("q"), ["cc.confirmation_no", party, "cc.po_number", "cc.confirmation_note"])
+    data = rows(
+        f"""
+        SELECT cc.confirmation_no, cc.confirmation_date AS date, {party} AS customer_party,
+               cc.confirmation_type AS type, cc.po_number, cc.total_amount AS total, cc.status
+        FROM customer_confirmations cc
+        LEFT JOIN customers c ON c.id=cc.customer_id
+        LEFT JOIN quotations q ON q.id=cc.quotation_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY cc.confirmation_date DESC, cc.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["total"])
+
+
+def delivery_challan_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["dc.company_id=%s", "dc.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "dc.dc_date", params))
+    if filters.get("status"):
+        clauses.append("dc.status=%s")
+        params.append(filters["status"])
+    party = "COALESCE(c.company_name, q.customer_name, '')" if column_exists("quotations", "customer_name") else "COALESCE(c.company_name, '')"
+    apply_search(clauses, params, filters.get("q"), ["dc.dc_no", party, "dc.po_number", "dc.delivered_by", "dc.received_by"])
+    data = rows(
+        f"""
+        SELECT dc.dc_no, dc.dc_date AS date, {party} AS customer_party, dc.po_number,
+               dc.delivered_by, dc.received_by, dc.signed_copy_path AS signed_copy, dc.status
+        FROM delivery_challans dc
+        LEFT JOIN customers c ON c.id=dc.customer_id
+        LEFT JOIN quotations q ON q.id=dc.quotation_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY dc.dc_date DESC, dc.id DESC
+        """,
+        params,
+    )
+    return data, {"Rows": len(data)}
+
+
+def sales_return_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["sr.company_id=%s", "sr.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "sr.return_date", params))
+    if filters.get("status"):
+        clauses.append("sr.status=%s")
+        params.append(filters["status"])
+    if filters.get("customer_id"):
+        clauses.append("sr.customer_id=%s")
+        params.append(filters["customer_id"])
+    apply_search(clauses, params, filters.get("q"), ["sr.sales_return_no", "c.company_name", "si.invoice_no", "sr.return_reason"])
+    data = rows(
+        f"""
+        SELECT sr.sales_return_no AS return_no, sr.return_date AS date, c.company_name AS customer,
+               si.invoice_no, sr.grand_total, sr.refund_amount, sr.status
+        FROM sales_returns sr
+        JOIN customers c ON c.id=sr.customer_id
+        LEFT JOIN sales_invoices si ON si.id=sr.sales_invoice_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY sr.return_date DESC, sr.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["grand_total", "refund_amount"])
+
+
+def sales_tax_report(company_id, branch_id, filters):
+    date_clause_i, params_i = bounded_date_clause(filters, "invoice_date")
+    date_clause_r, params_r = bounded_date_clause(filters, "return_date")
+    data = rows(
+        f"""
+        SELECT si.invoice_date AS date, 'Invoice' AS type, si.invoice_no AS ref_no,
+               c.company_name AS customer, (COALESCE(si.subtotal,0)-COALESCE(si.discount_total,0)) AS taxable_amount,
+               si.tax_total AS output_tax, si.status
+        FROM sales_invoices si
+        JOIN customers c ON c.id=si.customer_id
+        WHERE si.company_id=%s AND si.branch_id=%s AND si.status <> 'Cancelled' {date_clause_i}
+        UNION ALL
+        SELECT sr.return_date AS date, 'Sales Return' AS type, sr.sales_return_no AS ref_no,
+               c.company_name AS customer, (COALESCE(sr.subtotal,0)-COALESCE(sr.discount_total,0)) * -1 AS taxable_amount,
+               COALESCE(sr.tax_total,0) * -1 AS output_tax, sr.status
+        FROM sales_returns sr
+        JOIN customers c ON c.id=sr.customer_id
+        WHERE sr.company_id=%s AND sr.branch_id=%s AND sr.status <> 'Cancelled' {date_clause_r}
+        ORDER BY date DESC, ref_no DESC
+        """,
+        [company_id, branch_id] + params_i + [company_id, branch_id] + params_r,
+    )
+    return data, totals(data, ["taxable_amount", "output_tax"])
+
+
+def purchase_return_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["pr.company_id=%s", "pr.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "pr.return_date", params))
+    if filters.get("status"):
+        clauses.append("pr.status=%s")
+        params.append(filters["status"])
+    if filters.get("supplier_id"):
+        clauses.append("pr.supplier_id=%s")
+        params.append(filters["supplier_id"])
+    apply_search(clauses, params, filters.get("q"), ["pr.purchase_return_no", "s.supplier_name", "sp.purchase_no", "sp.supplier_bill_no", "pr.return_reason"])
+    data = rows(
+        f"""
+        SELECT pr.purchase_return_no AS return_no, pr.return_date AS date, s.supplier_name AS supplier,
+               sp.purchase_no, sp.supplier_bill_no, pr.grand_total, pr.refund_amount, pr.status
+        FROM purchase_returns pr
+        JOIN suppliers s ON s.id=pr.supplier_id
+        LEFT JOIN supplier_purchases sp ON sp.id=pr.supplier_purchase_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY pr.return_date DESC, pr.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["grand_total", "refund_amount"])
+
+
+def purchase_tax_report(company_id, branch_id, filters):
+    date_clause_p, params_p = bounded_date_clause(filters, "purchase_date")
+    date_clause_r, params_r = bounded_date_clause(filters, "return_date")
+    data = rows(
+        f"""
+        SELECT sp.purchase_date AS date, 'Purchase' AS type, sp.purchase_no AS ref_no,
+               s.supplier_name AS supplier, sp.subtotal AS taxable_amount,
+               sp.tax_total AS input_tax, sp.status
+        FROM supplier_purchases sp
+        JOIN suppliers s ON s.id=sp.supplier_id
+        WHERE sp.company_id=%s AND sp.branch_id=%s AND sp.status <> 'Cancelled' {date_clause_p}
+        UNION ALL
+        SELECT pr.return_date AS date, 'Purchase Return' AS type, pr.purchase_return_no AS ref_no,
+               s.supplier_name AS supplier, COALESCE(pr.subtotal,0) * -1 AS taxable_amount,
+               COALESCE(pr.tax_total,0) * -1 AS input_tax, pr.status
+        FROM purchase_returns pr
+        JOIN suppliers s ON s.id=pr.supplier_id
+        WHERE pr.company_id=%s AND pr.branch_id=%s AND pr.status <> 'Cancelled' {date_clause_r}
+        ORDER BY date DESC, ref_no DESC
+        """,
+        [company_id, branch_id] + params_p + [company_id, branch_id] + params_r,
+    )
+    return data, totals(data, ["taxable_amount", "input_tax"])
+
+
+def profit_by_invoice_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["si.company_id=%s", "si.branch_id=%s", "si.status <> 'Cancelled'"]
+    clauses.extend(date_filters_from_values(filters, "si.invoice_date", params))
+    data = rows(
+        f"""
+        SELECT si.invoice_no, si.invoice_date AS date, c.company_name AS customer,
+               COALESCE(si.grand_total,0) AS sales_total,
+               COALESCE((SELECT SUM(grand_total) FROM supplier_purchases sp WHERE sp.confirmation_id=si.confirmation_id AND sp.status <> 'Cancelled'),0) AS purchase_cost,
+               COALESCE(si.grand_total,0) - COALESCE((SELECT SUM(grand_total) FROM supplier_purchases sp WHERE sp.confirmation_id=si.confirmation_id AND sp.status <> 'Cancelled'),0) AS gross_profit,
+               0 AS profit_percent
+        FROM sales_invoices si
+        JOIN customers c ON c.id=si.customer_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY si.invoice_date DESC, si.id DESC
+        """,
+        params,
+    )
+    for item in data:
+        item["profit_percent"] = percent(item.get("gross_profit"), item.get("sales_total"))
+    return data, totals(data, ["sales_total", "purchase_cost", "gross_profit"])
+
+
+def profit_by_confirmation_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["cc.company_id=%s", "cc.branch_id=%s", "cc.status <> 'Cancelled'"]
+    clauses.extend(date_filters_from_values(filters, "cc.confirmation_date", params))
+    party = "COALESCE(c.company_name, q.customer_name, '')" if column_exists("quotations", "customer_name") else "COALESCE(c.company_name, '')"
+    data = rows(
+        f"""
+        SELECT cc.confirmation_no, {party} AS customer_party, cc.po_number,
+               COALESCE((SELECT SUM(grand_total) FROM sales_invoices si WHERE si.confirmation_id=cc.id AND si.status <> 'Cancelled'),0) AS sales_total,
+               COALESCE((SELECT SUM(grand_total) FROM supplier_purchases sp WHERE sp.confirmation_id=cc.id AND sp.status <> 'Cancelled'),0) AS purchase_cost,
+               0 AS gross_profit, 0 AS profit_percent
+        FROM customer_confirmations cc
+        LEFT JOIN customers c ON c.id=cc.customer_id
+        LEFT JOIN quotations q ON q.id=cc.quotation_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY cc.confirmation_date DESC, cc.id DESC
+        """,
+        params,
+    )
+    for item in data:
+        item["gross_profit"] = money(item.get("sales_total")) - money(item.get("purchase_cost"))
+        item["profit_percent"] = percent(item.get("gross_profit"), item.get("sales_total"))
+    return data, totals(data, ["sales_total", "purchase_cost", "gross_profit"])
+
+
+def service_contract_report(company_id, branch_id, filters):
+    if not table_exists("service_contracts"):
+        return [], {"Note": "Service contracts table is not available."}
+    params = [company_id, branch_id]
+    clauses = ["sc.company_id=%s", "sc.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "sc.start_date", params))
+    if filters.get("status"):
+        clauses.append("sc.status=%s")
+        params.append(filters["status"])
+    if filters.get("customer_id"):
+        clauses.append("sc.customer_id=%s")
+        params.append(filters["customer_id"])
+    apply_search(clauses, params, filters.get("q"), ["sc.contract_no", "c.company_name", "sc.service_type"])
+    data = rows(
+        f"""
+        SELECT sc.contract_no, c.company_name AS customer, sc.service_type,
+               sc.start_date AS start, sc.end_date AS end, sc.billing_cycle AS cycle,
+               sc.contract_amount AS amount, sc.next_billing_date AS next_billing, sc.status
+        FROM service_contracts sc
+        JOIN customers c ON c.id=sc.customer_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY sc.start_date DESC, sc.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["amount"])
+
+
+def service_expiring_report(company_id, branch_id, filters):
+    data, summary = service_contract_report(company_id, branch_id, {**filters, "status": filters.get("status") or "Active"})
+    today = date.today()
+    limit = parse_date(filters.get("date_to")) or date.fromordinal(today.toordinal() + 30)
+    data = [item for item in data if parse_date(item.get("end")) and today <= parse_date(item.get("end")) <= limit]
+    return data, {**summary, "Rows": len(data)}
+
+
+def service_billing_due_report(company_id, branch_id, filters):
+    data, summary = service_contract_report(company_id, branch_id, {**filters, "status": filters.get("status") or "Active"})
+    limit = parse_date(filters.get("date_to")) or date.today()
+    data = [item for item in data if parse_date(item.get("next_billing")) and parse_date(item.get("next_billing")) <= limit]
+    return data, {**summary, "Rows": len(data)}
+
+
+def service_invoice_history_report(company_id, branch_id, filters):
+    if not table_exists("service_contracts"):
+        return [], {"Note": "Service contracts table is not available."}
+    params = [company_id, branch_id]
+    clauses = ["sc.company_id=%s", "sc.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "si.invoice_date", params))
+    data = rows(
+        f"""
+        SELECT sc.contract_no, c.company_name AS customer, si.invoice_no,
+               si.invoice_date, si.grand_total AS amount, si.status
+        FROM service_contracts sc
+        JOIN customers c ON c.id=sc.customer_id
+        LEFT JOIN sales_invoices si ON si.customer_id=sc.customer_id
+             AND (si.remarks LIKE '%' || sc.contract_no || '%' OR si.remarks LIKE '%' || sc.service_type || '%')
+        WHERE {' AND '.join(clauses)}
+        ORDER BY si.invoice_date DESC, sc.contract_no
+        """,
+        params,
+    )
+    return data, totals(data, ["amount"])
+
+
+def journal_report(company_id, branch_id, filters):
+    params = [company_id, branch_id]
+    clauses = ["je.company_id=%s", "je.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "je.entry_date", params))
+    apply_search(clauses, params, filters.get("q"), ["je.entry_no", "je.reference_type", "je.description"])
+    data = rows(
+        f"""
+        SELECT je.entry_date AS date, je.entry_no, je.reference_type, je.description,
+               SUM(COALESCE(jel.debit,0)) AS debit, SUM(COALESCE(jel.credit,0)) AS credit
+        FROM journal_entries je
+        JOIN journal_entry_lines jel ON jel.journal_entry_id=je.id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY je.id, je.entry_date, je.entry_no, je.reference_type, je.description
+        ORDER BY je.entry_date DESC, je.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["debit", "credit"])
+
+
+def inventory_stock_balance_report(company_id, branch_id, filters):
+    if not table_exists("stock_movements"):
+        return [], {"Note": "Inventory tables are not available."}
+    params = [company_id, branch_id]
+    clauses = ["sm.company_id=%s", "sm.branch_id=%s"]
+    if filters.get("item_service_id"):
+        clauses.append("sm.item_service_id=%s")
+        params.append(filters["item_service_id"])
+    data = rows(
+        f"""
+        SELECT i.item_code, i.item_name, COALESCE(i.unit,'') AS unit,
+               SUM(COALESCE(sm.quantity_in,0)) AS qty_in,
+               SUM(COALESCE(sm.quantity_out,0)) AS qty_out,
+               SUM(COALESCE(sm.quantity_in,0) - COALESCE(sm.quantity_out,0)) AS available_qty,
+               COALESCE(NULLIF(i.default_purchase_rate,0), i.opening_cost, 0) AS average_cost,
+               SUM(COALESCE(sm.quantity_in,0) - COALESCE(sm.quantity_out,0)) * COALESCE(NULLIF(i.default_purchase_rate,0), i.opening_cost, 0) AS stock_value,
+               COALESCE(i.minimum_stock_level,0) AS minimum_level,
+               CASE WHEN SUM(COALESCE(sm.quantity_in,0) - COALESCE(sm.quantity_out,0)) <= COALESCE(i.minimum_stock_level,0) THEN 'Low' ELSE 'OK' END AS status
+        FROM stock_movements sm
+        JOIN item_services i ON i.id=sm.item_service_id
+        WHERE {' AND '.join(clauses)}
+        GROUP BY i.id, i.item_code, i.item_name, i.unit, i.default_purchase_rate, i.opening_cost, i.minimum_stock_level
+        ORDER BY i.item_name
+        """,
+        params,
+    )
+    if filters.get("status") == "low":
+        data = [item for item in data if item.get("status") == "Low"]
+    return data, totals(data, ["qty_in", "qty_out", "available_qty", "stock_value"])
+
+
+def inventory_item_ledger_report(company_id, branch_id, filters):
+    if not table_exists("stock_movements"):
+        return [], {"Note": "Inventory tables are not available."}
+    params = [company_id, branch_id]
+    clauses = ["sm.company_id=%s", "sm.branch_id=%s"]
+    clauses.extend(date_filters_from_values(filters, "sm.movement_date", params))
+    if filters.get("item_service_id"):
+        clauses.append("sm.item_service_id=%s")
+        params.append(filters["item_service_id"])
+    data = rows(
+        f"""
+        SELECT sm.movement_date AS date, sm.movement_type AS type, sm.source_no,
+               '' AS party, sm.quantity_in AS qty_in, sm.quantity_out AS qty_out,
+               0 AS balance, sm.unit_cost, sm.remarks
+        FROM stock_movements sm
+        WHERE {' AND '.join(clauses)}
+        ORDER BY sm.movement_date, sm.id
+        """,
+        params,
+    )
+    running = Decimal("0.00")
+    for item in data:
+        running += money(item.get("qty_in")) - money(item.get("qty_out"))
+        item["balance"] = running
+    return data, {"Closing Balance": running}
+
+
+def inventory_stock_flow_report(company_id, branch_id, filters, direction):
+    if not table_exists("stock_movements"):
+        return [], {"Note": "Inventory tables are not available."}
+    field = "quantity_in" if direction == "in" else "quantity_out"
+    params = [company_id, branch_id]
+    clauses = ["sm.company_id=%s", "sm.branch_id=%s", f"COALESCE(sm.{field},0) > 0"]
+    clauses.extend(date_filters_from_values(filters, "sm.movement_date", params))
+    data = rows(
+        f"""
+        SELECT sm.movement_date AS date, sm.movement_type AS type, sm.source_no,
+               i.item_code, i.item_name, sm.quantity_in AS qty_in, sm.quantity_out AS qty_out,
+               sm.unit_cost, sm.remarks
+        FROM stock_movements sm
+        JOIN item_services i ON i.id=sm.item_service_id
+        WHERE {' AND '.join(clauses)}
+        ORDER BY sm.movement_date DESC, sm.id DESC
+        """,
+        params,
+    )
+    return data, totals(data, ["qty_in", "qty_out"])
 
 
 def tax_scalar(table, date_column, amount_column, company_id, branch_id, filters, extra_clause):

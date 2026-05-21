@@ -10,6 +10,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Masters",
         "icon": "bi-collection",
+        "url_name": "masters:index",
         "items": [
             ("Customers", "customers", "masters:customers"),
             ("Suppliers", "suppliers", "masters:suppliers"),
@@ -22,6 +23,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Sales",
         "icon": "bi-receipt",
+        "url_name": "sales:index",
         "items": [
             ("Quotations", "quotations", "sales:quotations"),
             ("Customer Confirmations / PO", "customer_confirmations", "sales:confirmations"),
@@ -34,6 +36,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Purchases",
         "icon": "bi-cart-check",
+        "url_name": "purchases:index",
         "items": [
             ("Supplier Purchases", "supplier_purchases", "purchases:supplier_purchases"),
             ("Purchase Returns", "purchase_returns", "purchases:returns"),
@@ -43,6 +46,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Services",
         "icon": "bi-briefcase",
+        "url_name": "services:index",
         "items": [
             ("Service Contracts", "service_contracts", "services:contracts"),
         ],
@@ -50,6 +54,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Inventory",
         "icon": "bi-boxes",
+        "url_name": "inventory:index",
         "items": [
             ("Inventory Dashboard", "inventory", "inventory:index"),
             ("Stock Balance", "inventory", "inventory:stock_balance"),
@@ -63,6 +68,7 @@ SIDEBAR_GROUPS = [
     {
         "label": "Accounts",
         "icon": "bi-journal-richtext",
+        "url_name": "accounts_module:index",
         "items": [
             ("Chart of Accounts", "accounting_reports", "accounts_module:chart"),
             ("Journal Entries", "accounting_reports", "accounts_module:journals"),
@@ -72,24 +78,27 @@ SIDEBAR_GROUPS = [
     {
         "label": "Reports",
         "icon": "bi-bar-chart",
+        "url_name": "reports:index",
         "items": [
-            ("Customer Reports", "customer_reports", "reports:customer_outstanding"),
-            ("Supplier Reports", "supplier_reports", "reports:supplier_payable"),
-            ("Sales Reports", "sales_reports", "reports:sales_invoices"),
-            ("Purchase Reports", "purchase_reports", "reports:purchase_report"),
+            ("Customer Reports", "customer_reports", "reports:customer_reports"),
+            ("Supplier Reports", "supplier_reports", "reports:supplier_reports"),
+            ("Sales Reports", "sales_reports", "reports:sales_reports"),
+            ("Purchase Reports", "purchase_reports", "reports:purchase_reports"),
             ("Item / Product Reports", "sales_reports", "reports:item_reports"),
-            ("Service Reports", "service_reports", "reports:service_contracts"),
-            ("Accounting Reports", "accounting_reports", "reports:trial_balance"),
-            ("Tax Summary", "accounting_reports", "reports:tax_summary"),
+            ("Service Reports", "service_reports", "reports:service_reports"),
+            ("Accounting Reports", "accounting_reports", "reports:accounting_reports"),
+            ("Tax Summary", "accounting_reports", "reports:tax_reports"),
+            ("Inventory Reports", "inventory", "reports:inventory_reports"),
+            ("System / Audit Reports", "audit_log", "reports:system_reports"),
         ],
     },
     {
         "label": "System",
         "icon": "bi-shield-lock",
+        "url_name": "backup:index",
         "items": [
             ("Backup / Restore", "backup_restore", "backup:dashboard"),
             ("Audit Log", "audit_log", "backup:audit_log"),
-            ("System Reports", "audit_log", "reports:system_reports"),
             ("License Status", "licensing", "licensing:index"),
         ],
     },
@@ -99,8 +108,8 @@ SIDEBAR_GROUPS = [
         "items": [
             ("Company Settings", "company_settings", "settings_module:company"),
             ("Branches", "branches", "settings_module:branches"),
-            ("Users & Roles", "user_management", "masters:index"),
-            ("Role Management", "role_management", "masters:index"),
+            ("Users & Roles", "user_management", "settings_module:users_roles"),
+            ("Role Management", "role_management", "settings_module:role_management"),
             ("Numbering Settings", "numbering_settings", "settings_module:numbering"),
             ("Tax Settings", "tax_settings", "settings_module:tax"),
             ("Inventory Settings", "company_settings", "settings_module:inventory"),
@@ -165,12 +174,15 @@ def build_sidebar_groups(request):
                     }
                 )
         if visible_items:
+            group_url_name = group.get("url_name")
+            group_url = reverse(group_url_name) if group_url_name else ""
             groups.append(
                 {
                     "label": group["label"],
                     "icon": group["icon"],
+                    "url": group_url,
                     "items": visible_items,
-                    "active": any(item["active"] for item in visible_items),
+                    "active": any(item["active"] for item in visible_items) or (bool(group_url) and request.path == group_url),
                 }
             )
     return groups

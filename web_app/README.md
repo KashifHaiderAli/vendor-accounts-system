@@ -96,7 +96,60 @@ password: infoline
 
 The web app reads roles, permissions, assigned branches, company details, and license records from the SQLite database created by the DB App. Branch selection is based on the branches assigned to the logged-in user.
 
-Licenses must be generated from the DB App. If the license is missing, expired, inactive, or belongs to a different hardware fingerprint, the web app redirects to the license expired page and shows the current hardware fingerprint for renewal.
+Licenses must be generated from the DB App. If the license is missing, expired, inactive, invalid, or belongs to a different hardware fingerprint, the web app redirects to the license expired page and shows the current hardware fingerprint for renewal. The Web App validates the stored license key, license type, active flag, hardware fingerprint, start date, and expiry/lifetime rules.
+
+License behavior:
+
+- Login, logout, static files, and the license expired page are allowed without a valid license.
+- Dashboard, transactions, reports/export, print pages, backup/restore, settings, and user management are blocked without a valid license.
+- Trial licenses are valid for 30 days from the start date.
+- Annual licenses are valid for 365 days from the start date.
+- Lifetime licenses do not expire, but still require an active matching license key and hardware fingerprint.
+- License failures are logged in `user_activity_log` as `LICENSE_FAILURE` when audit logging is available.
+
+To check the current hardware fingerprint, open the license expired page or use the DB App licensing tab. To generate a license, use the DB App licensing tab, select Trial, Annual, or Lifetime, generate the key, and save the record into the active SQLite database.
+
+The Web App also includes a real License Status / License Activation page:
+
+```text
+/license/
+```
+
+Use this page to:
+
+- view current license status
+- copy the current hardware fingerprint
+- paste and activate a DB App-generated license key
+- review license history
+- deactivate or reactivate valid license records
+
+Activation from Web App:
+
+1. Login as Master Admin/Admin or a user with license/settings access.
+2. Open `/license/`.
+3. Copy the displayed hardware fingerprint.
+4. Open DB App, select the same SQLite database, and open the Licensing tab.
+5. Generate Trial, Annual, or Lifetime license.
+6. Paste the key into `/license/` and click Activate License.
+
+If the DB App already saved the license directly into the database, click Refresh Status on `/license/`.
+
+License test command:
+
+```bash
+python manage.py test_license_page
+python manage.py test_licensing_system
+```
+
+The test commands create temporary license scenarios in a transaction and roll them back. They verify the license page, activation flow, valid, missing, expired, inactive, wrong-hardware, invalid-key, trial, annual, lifetime, middleware, and audit-log behavior.
+
+Standalone deployment notes:
+
+- TAX version can run on one port/database, for example `vendor_accounts_tax.db` on port `8001`.
+- Local Vendor Accounting System can run on another port/database, for example `local_vendor_accounts.db` on port `8002`.
+- Each SQLite database has its own `license_records` table and should receive its own saved license record.
+- The current key format is tied to hardware, license type, and start date. It does not yet include edition name or database id, so keep edition/license assignments documented during deployment.
+- Keep the live SQLite database outside OneDrive, Google Drive, or Dropbox sync folders. Backups may be copied to synced folders.
 
 ## Phase 4 Settings Screens
 
@@ -104,6 +157,8 @@ Phase 4 adds working settings screens that use the existing DB App-created table
 
 - Company Settings: `/settings/company/`
 - Branch Management: `/settings/branches/`
+- Users & Roles: `/settings/users-roles/`
+- Role Management: `/settings/role-management/`
 - Numbering Settings: `/settings/numbering/`
 - Tax Settings: `/settings/tax/`
 
@@ -111,12 +166,25 @@ These pages require login, a valid license, and the matching role permissions:
 
 - `company_settings`: view/edit
 - `branches`: view/add/edit/delete permission family, with add/edit used by the current screens
+- `user_management`: view/add/edit for custom users, branch access, activation, and password reset
+- `role_management`: view/add/edit for roles and permission flags
 - `numbering_settings`: view/edit
 - `tax_settings`: view/edit
 
 Branch management enforces the current company from the logged-in session, unique branch codes per company, a single Head Office branch, and at least one active branch. Head Office branches cannot be deactivated. When a Master Admin creates a branch, that user is automatically granted branch access in `user_branches`.
 
-Settings updates write to the existing `companies`, `company_settings`, `branches`, `numbering_settings`, and `tax_settings` tables. User actions are logged into `user_activity_log`.
+Users & Roles uses the custom `users`, `user_roles`, and `user_branches` tables only. It does not use Django `auth_user`. New users and password resets receive the temporary password `Temp@12345`; blank passwords are not allowed, and users should change the temporary password after login.
+
+Role Management uses `permissions` and `role_permissions` for view/add/edit/delete/print/export flags. Roles are activated/deactivated instead of hard-deleted.
+
+Generic testing users and roles can be created with:
+
+```powershell
+python manage.py seed_generic_users_roles
+python manage.py test_users_roles_pages
+```
+
+Settings updates write to the existing `companies`, `company_settings`, `branches`, `numbering_settings`, `tax_settings`, `users`, `user_roles`, `user_branches`, and `role_permissions` tables. User actions are logged into `user_activity_log`.
 
 ## Phase 5 Master Data Screens
 
@@ -392,21 +460,27 @@ Company logos now use the existing `companies.logo_path` field.
 
 Reports are available under `/reports/` with branch-aware filters, CSV export, and print-friendly pages.
 
-Priority reports implemented with real SQL queries:
+The reports index opens group submenu pages instead of sending users directly into one generic report:
 
-- Customer Ledger, Customer Outstanding, Customer Aging, Customer Statement
-- Supplier Ledger, Supplier Payable, Supplier Aging, Supplier Statement
-- Sales Invoice Report and Receipt Report
-- Purchase Report and Supplier Payment Report
-- Cash Book, Bank Book, General Ledger, Trial Balance, Profit and Loss, Balance Sheet
-
-Additional report URLs are present as safe placeholders so links do not break while the detailed report bodies are expanded.
+- Customer Reports: ledger, statement, outstanding, aging, customer-wise sales, customer-wise receipts
+- Supplier Reports: ledger, statement, payable, aging, supplier-wise purchase, supplier-wise payment
+- Sales Reports: quotations, confirmations/PO, delivery challans, invoices, returns, receipts, sales tax
+- Purchase Reports: purchases, purchase returns, supplier payments, purchase tax, profit by invoice, profit by confirmation/PO
+- Item / Product Reports: item-wise sales, purchases, profit, transaction history, service-wise sales
+- Service Reports: contract list, expiring contracts, billing due, invoice history
+- Accounting Reports: cash book, bank book, general ledger, account ledger, trial balance, profit and loss, balance sheet, journals, expenses, income
+- Tax Summary: output tax, input tax, and net tax payable/receivable
+- Inventory Reports: stock balance, item ledger, stock in, stock out, low stock, valuation when inventory tables exist
+- System / Audit Reports: activity, login/logout, prints, exports, backup/restore, validation failures
 
 Run the report query smoke test:
 
 ```powershell
 python manage.py seed_smoke_test_data
 python manage.py test_reports_queries
+python manage.py test_reports_ui
+python manage.py test_party_statements
+python manage.py test_reports_routes
 ```
 
 CSV export is available from each report screen. The PDF button opens the print-friendly HTML view so the browser can print or save as PDF without adding a heavy Windows-sensitive PDF dependency.
@@ -425,6 +499,9 @@ Run the expanded report query smoke test:
 
 ```powershell
 python manage.py test_reports_queries
+python manage.py test_reports_ui
+python manage.py test_party_statements
+python manage.py test_reports_routes
 ```
 
 ## Phase 19 Print Finalization
@@ -463,6 +540,10 @@ Quotation and invoice tax are calculated after discount:
 - Inclusive tax: `gross = qty * rate`, `discounted_gross = gross - discount`, `tax = discounted_gross * tax% / (100 + tax%)`, `grand = discounted_gross`
 
 On quotation entry, the posted row tax percent is saved and used first. The product master `default_tax_rate` is only used when the row tax is blank, and a missing form tax option defaults to `tax_exclusive` rather than silently disabling tax.
+
+The quotation form JavaScript mirrors the backend formula so the live row tax, subtotal, discount, tax total, and grand total preview match the saved quotation before submission.
+
+If the quotation form still appears to use an old tax calculation after an update, hard refresh the browser with `Ctrl+F5`. The quotation page loads `static/js/quotation.js` with a version query string and logs `quotation.js loaded: qtax_discount_fix_20260520` in the browser console for quick verification.
 
 Run the print template check:
 

@@ -185,6 +185,19 @@ a {
     gap: 10px;
 }
 
+.sidebar-group-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+.sidebar-group-link:hover {
+    color: inherit;
+}
+
 .sidebar-group summary > i:last-child {
     color: var(--sidebar-muted);
     font-size: 0.82rem;

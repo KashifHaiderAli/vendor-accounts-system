@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge soft-badge-{{ status.tone }}">License Status</span>
+        <h2>License Status</h2>
+        <p>Generate the license key from DB App using this hardware fingerprint, then paste the key here.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'licensing:index' %}">
+            <i class="bi bi-arrow-clockwise"></i>
+            Refresh Status
+        </a>
+    </div>
+</section>
+
+<section class="section-grid">
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Current License</h3>
+                <p>{{ status.message }}</p>
+            </div>
+            <i class="bi bi-shield-check"></i>
+        </div>
+        <div class="app-card-body system-list">
+            <div>
+                <span>Status</span>
+                <strong>{{ status.label }}</strong>
+            </div>
+            <div>
+                <span>Company</span>
+                <strong>{{ company.company_name|default:"-" }}</strong>
+            </div>
+            <div>
+                <span>Branch</span>
+                <strong>{{ branch.branch_name|default:"Company level" }}</strong>
+            </div>
+            <div>
+                <span>Hardware Fingerprint</span>
+                <strong class="fingerprint-value" id="hardwareFingerprint">{{ hardware_fingerprint }}</strong>
+            </div>
+            <div>
+                <button class="btn btn-light btn-sm" type="button" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('hardwareFingerprint').innerText)">
+                    <i class="bi bi-clipboard"></i>
+                    Copy Hardware Fingerprint
+                </button>
+            </div>
+            {% if active_license %}
+                <div>
+                    <span>License Type</span>
+                    <strong>{{ active_license.license_type }}</strong>
+                </div>
+                <div>
+                    <span>Start Date</span>
+                    <strong>{{ active_license.start_date|default:"-" }}</strong>
+                </div>
+                <div>
+                    <span>Expiry Date</span>
+                    <strong>{{ active_license.expiry_date|default:"-" }}</strong>
+                </div>
+                <div>
+                    <span>Lifetime</span>
+                    <strong>{% if active_license.is_lifetime %}Yes{% else %}No{% endif %}</strong>
+                </div>
+                <div>
+                    <span>Days Remaining</span>
+                    <strong>{% if active_license.days_remaining is not None %}{{ active_license.days_remaining }}{% else %}-{% endif %}</strong>
+                </div>
+                <div>
+                    <span>Last Validation Message</span>
+                    <strong>{{ active_license.validation_message }}</strong>
+                </div>
+            {% else %}
+                <div class="empty-state">No valid license found. Please enter a valid license key generated from DB App.</div>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Activate License</h3>
+                <p>Use the current system hardware fingerprint. Do not type hardware fingerprint manually.</p>
+            </div>
+            <i class="bi bi-key"></i>
+        </div>
+        <div class="app-card-body">
+            <form method="post" class="form-grid">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="activate">
+                <div class="form-field">
+                    <label for="license_type">License Type</label>
+                    <select id="license_type" name="license_type" required>
+                        {% for license_type in license_types %}
+                            <option value="{{ license_type }}">{{ license_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="start_date">Start Date</label>
+                    <input id="start_date" name="start_date" type="date" value="{{ today }}" required>
+                </div>
+                <div class="form-field">
+                    <label for="expiry_date">Expiry Date</label>
+                    <input id="expiry_date" name="expiry_date" type="date">
+                </div>
+                <div class="form-field full-width">
+                    <label for="license_key">License Key</label>
+                    <input id="license_key" name="license_key" type="text" autocomplete="off" required>
+                </div>
+                <div class="form-field full-width">
+                    <label for="remarks">Remarks</label>
+                    <textarea id="remarks" name="remarks" rows="3"></textarea>
+                </div>
+                <div class="form-actions full-width">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-shield-plus"></i>
+                        Activate License
+                    </button>
+                </div>
+            </form>
+        </div>
+    </article>
+</section>
+
+<section class="section-grid">
+    <article class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>DB App Activation Steps</h3>
+                <p>If the DB App has already saved the license into this database, click Refresh Status.</p>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <ol class="compact-list">
+                <li>Open DB App.</li>
+                <li>Select the target SQLite database.</li>
+                <li>Open the Licensing tab.</li>
+                <li>Copy this hardware fingerprint.</li>
+                <li>Generate Trial, Annual, or Lifetime license.</li>
+                <li>Paste the license key here.</li>
+                <li>Activate.</li>
+            </ol>
+        </div>
+    </article>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header">
+        <div>
+            <h3>License History</h3>
+            <p>Records are never deleted. Deactivate old licenses instead.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Start Date</th>
+                    <th>Expiry Date</th>
+                    <th>Lifetime</th>
+                    <th>Active</th>
+                    <th>Hardware Match</th>
+                    <th>Status</th>
+                    <th>License Key</th>
+                    <th>Remarks</th>
+                    <th>Created At</th>
+                    <th>Updated At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in licenses %}
+                    <tr>
+                        <td>{{ row.license_type }}</td>
+                        <td>{{ row.start_date|default:"-" }}</td>
+                        <td>{{ row.expiry_date|default:"-" }}</td>
+                        <td>{% if row.is_lifetime %}Yes{% else %}No{% endif %}</td>
+                        <td>{% if row.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{% if row.hardware_match %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ row.computed_status }}</td>
+                        <td>{{ row.masked_key }}</td>
+                        <td>{{ row.remarks|default:"-" }}</td>
+                        <td>{{ row.created_at|default:"-" }}</td>
+                        <td>{{ row.updated_at|default:"-" }}</td>
+                        <td class="table-actions">
+                            {% if row.is_active %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="deactivate">
+                                    <input type="hidden" name="license_id" value="{{ row.id }}">
+                                    <button class="btn btn-light btn-sm" type="submit">Deactivate</button>
+                                </form>
+                            {% elif row.can_reactivate %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reactivate">
+                                    <input type="hidden" name="license_id" value="{{ row.id }}">
+                                    <button class="btn btn-light btn-sm" type="submit">Reactivate</button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="12">
+                            <div class="empty-state">No license records found for this company.</div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const typeField = document.getElementById("license_type");
+    const expiryField = document.getElementById("expiry_date");
+    function syncExpiry() {
+        const lifetime = typeField && typeField.value === "Lifetime";
+        if (expiryField) {
+            expiryField.disabled = lifetime;
+            expiryField.closest(".form-field").style.display = lifetime ? "none" : "";
+        }
+    }
+    if (typeField) {
+        typeField.addEventListener("change", syncExpiry);
+        syncExpiry();
+    }
+});
+</script>
+{% endblock %}
