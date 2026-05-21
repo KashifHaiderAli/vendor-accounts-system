@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 
 class DatabaseTab(ttk.Frame):
@@ -25,7 +25,8 @@ class DatabaseTab(ttk.Frame):
         actions.grid(row=1, column=0, columnspan=3, sticky="w", pady=12)
         ttk.Button(actions, text="Create Database", command=self.create_database).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Reset Database", command=self.reset_database).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Check Database", command=self.check_database).pack(side="left")
+        ttk.Button(actions, text="Check Database", command=self.check_database).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Prepare Database for New Client", command=self.prepare_for_new_client).pack(side="left")
 
         ttk.Label(self, text="Database status").grid(row=2, column=0, sticky="nw", pady=6)
         status = ttk.Label(self, textvariable=self.status_var, justify="left")
@@ -91,3 +92,45 @@ class DatabaseTab(ttk.Frame):
         except Exception as exc:
             self.logger.error(str(exc))
             messagebox.showerror("Check Database", str(exc))
+
+    def prepare_for_new_client(self) -> None:
+        try:
+            path = self._sync_folder()
+            if not path.exists():
+                raise FileNotFoundError(f"Database file not found: {path}")
+            warning = (
+                "This will remove all testing/demo/business transaction data from the selected database.\n\n"
+                "It will keep company setup, master admin user, roles, permissions, chart of accounts, "
+                "numbering, license, and required settings.\n\n"
+                "A backup will be created before reset.\n\n"
+                "Continue?"
+            )
+            if not messagebox.askyesno("Prepare Database for New Client", warning):
+                self.logger.info("Pre-client reset cancelled.")
+                return
+            typed = simpledialog.askstring(
+                "Confirm Reset",
+                "Type RESET to continue:",
+                parent=self,
+            )
+            if typed != "RESET":
+                self.logger.info("Pre-client reset confirmation failed or cancelled.")
+                messagebox.showinfo("Prepare Database", "Reset cancelled.")
+                return
+            result = self.controller.prepare_database_for_new_client()
+            deleted_total = sum(result["rows_deleted_by_table"].values())
+            messagebox.showinfo(
+                "Prepare Database Complete",
+                "\n".join(
+                    [
+                        "Database prepared for new client deployment.",
+                        f"Backup: {result['backup_path']}",
+                        f"Tables cleaned: {len(result['tables_cleaned'])}",
+                        f"Rows deleted: {deleted_total}",
+                    ]
+                ),
+            )
+            self.check_database()
+        except Exception as exc:
+            self.logger.error(str(exc))
+            messagebox.showerror("Prepare Database", str(exc))

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+import shutil
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
 
 from app.utils.date_utils import now_iso
 
@@ -44,7 +46,14 @@ class CompanyTab(ttk.Frame):
             row = index // 2
             col = (index % 2) * 2
             ttk.Label(self, text=label).grid(row=row, column=col, sticky="w", pady=4)
-            ttk.Entry(self, textvariable=self.vars[field]).grid(row=row, column=col + 1, sticky="ew", padx=8, pady=4)
+            if field == "logo_path":
+                logo_frame = ttk.Frame(self)
+                logo_frame.grid(row=row, column=col + 1, sticky="ew", padx=8, pady=4)
+                logo_frame.columnconfigure(0, weight=1)
+                ttk.Entry(logo_frame, textvariable=self.vars[field]).grid(row=0, column=0, sticky="ew")
+                ttk.Button(logo_frame, text="Browse Logo", command=self.browse_logo).grid(row=0, column=1, padx=(6, 0))
+            else:
+                ttk.Entry(self, textvariable=self.vars[field]).grid(row=row, column=col + 1, sticky="ew", padx=8, pady=4)
 
         actions = ttk.Frame(self)
         actions.grid(row=8, column=0, columnspan=4, sticky="w", pady=12)
@@ -149,6 +158,48 @@ class CompanyTab(ttk.Frame):
         except Exception as exc:
             self.logger.error(str(exc))
             messagebox.showerror("Company Setup", str(exc))
+
+    def browse_logo(self) -> None:
+        try:
+            selected = filedialog.askopenfilename(
+                title="Select Company Logo",
+                filetypes=[
+                    ("Image files", "*.png *.jpg *.jpeg *.webp *.bmp"),
+                    ("PNG files", "*.png"),
+                    ("JPEG files", "*.jpg *.jpeg"),
+                    ("WEBP files", "*.webp"),
+                    ("BMP files", "*.bmp"),
+                    ("All files", "*.*"),
+                ],
+            )
+            if not selected:
+                return
+            source = Path(selected)
+            if source.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".bmp"}:
+                raise RuntimeError("Logo must be a PNG, JPG, JPEG, WEBP, or BMP file.")
+            if source.stat().st_size > 2 * 1024 * 1024:
+                raise RuntimeError("Logo file size must be 2 MB or less.")
+
+            with self.controller.connect() as connection:
+                db_info = connection.execute("PRAGMA database_list").fetchone()
+                try:
+                    db_file = db_info["file"]
+                except (KeyError, TypeError):
+                    db_file = db_info[2]
+                db_path = Path(db_file).resolve()
+            target_dir = db_path.parent / "company_assets" / "logo"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            for old_file in target_dir.glob("company_logo.*"):
+                if old_file.is_file():
+                    old_file.unlink()
+            target = target_dir / f"company_logo{source.suffix.lower()}"
+            shutil.copy2(source, target)
+            self.vars["logo_path"].set(str(target))
+            self.logger.info(f"Company logo copied to {target}")
+            messagebox.showinfo("Company Logo", "Company logo selected and copied. Click Save Company Setup to store it.")
+        except Exception as exc:
+            self.logger.error(str(exc))
+            messagebox.showerror("Company Logo", str(exc))
 
     def _ensure_head_office_branch(self, connection, company_id: int, now: str) -> int:
         head_office = connection.execute(

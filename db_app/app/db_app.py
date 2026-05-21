@@ -7,6 +7,7 @@ from app.database.connection import database_status, get_connection
 from app.database.initializer import initialize_database
 from app.database.resetter import reset_database
 from app.logger import AppLogger
+from app.services.reset_database_service import reset_database_for_new_client
 
 
 class VendorAccountsDBAppController:
@@ -31,6 +32,14 @@ class VendorAccountsDBAppController:
         reset_database(self.database_path)
         self.logger.info("Database reset and initialized successfully.")
 
+    def prepare_database_for_new_client(self, keep_logs: bool = False) -> dict[str, object]:
+        self.logger.info("Preparing database for new client deployment.")
+        result = reset_database_for_new_client(self.database_path, keep_logs=keep_logs)
+        self.logger.info(
+            f"Pre-client reset completed. cleaned={len(result['tables_cleaned'])}, backup={result['backup_path']}"
+        )
+        return result
+
     def check_status(self) -> dict[str, object]:
         status = database_status(self.database_path)
         self.logger.info(
@@ -53,4 +62,3 @@ class VendorAccountsDBAppController:
                 (company["id"],),
             ).fetchone()
             return company["id"], branch["id"] if branch else None
-

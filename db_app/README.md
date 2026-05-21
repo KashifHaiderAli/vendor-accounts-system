@@ -39,6 +39,31 @@ The app lets you browse to another local folder before creating the database.
 8. Add users if needed.
 9. Generate a trial, annual, or lifetime license.
 
+## Prepare Database for New Client
+
+Before deploying a standalone SQLite database for a new client, use the Database tab button:
+
+```text
+Prepare Database for New Client
+```
+
+This creates a backup first, then removes testing/demo/business transaction data while keeping company setup, branches, users, roles, permissions, chart of accounts, numbering, settings, and license records. The confirmation dialog requires typing `RESET`.
+
+Command line usage is also available:
+
+```powershell
+python ..\db_app_reset_for_new_client.py --db "D:\Development\vendor-accounts-system\data\vendor_accounts.db" --dry-run
+python ..\db_app_reset_for_new_client.py --db "D:\Development\vendor-accounts-system\data\vendor_accounts.db"
+```
+
+Test the reset flow:
+
+```powershell
+python ..\db_app_test_reset_database.py
+```
+
+Full details are documented in `docs/db_app_new_client_reset.md`.
+
 ## DB App Login
 
 The DB App login protects this desktop database utility only. It is separate from the future web app users table.

@@ -5,7 +5,6 @@ from pathlib import Path
 from app.config import DATABASE_PASSWORD_HINT
 from app.constants import (
     BUSINESS_MODULES,
-    DEFAULT_ACCOUNT_GROUPS,
     DEFAULT_ROLES,
     PERMISSION_MODULES,
     REPORT_MODULES,
@@ -18,6 +17,28 @@ from app.constants import (
 )
 from app.security.password_utils import hash_password
 from app.utils.date_utils import now_iso
+
+
+DEFAULT_CHART_ACCOUNTS = [
+    ("ASSET", "Assets", "Assets", None, 1),
+    ("CASH", "Cash", "Assets", "Assets", 0),
+    ("BANK", "Bank", "Assets", "Assets", 0),
+    ("AR", "Accounts Receivable", "Assets", "Assets", 1),
+    ("INPUT-TAX", "Input Tax Receivable", "Assets", "Assets", 0),
+    ("LIABILITY", "Liabilities", "Liabilities", None, 1),
+    ("AP", "Accounts Payable", "Liabilities", "Liabilities", 1),
+    ("OUTPUT-TAX", "Output Tax Payable", "Liabilities", "Liabilities", 0),
+    ("EQUITY", "Equity", "Equity", None, 1),
+    ("CAPITAL", "Capital / Opening Balance", "Equity", "Equity", 0),
+    ("INCOME", "Income", "Income", None, 1),
+    ("SALES", "Sales", "Income", "Income", 0),
+    ("SERVICE-INCOME", "Service Income", "Income", "Income", 0),
+    ("EXPENSE", "Expenses", "Expenses", None, 1),
+    ("PURCHASES", "Purchases / Cost of Goods", "Expenses", "Expenses", 0),
+    ("OFFICE-EXP", "Office Expenses", "Expenses", "Expenses", 1),
+    ("SALES-RETURN", "Sales Returns", "Expenses", "Expenses", 0),
+    ("PURCHASE-RETURN", "Purchase Returns", "Expenses", "Expenses", 0),
+]
 
 
 def seed_defaults(connection, database_path: str | Path) -> None:
@@ -290,18 +311,32 @@ def _seed_user_branch(connection, user_id: int, branch_id: int, now: str) -> Non
 
 
 def _seed_accounts(connection, company_id: int, branch_id: int, now: str) -> None:
-    for code, name, account_type in DEFAULT_ACCOUNT_GROUPS:
-        if connection.execute(
+    by_name = {}
+    for code, name, account_type, parent_name, is_control in DEFAULT_CHART_ACCOUNTS:
+        parent_id = by_name.get(parent_name)
+        row = connection.execute(
             "SELECT id FROM accounts WHERE company_id = ? AND branch_id = ? AND account_code = ?",
             (company_id, branch_id, code),
-        ).fetchone():
+        ).fetchone()
+        if row:
+            by_name[name] = row["id"]
+            connection.execute(
+                """
+                UPDATE accounts
+                SET account_name = ?, account_type = ?, parent_id = ?, is_control_account = ?,
+                    is_system_account = 1, is_active = 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (name, account_type, parent_id, is_control, now, row["id"]),
+            )
             continue
-        connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO accounts (
                 company_id, branch_id, account_code, account_name, account_type,
                 parent_id, is_control_account, is_system_account, is_active, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, NULL, 1, 1, 1, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)
             """,
-            (company_id, branch_id, code, name, account_type, now, now),
+            (company_id, branch_id, code, name, account_type, parent_id, is_control, now, now),
         )
+        by_name[name] = int(cursor.lastrowid)
