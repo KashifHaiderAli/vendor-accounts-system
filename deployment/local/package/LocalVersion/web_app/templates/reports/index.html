@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Reports</span>
+        <h2>Reports Center</h2>
+        <p>Branch-aware reports with filters, CSV export, and print-friendly output.</p>
+    </div>
+</section>
+
+<section class="section-grid">
+    {% for title, icon, description, route_name, permission in report_categories %}
+    <article class="app-card module-card">
+        <div class="app-card-body">
+            <div class="module-card-icon"><i class="bi {{ icon }}"></i></div>
+            <h3>{{ title }}</h3>
+            <p>{{ description }}</p>
+            <a class="btn btn-primary btn-sm" href="{% url route_name %}">Open</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+
+{% if priority_links %}
+<section class="app-card mt-3">
+    <div class="app-card-header">
+        <div>
+            <h3>Priority Reports</h3>
+            <p>Frequently used detailed reports. Each group above opens its full report submenu.</p>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <div class="quick-actions-grid">
+            {% for label, icon, route_name, permission in priority_links %}
+            <a class="quick-action-btn" href="{% url route_name %}"><i class="bi {{ icon }}"></i> {{ label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

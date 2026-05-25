@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Master Admin</span><h2>Restore Backup</h2><p>Restore replaces the current live database after a safety backup is created.</p></div>
+</section>
+
+<div class="alert alert-danger">Restore will replace the current live database. A safety backup will be created first.</div>
+<form method="post" action="{% url 'backup:restore_preview' %}" class="app-card">
+    {% csrf_token %}
+    <div class="app-card-body">
+        <label class="form-label" for="backup_path">Backup .db File Path</label>
+        <input class="form-control" id="backup_path" name="backup_path" value="{{ request.GET.path|default:'' }}" required>
+        <div class="form-text">Select a readable SQLite backup with core tables.</div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'backup:dashboard' %}">Cancel</a>
+            <button class="btn btn-warning" type="submit"><i class="bi bi-search"></i> Preview Restore</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

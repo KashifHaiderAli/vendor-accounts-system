@@ -1,0 +1,11 @@
+{
+  "db_path": "D:\\Development\\vendor-accounts-system\\data\\vendor_accounts.db",
+  "backup_path": "D:\\Development\\vendor-accounts-system\\data\\backups\\vendor_accounts_backup_20260509_162718.db",
+  "folder": "D:\\Development\\vendor-accounts-system\\data\\backups",
+  "timestamp": "20260509_162718",
+  "user_id": 1,
+  "company_id": 1,
+  "branch_id": 1,
+  "file_size": 589824,
+  "status": "SUCCESS"
+}

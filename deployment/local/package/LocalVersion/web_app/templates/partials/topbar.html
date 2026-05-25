@@ -1,0 +1,70 @@
+<header class="topbar">
+    <div class="topbar-left">
+        <button class="icon-button sidebar-mobile-toggle" type="button" aria-label="Toggle navigation">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="topbar-title">
+            <span class="breadcrumb-line">Home / {{ page_title|default:"Dashboard" }}</span>
+            <h1>{{ page_title|default:"Dashboard" }}</h1>
+        </div>
+    </div>
+
+    <div class="topbar-center">
+        <label class="search-box" aria-label="Search placeholder">
+            <i class="bi bi-search"></i>
+            <input type="search" placeholder="Search transactions, customers, invoices" disabled>
+        </label>
+    </div>
+
+    <div class="topbar-actions">
+        <div class="company-chip">
+            <i class="bi bi-buildings"></i>
+            <span>{{ current_company_name }}</span>
+            <small>{{ current_branch_name }}</small>
+        </div>
+
+        {% if allowed_branches|length > 1 %}
+        <div class="dropdown">
+            <button class="branch-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-diagram-3"></i>
+                <span>{{ current_branch_name }}</span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% for branch in allowed_branches %}
+                <li>
+                    <a class="dropdown-item" href="{% url 'authentication:switch_branch' branch.id %}">
+                        {{ branch.branch_name }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <span class="date-chip">
+            <i class="bi bi-calendar3"></i>
+            {{ current_date|date:"M d, Y" }}
+        </span>
+        <button class="icon-button" type="button" aria-label="Notifications">
+            <i class="bi bi-bell"></i>
+        </button>
+
+        {% if is_authenticated_custom %}
+        <div class="dropdown">
+            <button class="profile-button" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="profile-avatar">{{ logged_in_user_name|default:"U"|slice:":1" }}</span>
+                <span>{{ logged_in_user_name }}</span>
+                <small>{{ logged_in_role_name }}</small>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><span class="dropdown-item-text">{{ logged_in_role_name }}</span></li>
+                <li><a class="dropdown-item" href="{% url 'authentication:logout' %}">Logout</a></li>
+            </ul>
+        </div>
+        {% else %}
+        <a class="btn btn-primary" href="{% url 'authentication:login' %}">Login</a>
+        {% endif %}
+    </div>
+</header>

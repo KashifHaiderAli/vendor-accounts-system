@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Inventory</span><h2>New Stock Adjustment</h2><p>Stock Out cannot exceed available stock.</p></div></section>
+{% if errors %}<div class="alert alert-danger">{% for key, error in errors.items %}<div>{{ error }}</div>{% endfor %}</div>{% endif %}
+<form class="app-card" method="post">{% csrf_token %}
+<div class="app-card-body"><div class="row g-3"><div class="col-md-3"><label class="form-label">Adjustment No</label><input class="form-control" name="adjustment_no" value="{{ form_data.adjustment_no }}"></div><div class="col-md-3"><label class="form-label">Date</label><input class="form-control" type="date" name="adjustment_date" value="{{ form_data.adjustment_date }}"></div><div class="col-md-3"><label class="form-label">Type</label><select class="form-select" name="adjustment_type"><option {% if form_data.adjustment_type == "Stock In" %}selected{% endif %}>Stock In</option><option {% if form_data.adjustment_type == "Stock Out" %}selected{% endif %}>Stock Out</option></select></div><div class="col-md-3"><label class="form-label">Reason</label><input class="form-control" name="reason" value="{{ form_data.reason }}"></div></div></div>
+<div class="app-card-body table-responsive border-top"><table class="table app-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Remarks</th></tr></thead><tbody><tr><td><select class="form-select" name="item_service_id[]"><option value="">Select</option>{% for item in items %}<option value="{{ item.id }}">{{ item.item_name }}</option>{% endfor %}</select></td><td><input class="form-control" type="number" step="0.01" min="0.01" name="quantity[]" value="1"></td><td><input class="form-control" type="number" step="0.01" min="0" name="unit_cost[]" value="0"></td><td><input class="form-control" name="item_remarks[]"></td></tr></tbody></table></div>
+<div class="app-card-body border-top form-actions"><button class="btn btn-primary">Post Adjustment</button><a class="btn btn-light" href="{% url 'inventory:adjustments' %}">Cancel</a></div>
+</form>
+{% endblock %}
+

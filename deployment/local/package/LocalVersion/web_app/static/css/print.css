@@ -1,0 +1,251 @@
+@page {
+    size: A4 portrait;
+    margin: 8mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    color: #111827;
+    background: #fff;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 10.5px;
+    line-height: 1.2;
+}
+
+.print-actions,
+.no-print,
+.screen-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 12px auto 18px;
+    max-width: 800px;
+}
+
+.print-actions button,
+.print-actions a,
+.no-print button,
+.screen-actions button,
+.screen-actions a {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    color: #111827;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.print-page {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.print-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 7px;
+    margin-bottom: 8px;
+}
+
+.print-logo {
+    max-height: 42px;
+    max-width: 135px;
+    object-fit: contain;
+}
+
+.print-title {
+    text-align: right;
+}
+
+.print-title h1,
+.print-title h2,
+.company-name {
+    margin: 0;
+}
+
+.company-name {
+    color: #0f4cbd;
+    font-size: 22px;
+    font-weight: 750;
+}
+
+.print-document-title {
+    text-align: center;
+    font-size: 15px;
+    margin: 7px 0;
+    text-transform: uppercase;
+    letter-spacing: 0;
+}
+
+.print-detail-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 3px 0 5px;
+    font-size: 10px;
+    line-height: 1.15;
+}
+
+.print-detail-grid td {
+    border: 1px solid #d1d5db;
+    padding: 2px 4px;
+    vertical-align: top;
+}
+
+.print-label {
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+.print-value {
+    font-weight: 400;
+}
+
+.print-meta-grid,
+.print-party-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px 8px;
+    margin: 3px 0 5px;
+}
+
+.muted {
+    color: #64748b;
+}
+
+.print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.print-panel {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px;
+}
+
+.app-card {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.app-card-header,
+.app-card-body {
+    padding: 7px;
+}
+
+.app-card-header {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.app-card-header h3,
+.app-card-header p {
+    margin: 0;
+}
+
+.app-card-header p {
+    color: #64748b;
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 7px 0 8px;
+}
+
+.print-table th,
+.print-table td {
+    border: 1px solid #d1d5db;
+    padding: 2px 4px;
+    vertical-align: top;
+    line-height: 1.15;
+}
+
+.print-table th {
+    background: #f8fafc;
+    text-align: left;
+}
+
+.app-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.app-table th,
+.app-table td {
+    border: 1px solid #d1d5db;
+    padding: 2px 4px;
+    vertical-align: top;
+}
+
+.app-table th {
+    background: #f8fafc;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.totals-box {
+    width: 235px;
+    margin-left: auto;
+}
+
+.totals-box .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 0;
+}
+
+.print-footer {
+    border-top: 1px solid #cbd5e1;
+    margin-top: 10px;
+    padding-top: 5px;
+    text-align: center;
+    color: #475569;
+    font-size: 9.5px;
+}
+
+.signature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+    margin-top: 28px;
+}
+
+.signature-line {
+    border-top: 1px solid #94a3b8;
+    padding-top: 6px;
+    text-align: center;
+}
+
+tr {
+    page-break-inside: avoid;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .print-actions,
+    .no-print,
+    .screen-actions,
+    .app-sidebar,
+    .app-topbar,
+    .app-footer,
+    .btn {
+        display: none !important;
+    }
+}

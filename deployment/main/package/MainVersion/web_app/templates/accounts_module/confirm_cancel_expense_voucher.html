@@ -1,0 +1,2 @@
+{% extends "base.html" %}
+{% block content %}<section class="page-header"><div><span class="soft-badge">Expense Voucher</span><h2>Cancel Voucher</h2><p>{{ voucher.voucher_no }}</p></div></section><section class="app-card"><div class="app-card-body"><p>This will create a reversal journal and mark the voucher Cancelled.</p><form method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Cancel Voucher</button><a class="btn btn-light" href="{% url 'accounts_module:expense_detail' voucher.id %}">Back</a></form></div></section>{% endblock %}

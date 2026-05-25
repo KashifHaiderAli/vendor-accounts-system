@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Masters</span>
+        <h2>Master Data</h2>
+        <p>Maintain branch-level customer, supplier, item, account, expense, and payment term records.</p>
+    </div>
+</section>
+
+<section class="section-grid stat-grid">
+    {% for card in master_cards %}
+    <a class="app-card master-menu-card" href="{% url card.url_name %}">
+        <div class="stat-icon"><i class="bi {{ card.icon }}"></i></div>
+        <div>
+            <h3>{{ card.label }}</h3>
+            <p>{{ card.description }}</p>
+        </div>
+    </a>
+    {% empty %}
+    <div class="app-card">
+        <div class="app-card-body">
+            <div class="empty-state">No master permissions are assigned to your role.</div>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

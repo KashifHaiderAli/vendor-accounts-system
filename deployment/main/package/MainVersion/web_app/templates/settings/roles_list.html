@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Role Management</h2>
+        <p>Manage application roles and permission flags.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-primary" href="{% url 'settings_module:role_new' %}"><i class="bi bi-plus-lg"></i> Add Role</a>
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-body">
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Role Name</th>
+                        <th>Description</th>
+                        <th>System Role</th>
+                        <th>Status</th>
+                        <th>Users</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role in roles %}
+                    <tr>
+                        <td><strong>{{ role.role_name }}</strong></td>
+                        <td>{{ role.description|default:"-" }}</td>
+                        <td>{% if role.is_system_role %}<span class="soft-badge">Yes</span>{% else %}-{% endif %}</td>
+                        <td>{% if role.is_active %}<span class="status-pill success">Active</span>{% else %}<span class="status-pill muted">Inactive</span>{% endif %}</td>
+                        <td>{{ role.users_count }}</td>
+                        <td class="text-end table-actions">
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:role_edit' role.id %}"><i class="bi bi-pencil"></i></a>
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:role_permissions' role.id %}"><i class="bi bi-shield-check"></i></a>
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:role_toggle_active' role.id %}">
+                                {% if role.is_active %}<i class="bi bi-toggle-on"></i>{% else %}<i class="bi bi-toggle-off"></i>{% endif %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6"><div class="empty-state">No roles found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

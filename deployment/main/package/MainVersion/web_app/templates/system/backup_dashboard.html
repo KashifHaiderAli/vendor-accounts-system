@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">System</span>
+        <h2>Backup / Restore</h2>
+        <p>Protect the live SQLite database with safe copies and restore safeguards.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'backup:settings' %}"><i class="bi bi-gear"></i> Settings</a>
+        <a class="btn btn-light" href="{% url 'backup:history' %}"><i class="bi bi-clock-history"></i> History</a>
+        {% if can_restore %}<a class="btn btn-warning" href="{% url 'backup:restore' %}"><i class="bi bi-arrow-counterclockwise"></i> Restore</a>{% endif %}
+    </div>
+</section>
+
+{% if live_db_synced_warning %}
+<div class="alert alert-warning">Live database should not be placed in synced folders like OneDrive, Google Drive, or Dropbox. Backups may be copied there.</div>
+{% endif %}
+{% if backup_folder_same_warning %}
+<div class="alert alert-warning">Backup folder is the same as the live database folder. Choose a separate folder for safer backups.</div>
+{% endif %}
+
+<section class="section-grid">
+    <article class="app-card">
+        <div class="app-card-header"><div><h3>Backup Now</h3><p>Create a timestamped database copy.</p></div><i class="bi bi-database-down"></i></div>
+        <div class="app-card-body">
+            <p><strong>Live DB:</strong><br>{{ live_db_path }}</p>
+            <p><strong>Backup Folder:</strong><br>{{ backup_folder }}</p>
+            <form method="post" action="{% url 'backup:backup_now' %}">
+                {% csrf_token %}
+                <button class="btn btn-primary" type="submit"><i class="bi bi-shield-check"></i> Backup Now</button>
+            </form>
+        </div>
+    </article>
+    <article class="app-card">
+        <div class="app-card-header"><div><h3>Last Backup</h3><p>Most recent system backup.</p></div><i class="bi bi-clock"></i></div>
+        <div class="app-card-body">
+            {% if last_backup %}
+            <p><strong>{{ last_backup.timestamp }}</strong></p>
+            <p>{{ last_backup.backup_path }}</p>
+            <span class="soft-badge">{{ last_backup.status }}</span>
+            {% else %}
+            <p class="text-muted">No backup history yet.</p>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<section class="app-card mt-3">
+    <div class="app-card-header"><div><h3>Recent Backups</h3><p>Last 10 backup attempts.</p></div></div>
+    <div class="app-card-body table-responsive">
+        <table class="table app-table align-middle">
+            <thead><tr><th>Date</th><th>File</th><th>Size</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for item in history %}
+                <tr><td>{{ item.timestamp }}</td><td>{{ item.backup_path }}</td><td>{{ item.file_size }}</td><td><span class="soft-badge">{{ item.status }}</span></td></tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No backup history found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

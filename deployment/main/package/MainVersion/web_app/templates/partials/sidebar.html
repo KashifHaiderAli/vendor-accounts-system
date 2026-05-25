@@ -1,0 +1,46 @@
+<aside class="app-sidebar" aria-label="Main navigation">
+    <div class="brand-block">
+        <div class="brand-mark">CS</div>
+        <div>
+            <strong>{{ system_name }}</strong>
+            <span>Accounts Suite</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        {% if is_authenticated_custom and can_view_dashboard %}
+        <a class="sidebar-link {% if request.path == '/' %}sidebar-link-active{% endif %}" href="{% url 'dashboard' %}">
+            <i class="bi bi-grid-1x2"></i>
+            <span>Dashboard</span>
+        </a>
+        {% endif %}
+
+        {% for group in sidebar_groups %}
+        <details class="sidebar-group {% if group.active %}sidebar-group-active{% endif %}" {% if group.active or forloop.counter <= 2 %}open{% endif %}>
+            <summary>
+                {% if group.url %}
+                <a class="sidebar-group-link" href="{{ group.url }}" onclick="event.stopPropagation();">
+                    <i class="bi {{ group.icon }}"></i>
+                    <span>{{ group.label }}</span>
+                </a>
+                {% else %}
+                <span><i class="bi {{ group.icon }}"></i> {{ group.label }}</span>
+                {% endif %}
+                <i class="bi bi-chevron-down"></i>
+            </summary>
+            <div class="sidebar-subnav">
+                {% for item in group.items %}
+                <a class="{% if item.active %}active{% endif %}" href="{{ item.url }}">{{ item.label }}</a>
+                {% endfor %}
+            </div>
+        </details>
+        {% empty %}
+            {% if is_authenticated_custom %}
+            <div class="sidebar-empty">
+                <i class="bi bi-lock"></i>
+                <span>No menu permissions assigned.</span>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </nav>
+</aside>

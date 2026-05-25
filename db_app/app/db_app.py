@@ -22,6 +22,12 @@ class VendorAccountsDBAppController:
         self.logger.info(f"Selected database path: {self.database_path}")
         return self.database_path
 
+    def set_database_file(self, file_path: str | Path) -> Path:
+        self.database_path = Path(file_path)
+        self.database_folder = self.database_path.parent
+        self.logger.info(f"Selected database file: {self.database_path}")
+        return self.database_path
+
     def create_database(self) -> None:
         self.logger.info("Creating database schema and seed records.")
         initialize_database(self.database_path)

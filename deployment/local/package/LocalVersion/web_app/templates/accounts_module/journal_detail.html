@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Accounting</span>
+        <h2>{{ journal.entry_no }}</h2>
+        <p>{{ journal.description|default:"Journal entry detail" }}</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'accounts_module:journals' %}"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</section>
+
+<section class="section-grid insight-grid">
+    <article class="app-card">
+        <div class="app-card-body system-list">
+            <div><span>Date</span><strong>{{ journal.entry_date }}</strong></div>
+            <div><span>Reference</span><strong>{{ journal.reference_type|default:"-" }} / {{ journal.reference_id|default:"-" }}</strong></div>
+            <div><span>Created By</span><strong>{{ journal.created_by_name|default:"-" }}</strong></div>
+        </div>
+    </article>
+    <article class="app-card">
+        <div class="app-card-body system-list">
+            <div><span>Total Debit</span><strong>{{ total_debit }}</strong></div>
+            <div><span>Total Credit</span><strong>{{ total_credit }}</strong></div>
+            <div><span>Status</span><strong>{% if is_balanced %}<span class="status-pill success">Balanced</span>{% else %}<span class="status-pill muted">Unbalanced</span>{% endif %}</strong></div>
+        </div>
+    </article>
+</section>
+
+<section class="app-card mt-4">
+    <div class="app-card-header">
+        <div>
+            <h3>Journal Lines</h3>
+            <p>Debit and credit lines for this entry.</p>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <div class="table-responsive">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Account Code</th>
+                        <th>Account Name</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in lines %}
+                    <tr>
+                        <td><strong>{{ line.account_code }}</strong></td>
+                        <td>{{ line.account_name }}</td>
+                        <td>{{ line.debit }}</td>
+                        <td>{{ line.credit }}</td>
+                        <td>{{ line.description|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Signed Copy</span><h2>Upload Signed Copy Path</h2><p>{{ challan.dc_no }} · {{ challan.party_name|default:"Party" }}</p></div>
+    <div class="page-header-actions"><a class="btn btn-light" href="{% url 'sales:delivery_challan_detail' challan.id %}"><i class="bi bi-arrow-left"></i> Back</a></div>
+</section>
+
+<form class="app-card" method="post" novalidate>
+    {% csrf_token %}
+    <div class="app-card-header"><div><h3>Signed Copy Details</h3><p>Use a file path for now. Actual file upload can be added later.</p></div><i class="bi bi-file-earmark-check"></i></div>
+    <div class="app-card-body">
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Signed Copy Path</label><input class="form-control {% if errors.signed_copy_path %}is-invalid{% endif %}" name="signed_copy_path" value="{{ form_data.signed_copy_path }}" maxlength="500">{% if errors.signed_copy_path %}<div class="invalid-feedback">{{ errors.signed_copy_path }}</div>{% endif %}</div>
+            <div class="col-md-6"><label class="form-label">Received By</label><input class="form-control {% if errors.received_by %}is-invalid{% endif %}" name="received_by" value="{{ form_data.received_by }}" maxlength="150">{% if errors.received_by %}<div class="invalid-feedback">{{ errors.received_by }}</div>{% endif %}</div>
+            <div class="col-md-12"><label class="form-label">Remarks</label><textarea class="form-control {% if errors.remarks %}is-invalid{% endif %}" name="remarks" rows="3">{{ form_data.remarks }}</textarea>{% if errors.remarks %}<div class="invalid-feedback">{{ errors.remarks }}</div>{% endif %}</div>
+        </div>
+    </div>
+    <div class="app-card-body border-top form-actions">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Save Signed Copy</button>
+        <a class="btn btn-light" href="{% url 'sales:delivery_challan_detail' challan.id %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

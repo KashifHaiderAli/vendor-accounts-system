@@ -1,0 +1,2 @@
+{% extends "base.html" %}
+{% block content %}<section class="page-header"><div><span class="soft-badge">Service Contract</span><h2>Close Contract</h2><p>{{ contract.contract_no }}</p></div></section><section class="app-card"><div class="app-card-body"><p>Closed contracts cannot generate new invoices.</p><form method="post">{% csrf_token %}<div class="form-actions"><button class="btn btn-outline-danger" type="submit">Close Contract</button><a class="btn btn-light" href="{% url 'services:contract_detail' contract.id %}">Back</a></div></form></div></section>{% endblock %}

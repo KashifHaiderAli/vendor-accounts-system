@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Audit</span><h2>Audit Detail</h2><p>{{ row.activity_datetime }}</p></div>
+    <div class="page-header-actions"><a class="btn btn-light" href="{% url 'backup:audit_log' %}"><i class="bi bi-arrow-left"></i> Back</a></div>
+</section>
+<section class="app-card"><div class="app-card-body"><div class="detail-grid">
+    <div><span>User</span><strong>{{ row.username|default:"-" }}</strong></div>
+    <div><span>Action</span><strong>{{ row.action_type }}</strong></div>
+    <div><span>Module</span><strong>{{ row.module_name|default:"-" }}</strong></div>
+    <div><span>Record</span><strong>{{ row.table_name|default:"-" }} #{{ row.record_id|default:"" }}</strong></div>
+    <div class="full-span"><span>Description</span><strong>{{ row.description|default:"-" }}</strong></div>
+</div></div></section>
+{% endblock %}

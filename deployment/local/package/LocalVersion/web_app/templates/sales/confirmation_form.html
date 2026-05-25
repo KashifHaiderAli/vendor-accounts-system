@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Customer Confirmation</span>
+        <h2>{% if is_edit %}Edit Confirmation{% else %}New Confirmation{% endif %}</h2>
+        <p>Record PO and non-PO customer confirmations without affecting accounts.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'sales:confirmations' %}"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+</section>
+
+{% if error_summary %}
+<div class="alert alert-danger app-alert">
+    <strong>Please fix these items:</strong>
+    <ul class="mb-0">
+        {% for error in error_summary %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if selected_quotation %}
+<section class="app-card">
+    <div class="app-card-header">
+        <div>
+            <h3>Related Quotation</h3>
+            <p>{{ selected_quotation.quotation_no }} · {{ selected_quotation.display_customer_name }} · {{ selected_quotation.grand_total|floatformat:2 }}</p>
+        </div>
+        <a class="btn btn-sm btn-light" href="{% url 'sales:quotation_detail' selected_quotation.id %}"><i class="bi bi-box-arrow-up-right"></i> Open</a>
+    </div>
+</section>
+{% endif %}
+
+<form method="post" class="app-card" novalidate>
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div><h3>Confirmation Details</h3><p>Direct confirmations without quotation require an existing customer in this version.</p></div>
+        <i class="bi bi-clipboard-check"></i>
+    </div>
+    <div class="app-card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Confirmation No</label>
+                <input class="form-control {% if errors.confirmation_no %}is-invalid{% endif %}" name="confirmation_no" value="{{ form_data.confirmation_no }}" maxlength="50" required>
+                {% if errors.confirmation_no %}<div class="invalid-feedback">{{ errors.confirmation_no }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Confirmation Date</label>
+                <input class="form-control {% if errors.confirmation_date %}is-invalid{% endif %}" type="date" name="confirmation_date" value="{{ form_data.confirmation_date }}" required>
+                {% if errors.confirmation_date %}<div class="invalid-feedback">{{ errors.confirmation_date }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select {% if errors.status %}is-invalid{% endif %}" name="status">
+                    {% for option in statuses %}
+                    <option value="{{ option }}" {% if form_data.status == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.status %}<div class="invalid-feedback">{{ errors.status }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Related Quotation</label>
+                <select class="form-select {% if errors.quotation_id %}is-invalid{% endif %}" name="quotation_id" id="confirmationQuotation">
+                    <option value="">No quotation</option>
+                    {% for quotation in quotations %}
+                    <option value="{{ quotation.id }}" data-total="{{ quotation.grand_total }}" data-contact="{{ quotation.contact_person }}" {% if form_data.quotation_id|stringformat:"s" == quotation.id|stringformat:"s" %}selected{% endif %}>
+                        {{ quotation.quotation_no }} - {{ quotation.display_customer_name|default:"Unregistered Party" }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if errors.quotation_id %}<div class="invalid-feedback">{{ errors.quotation_id }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Customer / Party</label>
+                <select class="form-select {% if errors.customer_id %}is-invalid{% endif %}" name="customer_id" id="confirmationCustomer">
+                    <option value="">Select customer</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" {% if form_data.customer_id|stringformat:"s" == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.company_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.customer_id %}<div class="invalid-feedback">{{ errors.customer_id }}</div>{% endif %}
+                <div class="form-text">For a new party, create a quotation first or add the customer master first.</div>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Confirmation Type</label>
+                <select class="form-select {% if errors.confirmation_type %}is-invalid{% endif %}" name="confirmation_type" id="confirmationType" required>
+                    {% for option in confirmation_types %}
+                    <option value="{{ option }}" {% if form_data.confirmation_type == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.confirmation_type %}<div class="invalid-feedback">{{ errors.confirmation_type }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">PO Number</label>
+                <input class="form-control {% if errors.po_number %}is-invalid{% endif %}" name="po_number" id="poNumber" value="{{ form_data.po_number }}" maxlength="100">
+                {% if errors.po_number %}<div class="invalid-feedback">{{ errors.po_number }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">PO Date</label>
+                <input class="form-control {% if errors.po_date %}is-invalid{% endif %}" type="date" name="po_date" value="{{ form_data.po_date }}">
+                {% if errors.po_date %}<div class="invalid-feedback">{{ errors.po_date }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">PO Amount</label>
+                <input class="form-control {% if errors.po_amount %}is-invalid{% endif %}" type="number" step="0.01" min="0" inputmode="decimal" name="po_amount" value="{{ form_data.po_amount }}">
+                {% if errors.po_amount %}<div class="invalid-feedback">{{ errors.po_amount }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Total Amount</label>
+                <input class="form-control {% if errors.total_amount %}is-invalid{% endif %}" type="number" step="0.01" min="0" inputmode="decimal" name="total_amount" id="confirmationTotal" value="{{ form_data.total_amount }}">
+                {% if errors.total_amount %}<div class="invalid-feedback">{{ errors.total_amount }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Contact Person</label>
+                <input class="form-control {% if errors.contact_person %}is-invalid{% endif %}" name="contact_person" id="confirmationContact" value="{{ form_data.contact_person }}" maxlength="150">
+                {% if errors.contact_person %}<div class="invalid-feedback">{{ errors.contact_person }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Confirmation Note</label>
+                <textarea class="form-control {% if errors.confirmation_note %}is-invalid{% endif %}" name="confirmation_note" rows="3">{{ form_data.confirmation_note }}</textarea>
+                {% if errors.confirmation_note %}<div class="invalid-feedback">{{ errors.confirmation_note }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Attachment Path</label>
+                <input class="form-control {% if errors.attachment_path %}is-invalid{% endif %}" name="attachment_path" value="{{ form_data.attachment_path }}" maxlength="500">
+                {% if errors.attachment_path %}<div class="invalid-feedback">{{ errors.attachment_path }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Remarks</label>
+                <input class="form-control {% if errors.remarks %}is-invalid{% endif %}" name="remarks" value="{{ form_data.remarks }}">
+                {% if errors.remarks %}<div class="invalid-feedback">{{ errors.remarks }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="app-card-body border-top form-actions">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle"></i> Save Confirmation</button>
+        <a class="btn btn-light" href="{% url 'sales:confirmations' %}">Cancel</a>
+    </div>
+</form>
+<script src="{% static 'js/confirmation.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Phase 8</span>
+        <h2>Customer Confirmation / PO</h2>
+        <p>Quotation {{ quotation.quotation_no }} is ready for the next workflow phase.</p>
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header">
+        <div>
+            <h3>Conversion Placeholder</h3>
+            <p>Customer Confirmation / PO module will be implemented in Phase 8.</p>
+        </div>
+        <i class="bi bi-arrow-right-circle"></i>
+    </div>
+    <div class="app-card-body">
+        <p class="text-muted">No confirmation records were created and the quotation status was not changed.</p>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'sales:quotation_detail' quotation.id %}">Back to Quotation</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

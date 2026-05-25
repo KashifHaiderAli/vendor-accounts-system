@@ -13,7 +13,19 @@ cd db_app
 python main.py
 ```
 
-The default database file name is `vendor_accounts.db`.
+The development default database file name is `vendor_accounts.db`.
+
+For MainVersion deployment, use:
+
+```text
+C:\VendorAccounts\MainVersion\data\vendor_accounts_main.db
+```
+
+The future LocalVersion will use:
+
+```text
+C:\VendorAccounts\LocalVersion\data\vendor_accounts_local.db
+```
 
 Default local database path:
 
@@ -21,7 +33,28 @@ Default local database path:
 D:\Development\vendor-accounts-system\data\vendor_accounts.db
 ```
 
-The app lets you browse to another local folder before creating the database.
+The app lets you browse to another local folder before creating the database. Folder mode keeps the development behavior and resolves to:
+
+```text
+selected folder\vendor_accounts.db
+```
+
+For deployment, use Database tab -> Browse Database File and select the exact SQLite file used by the Web App.
+
+MainVersion must select:
+
+```text
+C:\VendorAccounts\MainVersion\data\vendor_accounts_main.db
+```
+
+LocalVersion must select:
+
+```text
+C:\VendorAccounts\LocalVersion\data\vendor_accounts_local.db
+```
+
+Do not save the license into `vendor_accounts.db` unless the Web App is also using `vendor_accounts.db`.
+MainVersion and LocalVersion use separate SQLite files and separate `license_records` rows. Generate one license for the MainVersion DB and another license for the LocalVersion DB.
 
 ## Workflow
 
@@ -39,6 +72,8 @@ The app lets you browse to another local folder before creating the database.
 8. Add users if needed.
 9. Generate a trial, annual, or lifetime license.
 
+Before generating or saving a license, confirm the Database tab shows the same database file that the Web App uses through `VENDOR_ACCOUNTS_DB_PATH`.
+
 ## Prepare Database for New Client
 
 Before deploying a standalone SQLite database for a new client, use the Database tab button:
@@ -52,14 +87,16 @@ This creates a backup first, then removes testing/demo/business transaction data
 Command line usage is also available:
 
 ```powershell
-python ..\db_app_reset_for_new_client.py --db "D:\Development\vendor-accounts-system\data\vendor_accounts.db" --dry-run
-python ..\db_app_reset_for_new_client.py --db "D:\Development\vendor-accounts-system\data\vendor_accounts.db"
+python ..\db_app_reset_for_new_client.py --db "C:\VendorAccounts\MainVersion\data\vendor_accounts_main.db" --dry-run
+python ..\db_app_reset_for_new_client.py --db "C:\VendorAccounts\MainVersion\data\vendor_accounts_main.db"
 ```
 
 Test the reset flow:
 
 ```powershell
 python ..\db_app_test_reset_database.py
+python ..\db_app_test_database_file_selection.py
+python ..\db_app_test_local_version_db.py
 ```
 
 Full details are documented in `docs/db_app_new_client_reset.md`.

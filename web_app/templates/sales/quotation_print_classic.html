@@ -1,0 +1,114 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ quotation.quotation_no }} - Classic</title>
+    <link rel="stylesheet" href="{% static 'css/print_classic.css' %}">
+</head>
+<body>
+{% include "partials/print_actions.html" %}
+<main class="classic-page">
+    <section class="classic-top">
+        <div></div>
+        <header class="classic-company-header">
+            {% if show_logo and logo_url %}<img class="classic-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
+            <div class="classic-company-name">{{ classic_company_name|default:"Company" }}</div>
+            {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
+            {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
+            {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
+            {% if classic_company_website %}<div>{{ classic_company_website }}</div>{% endif %}
+            {% if tax_enabled and classic_company_ntn %}<div>NTN: {{ classic_company_ntn }}</div>{% endif %}
+            {% if tax_enabled and classic_company_strn %}<div>STRN: {{ classic_company_strn }}</div>{% endif %}
+        </header>
+    </section>
+
+    <h1 class="classic-title">QUOTATION</h1>
+
+    <section class="classic-meta-grid">
+        <table class="classic-meta-table">
+            <tr><td class="classic-label">QUOTATION NO.</td><td class="classic-value">{{ quotation.quotation_no }}</td></tr>
+            <tr><td class="classic-label">DATE</td><td class="classic-value">{{ quotation.quotation_date }}</td></tr>
+            <tr><td class="classic-label">CUSTOMER CODE</td><td class="classic-value">{{ quotation.display_customer_code|default:"" }}</td></tr>
+            <tr><td class="classic-label">VALID TILL</td><td class="classic-value">{{ quotation.valid_till|default:"" }}</td></tr>
+        </table>
+        <table class="classic-meta-table">
+            <tr><td class="classic-label">QUOTED TO</td><td class="classic-value">{{ quotation.display_customer_name }}</td></tr>
+            <tr><td class="classic-label">CONT PER.</td><td class="classic-value">{% if quotation.display_contact_person %}{{ quotation.display_contact_person }}{% else %}{{ quotation.contact_person|default:"" }}{% endif %}</td></tr>
+            <tr><td class="classic-label">PHONE</td><td class="classic-value">{{ quotation.display_customer_phone }}{% if quotation.display_customer_phone and quotation.display_customer_mobile %} / {% endif %}{{ quotation.display_customer_mobile }}</td></tr>
+            <tr><td class="classic-label">SUBJECT</td><td class="classic-value">{{ quotation.subject|default:"" }}</td></tr>
+        </table>
+    </section>
+
+    <table class="classic-items-table">
+        <thead>
+            <tr>
+                <th class="col-sno">S. NO.</th>
+                <th class="col-qty">QTY.</th>
+                <th>DESCRIPTION</th>
+                <th class="col-price">UNIT PRICE</th>
+                <th class="col-amount">AMOUNT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="classic-item-row">
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">{{ item.quantity|format_quantity }}</td>
+                <td>{{ item.description }}</td>
+                <td class="text-end">{{ item.rate|floatformat:2 }}</td>
+                <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+    </table>
+
+    <section class="classic-bottom-section">
+        <div class="classic-payment-terms">
+            <div class="classic-terms-box">
+                <p><strong>Terms &amp; Conditions / Payment Terms</strong></p>
+                {% if classic_use_saved_terms %}
+                <p>{{ classic_terms_text|linebreaksbr }}</p>
+                {% else %}
+                <p><span>Availability</span><strong>: Ex-Stock</strong></p>
+                <p><span>Payment Terms</span><strong>: 50% Advance with purchase order</strong></p>
+                <p><span>Validity</span><strong>: Quotation validity for one week or subject to US $ rate change.</strong></p>
+                {% if tax_enabled %}
+                <p><span>Tax</span><strong>: Above price quote without. Tax.</strong></p>
+                {% else %}
+                <p><strong>Price quote is final as per listed items.</strong></p>
+                {% endif %}
+                {% endif %}
+            </div>
+            <p class="classic-amount-words">Rupees in words:<br>{{ quotation.grand_total|amount_in_words }}</p>
+            <div class="classic-contact-note">
+                <p>If you have any questions about this price quote,<br>please contact {% if classic_contact_person %}{{ classic_contact_person }}{% else %}{{ classic_company_name }}{% endif %}{% if classic_contact_phone %}, Phone # {{ classic_contact_phone }}{% endif %}{% if classic_contact_email %}, E-mail {{ classic_contact_email }}{% endif %}</p>
+                <p class="classic-thank-you">Thank You For Your Business!</p>
+            </div>
+        </div>
+        <div class="classic-totals-box">
+            <div class="classic-total-row"><span>Sub Total</span><strong>{{ quotation.subtotal|floatformat:2 }}</strong></div>
+            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ quotation.discount_total|floatformat:2 }}</strong></div>
+            {% if tax_enabled and quotation.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ quotation.tax_total|floatformat:2 }}</strong></div>{% endif %}
+            <div class="classic-total-row classic-total-due"><span>Grand Total</span><strong>{{ quotation.grand_total|floatformat:2 }}</strong></div>
+        </div>
+    </section>
+
+    <section class="classic-signature-area">
+        <div></div>
+        <div>
+            <p class="text-center"><strong>FOR {{ classic_company_name|default:"COMPANY" }}</strong></p>
+            <div class="classic-sign-line">Authorized Signature</div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

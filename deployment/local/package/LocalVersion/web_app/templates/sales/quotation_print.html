@@ -1,0 +1,44 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ quotation.quotation_no }}</title>
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+</head>
+<body>
+{% include "partials/print_actions.html" %}
+<main class="print-page">
+    {% include "partials/print_header.html" with document_title="Quotation" document_no=quotation.quotation_no document_date=quotation.quotation_date %}
+    <h1 class="print-document-title">Quotation</h1>
+    {% include "partials/print_detail_grid.html" %}
+    <table class="print-detail-grid">
+        <tr>
+            <td><span class="print-label">Customer:</span> <span class="print-value">{{ quotation.display_customer_name }}</span></td>
+            <td><span class="print-label">Contact:</span> <span class="print-value">{{ quotation.contact_person }}</span></td>
+            <td><span class="print-label">Phone:</span> <span class="print-value">{{ quotation.display_customer_phone }} {{ quotation.display_customer_mobile }}</span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><span class="print-label">Address:</span> <span class="print-value">{{ quotation.display_customer_address }}</span></td>
+            <td><span class="print-label">Valid Till:</span> <span class="print-value">{{ quotation.valid_till }}</span></td>
+        </tr>
+        <tr>
+            <td colspan="2"><span class="print-label">Subject:</span> <span class="print-value">{{ quotation.subject }}</span></td>
+            <td><span class="print-label">Terms/Status:</span> <span class="print-value">{{ quotation.payment_terms_name }}{% if quotation.payment_terms_name and quotation.display_status %} / {% endif %}{{ quotation.display_status|default:"Draft" }}</span></td>
+        </tr>
+    </table>
+    <table class="print-table">
+        <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+        <tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td><td class="text-end">{{ item.rate|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include "partials/document_totals.html" with subtotal=quotation.subtotal discount_total=quotation.discount_total tax_total=quotation.tax_total grand_total=quotation.grand_total %}
+    {% if quotation.terms_conditions %}<section class="print-panel"><strong>Terms:</strong><br>{{ quotation.terms_conditions|linebreaksbr }}</section>{% endif %}
+    <section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">{{ company_settings.authorized_person_name|default:"Authorized Signature" }}</div></section>
+    {% include "partials/print_footer.html" %}
+</main>
+</body>
+</html>

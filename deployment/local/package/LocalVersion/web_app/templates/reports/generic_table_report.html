@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Reports</span>
+        <h2>{{ report_title }}</h2>
+        <p>Use filters, print, or export this branch-aware report.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'reports:index' %}"><i class="bi bi-arrow-left"></i> Reports</a>
+        <a class="btn btn-light" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}export=csv"><i class="bi bi-filetype-csv"></i> CSV</a>
+        <a class="btn btn-light" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=0"><i class="bi bi-printer"></i> Print Without Logo</a>
+        <a class="btn btn-light" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=1"><i class="bi bi-image"></i> Print With Logo</a>
+        <a class="btn btn-primary" target="_blank" href="?{{ request.GET.urlencode }}{% if request.GET.urlencode %}&{% endif %}print=1&logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>
+    </div>
+</section>
+
+<form class="app-card report-filter-card mb-3" method="get">
+    <div class="app-card-body">
+        <div class="form-grid four-col">
+            {% if "branch" in active_filters %}
+            <div>
+                <label class="form-label" for="branch_id">Branch</label>
+                <select class="form-select" id="branch_id" name="branch_id">
+                    {% for branch in allowed_branches %}
+                    <option value="{{ branch.id }}" {% if filters.branch_id == branch.id|stringformat:"s" %}selected{% endif %}>{{ branch.branch_name }}</option>
+                    {% empty %}
+                    <option value="{{ filters.branch_id }}">Current Branch</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "date_from" in active_filters %}
+            <div>
+                <label class="form-label" for="date_from">Date From</label>
+                <input class="form-control" type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            {% endif %}
+
+            {% if "date_to" in active_filters %}
+            <div>
+                <label class="form-label" for="date_to">Date To</label>
+                <input class="form-control" type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            {% endif %}
+
+            {% if "as_of_date" in active_filters %}
+            <div>
+                <label class="form-label" for="as_of_date">As of Date</label>
+                <input class="form-control" type="date" id="as_of_date" name="as_of_date" value="{{ filters.as_of_date }}">
+            </div>
+            {% endif %}
+
+            {% if "q" in active_filters %}
+            <div>
+                <label class="form-label" for="q">Search</label>
+                <input class="form-control" id="q" name="q" value="{{ filters.q }}" placeholder="Search report">
+            </div>
+            {% endif %}
+
+            {% if "status" in active_filters %}
+            <div>
+                <label class="form-label" for="status">Status</label>
+                <input class="form-control" id="status" name="status" value="{{ filters.status }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "invoice_type" in active_filters %}
+            <div>
+                <label class="form-label" for="invoice_type">Invoice Type</label>
+                <input class="form-control" id="invoice_type" name="invoice_type" value="{{ filters.invoice_type }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "confirmation_type" in active_filters %}
+            <div>
+                <label class="form-label" for="confirmation_type">Confirmation Type</label>
+                <input class="form-control" id="confirmation_type" name="confirmation_type" value="{{ filters.confirmation_type }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "payment_mode" in active_filters %}
+            <div>
+                <label class="form-label" for="payment_mode">Payment Mode</label>
+                <input class="form-control" id="payment_mode" name="payment_mode" value="{{ filters.payment_mode }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "customer" in active_filters %}
+            <div>
+                <label class="form-label" for="customer_id">Customer</label>
+                <select class="form-select" id="customer_id" name="customer_id">
+                    <option value="">All / Select</option>
+                    {% for customer in filters.customers %}
+                    <option value="{{ customer.id }}" {% if filters.customer_id == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "supplier" in active_filters %}
+            <div>
+                <label class="form-label" for="supplier_id">Supplier</label>
+                <select class="form-select" id="supplier_id" name="supplier_id">
+                    <option value="">All / Select</option>
+                    {% for supplier in filters.suppliers %}
+                    <option value="{{ supplier.id }}" {% if filters.supplier_id == supplier.id|stringformat:"s" %}selected{% endif %}>{{ supplier.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "item" in active_filters %}
+            <div>
+                <label class="form-label" for="item_service_id">Item / Service</label>
+                <select class="form-select" id="item_service_id" name="item_service_id">
+                    <option value="">All / Select</option>
+                    {% for item in filters.items %}
+                    <option value="{{ item.id }}" {% if filters.item_service_id == item.id|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "expense_head" in active_filters %}
+            <div>
+                <label class="form-label" for="expense_head_id">Expense Head</label>
+                <select class="form-select" id="expense_head_id" name="expense_head_id">
+                    <option value="">All / Select</option>
+                    {% for head in filters.expense_heads %}
+                    <option value="{{ head.id }}" {% if filters.expense_head_id == head.id|stringformat:"s" %}selected{% endif %}>{{ head.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "account" in active_filters %}
+            <div>
+                <label class="form-label" for="account_id">Account</label>
+                <select class="form-select" id="account_id" name="account_id">
+                    <option value="">All / Select</option>
+                    {% for account in filters.accounts %}
+                    <option value="{{ account.id }}" {% if filters.account_id == account.id|stringformat:"s" %}selected{% endif %}>{{ account.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "cash_bank" in active_filters %}
+            <div>
+                <label class="form-label" for="cash_bank_account_id">Cash / Bank</label>
+                <select class="form-select" id="cash_bank_account_id" name="cash_bank_account_id">
+                    <option value="">All / Select</option>
+                    {% for account in filters.cash_bank_accounts %}
+                    <option value="{{ account.id }}" {% if filters.cash_bank_account_id == account.id|stringformat:"s" %}selected{% endif %}>{{ account.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "user" in active_filters %}
+            <div>
+                <label class="form-label" for="user_id">User</label>
+                <select class="form-select" id="user_id" name="user_id">
+                    <option value="">All / Select</option>
+                    {% for user in filters.users %}
+                    <option value="{{ user.id }}" {% if filters.user_id == user.id|stringformat:"s" %}selected{% endif %}>{{ user.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {% if "reference_type" in active_filters %}
+            <div>
+                <label class="form-label" for="reference_type">Reference Type</label>
+                <input class="form-control" id="reference_type" name="reference_type" value="{{ filters.reference_type }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "action" in active_filters %}
+            <div>
+                <label class="form-label" for="action">Action</label>
+                <input class="form-control" id="action" name="action" value="{{ filters.action }}" placeholder="Any">
+            </div>
+            {% endif %}
+
+            {% if "module" in active_filters %}
+            <div>
+                <label class="form-label" for="module">Module</label>
+                <input class="form-control" id="module" name="module" value="{{ filters.module }}" placeholder="Any">
+            </div>
+            {% endif %}
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{{ request.path }}">Reset</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Apply Filters</button>
+        </div>
+    </div>
+</form>
+
+{% if missing_filter_message %}
+<section class="app-card mb-3">
+    <div class="app-card-body">
+        <div class="alert alert-info app-alert mb-0">{{ missing_filter_message }}</div>
+    </div>
+</section>
+{% endif %}
+
+{% include "reports/report_base.html" %}
+{% endblock %}

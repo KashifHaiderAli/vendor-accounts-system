@@ -1,0 +1,238 @@
+@page {
+    size: A4 portrait;
+    margin: 10mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #fff;
+    color: #111;
+    font-family: Arial, "Segoe UI", sans-serif;
+    font-size: 10.5px;
+    line-height: 1.2;
+}
+
+.print-actions {
+    max-width: 780px;
+    margin: 12px auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.print-actions button,
+.print-actions a {
+    border: 1px solid #999;
+    background: #fff;
+    border-radius: 4px;
+    padding: 7px 10px;
+    color: #111;
+    text-decoration: none;
+}
+
+.classic-page {
+    width: 190mm;
+    min-height: 277mm;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.classic-top {
+    display: grid;
+    grid-template-columns: 1fr 78mm;
+    min-height: 31mm;
+    align-items: start;
+}
+
+.classic-company-header {
+    text-align: right;
+    font-size: 10px;
+}
+
+.classic-logo {
+    max-height: 28px;
+    max-width: 120px;
+    object-fit: contain;
+    margin-bottom: 2px;
+}
+
+.classic-company-name {
+    font-size: 18px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.classic-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-decoration: underline;
+    margin: 4mm 0 3mm;
+}
+
+.classic-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 9mm;
+    margin-bottom: 4mm;
+}
+
+.classic-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.classic-meta-table td {
+    padding: 1.5px 2px;
+    vertical-align: top;
+}
+
+.classic-label {
+    width: 27mm;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.classic-value {
+    border-bottom: 1px solid #444;
+    min-height: 14px;
+}
+
+.classic-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-height: 128mm;
+}
+
+.classic-items-table th {
+    border: 1px solid #333;
+    padding: 3px 4px;
+    vertical-align: top;
+}
+
+.classic-items-table th {
+    text-align: center;
+    font-weight: 800;
+}
+
+.classic-items-table tbody td {
+    border-top: 0;
+    border-bottom: 0;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+    padding: 3px 4px;
+    vertical-align: top;
+}
+
+.classic-items-table tbody tr:last-child td {
+    border-bottom: 1px solid #333;
+}
+
+.classic-items-table .col-sno {
+    width: 13mm;
+}
+
+.classic-items-table .col-qty {
+    width: 18mm;
+}
+
+.classic-items-table .col-price,
+.classic-items-table .col-amount {
+    width: 28mm;
+}
+
+.classic-items-table tbody tr {
+    height: 8mm;
+}
+
+.classic-items-table .blank-row td {
+    color: transparent;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.classic-bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 64mm;
+    gap: 8mm;
+    margin-top: 5mm;
+    align-items: start;
+}
+
+.classic-payment-terms {
+    min-height: 38mm;
+}
+
+.classic-payment-terms p {
+    margin: 0 0 3px;
+}
+
+.classic-amount-words {
+    margin-top: 5mm;
+    font-weight: 700;
+}
+
+.classic-totals-box {
+    border: 1px solid #333;
+}
+
+.classic-total-row {
+    display: grid;
+    grid-template-columns: 1fr 28mm;
+    border-bottom: 1px solid #333;
+}
+
+.classic-total-row:last-child {
+    border-bottom: 0;
+}
+
+.classic-total-row span,
+.classic-total-row strong {
+    padding: 4px 5px;
+}
+
+.classic-total-row strong {
+    border-left: 1px solid #333;
+    text-align: right;
+}
+
+.classic-total-due {
+    font-size: 12px;
+}
+
+.classic-signature-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20mm;
+    margin-top: 12mm;
+}
+
+.classic-sign-line {
+    border-top: 1px solid #333;
+    padding-top: 4px;
+    text-align: center;
+    min-height: 13mm;
+}
+
+@media print {
+    .print-actions {
+        display: none;
+    }
+
+    .classic-page {
+        width: auto;
+        min-height: auto;
+    }
+}

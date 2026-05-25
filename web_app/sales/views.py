@@ -8,6 +8,7 @@ from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core import validators
+from core.edition_utils import is_tax_enabled
 from core.print_utils import build_print_context
 from settings_module.services import log_user_activity
 
@@ -235,6 +236,18 @@ def print_quotation(request, quotation_id):
 def pdf_quotation(request, quotation_id):
     response = render_print_response(request, quotation_id, "Viewed PDF")
     response["Content-Disposition"] = 'inline; filename="quotation.html"'
+    return response
+
+
+@permission_required_custom("quotations", "view")
+def classic_print_quotation(request, quotation_id):
+    return render_classic_quotation(request, quotation_id, "Classic printed", pdf=False)
+
+
+@permission_required_custom("quotations", "view")
+def classic_pdf_quotation(request, quotation_id):
+    response = render_classic_quotation(request, quotation_id, "Classic PDF viewed", pdf=True)
+    response["Content-Disposition"] = 'inline; filename="quotation-classic.html"'
     return response
 
 
@@ -848,6 +861,18 @@ def digital_print_invoice(request, invoice_id):
     return render_invoice_print(request, invoice_id, digital=True)
 
 
+@permission_required_custom("sales_invoices", "view")
+def classic_print_invoice(request, invoice_id):
+    return render_classic_invoice(request, invoice_id, pdf=False)
+
+
+@permission_required_custom("sales_invoices", "view")
+def classic_pdf_invoice(request, invoice_id):
+    response = render_classic_invoice(request, invoice_id, pdf=True)
+    response["Content-Disposition"] = 'inline; filename="invoice-classic.html"'
+    return response
+
+
 def render_invoice_print(request, invoice_id, digital=False):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -861,6 +886,21 @@ def render_invoice_print(request, invoice_id, digital=False):
     context = invoice_services.get_print_context(company_id, branch_id, invoice_id)
     context.update(build_print_context(company_id, request, "Digital Invoice" if digital else "Sales Invoice", force_logo=digital, force_pdf=digital))
     return render(request, template, context)
+
+
+def render_classic_invoice(request, invoice_id, pdf=False):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    invoice = invoice_services.get_invoice(company_id, branch_id, invoice_id)
+    if not invoice:
+        messages.error(request, "Invoice was not found.")
+        return redirect("sales:invoices")
+    invoice_services.mark_printed(request, invoice, digital=pdf)
+    context = invoice_services.get_print_context(company_id, branch_id, invoice_id)
+    context.update(build_print_context(company_id, request, "Classic Invoice", force_logo=pdf, force_pdf=pdf))
+    context.update(build_classic_print_context(context, request, company_id, terms_source=None))
+    return render(request, "sales/invoice_print_classic.html", context)
 
 
 @permission_required_custom("customer_receipts", "view")
@@ -1153,6 +1193,64 @@ def render_print_response(request, quotation_id, action_label):
     context = services.get_print_context(company_id, branch_id, quotation_id)
     context.update(build_print_context(company_id, request, "Quotation", force_logo=action_label == "Viewed PDF", force_pdf=action_label == "Viewed PDF"))
     return render(request, "sales/quotation_print.html", context)
+
+
+def render_classic_quotation(request, quotation_id, action_label, pdf=False):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return redirect("authentication:login")
+    quotation = services.get_quotation(company_id, branch_id, quotation_id)
+    if not quotation:
+        messages.error(request, "Quotation was not found.")
+        return redirect("sales:quotations")
+    services.mark_printed(request, quotation, action_label)
+    context = services.get_print_context(company_id, branch_id, quotation_id)
+    context.update(build_print_context(company_id, request, "Classic Quotation", force_logo=pdf, force_pdf=pdf))
+    context.update(build_classic_print_context(context, request, company_id, terms_source=quotation.get("terms_conditions")))
+    return render(request, "sales/quotation_print_classic.html", context)
+
+
+def first_nonempty(*values):
+    for value in values:
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def build_classic_print_context(context, request, company_id, terms_source=None):
+    company = context.get("company") or {}
+    company_settings = context.get("company_settings") or {}
+    tax_enabled = is_tax_enabled(request=request, company_id=company_id)
+    company_name = first_nonempty(company_settings.get("company_name"), company.get("company_name"), "Company")
+    contact_person = first_nonempty(
+        company_settings.get("authorized_person_name"),
+        company_settings.get("contact_person"),
+        company.get("contact_person"),
+        company_name,
+    )
+    phone_or_mobile = first_nonempty(company_settings.get("mobile"), company_settings.get("phone"), company.get("mobile"), company.get("phone"))
+    email = first_nonempty(company_settings.get("email"), company.get("email"))
+    terms_text = first_nonempty(terms_source)
+    if terms_text and (tax_enabled or "tax" not in terms_text.lower()):
+        use_saved_terms = True
+    else:
+        terms_text = ""
+        use_saved_terms = False
+    return {
+        "tax_enabled": tax_enabled,
+        "classic_company_name": company_name,
+        "classic_company_address": first_nonempty(company_settings.get("address"), company.get("address")),
+        "classic_company_phone": phone_or_mobile,
+        "classic_company_email": email,
+        "classic_company_website": first_nonempty(company_settings.get("website"), company.get("website")),
+        "classic_company_ntn": first_nonempty(company_settings.get("ntn"), company.get("ntn")),
+        "classic_company_strn": first_nonempty(company_settings.get("strn"), company.get("strn")),
+        "classic_contact_person": contact_person,
+        "classic_contact_phone": phone_or_mobile,
+        "classic_contact_email": email,
+        "classic_terms_text": terms_text,
+        "classic_use_saved_terms": use_saved_terms,
+    }
 
 
 def require_scope(request):

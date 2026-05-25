@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Cancel</span><h2>Cancel Invoice</h2><p>{{ invoice.invoice_no }} · {{ invoice.company_name }}</p></div></section>
+<section class="app-card"><div class="app-card-header"><div><h3>Confirm Cancellation</h3><p>This will mark the invoice Cancelled and create a reversal journal entry.</p></div><i class="bi bi-exclamation-triangle"></i></div><div class="app-card-body"><p>Are you sure you want to cancel invoice <strong>{{ invoice.invoice_no }}</strong>?</p></div><form class="app-card-body border-top form-actions" method="post">{% csrf_token %}<button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i> Yes, Cancel Invoice</button><a class="btn btn-light" href="{% url 'sales:invoice_detail' invoice.id %}">Keep Invoice</a></form></section>
+{% endblock %}

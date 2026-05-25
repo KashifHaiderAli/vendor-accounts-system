@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load form_extras %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Numbering Settings</h2>
+        <p>Maintain document prefixes and number formatting for the current branch.</p>
+    </div>
+</section>
+
+<form method="post" class="settings-stack">
+    {% csrf_token %}
+    {% include "masters/partials/form_errors.html" %}
+    {% for section_name, fields in numbering_sections %}
+    <section class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>{{ section_name }}</h3>
+                <p>Prefix settings for {{ section_name|lower }} records.</p>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <div class="form-grid three-col">
+                {% for field in fields %}
+                <div>
+                    <label class="form-label" for="{{ field }}">{{ field|field_label }}</label>
+                    <input class="form-control {% if errors|get_item:field %}is-invalid{% endif %}" id="{{ field }}" name="{{ field }}" maxlength="20" value="{{ form_data|get_item:field }}">
+                    {% if errors|get_item:field %}<div class="invalid-feedback">{{ errors|get_item:field }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endfor %}
+
+    <section class="app-card">
+        <div class="app-card-header">
+            <div>
+                <h3>Number Format</h3>
+                <p>Shared formatting rules for generated document numbers.</p>
+            </div>
+        </div>
+        <div class="app-card-body">
+            <div class="form-grid two-col">
+                <div>
+                    <label class="form-label" for="number_padding">Number Padding</label>
+                    <input class="form-control {% if errors.number_padding %}is-invalid{% endif %}" id="number_padding" name="number_padding" type="number" step="1" min="3" max="8" inputmode="numeric" value="{{ form_data.number_padding|default:4 }}">
+                    {% if errors.number_padding %}<div class="invalid-feedback">{{ errors.number_padding }}</div>{% endif %}
+                </div>
+                <div class="form-check form-switch settings-switches">
+                    <input class="form-check-input" id="use_year_in_number" name="use_year_in_number" type="checkbox" {% if form_data.use_year_in_number %}checked{% endif %}>
+                    <label class="form-check-label" for="use_year_in_number">Use year in number</label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <a class="btn btn-light" href="{% url 'dashboard' %}">Cancel</a>
+                <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Numbering</button>
+            </div>
+        </div>
+    </section>
+</form>
+{% endblock %}

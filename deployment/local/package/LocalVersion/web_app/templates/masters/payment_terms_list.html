@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Masters</span><h2>Payment Terms</h2><p>Reusable branch-level payment terms for customer records.</p></div>
+    {% if can_add %}<div class="page-header-actions"><a class="btn btn-primary" href="{% url 'masters:payment_term_new' %}"><i class="bi bi-plus-lg"></i> New Payment Term</a></div>{% endif %}
+</section>
+{% include "masters/partials/filter_table_payment_terms.html" %}
+{% endblock %}

@@ -1,0 +1,10 @@
+<form class="filter-bar" method="get">
+    <input class="form-control" name="q" value="{{ search }}" placeholder="Search {{ config.title|lower }}">
+    <select class="form-select" name="status">
+        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+        <option value="all" {% if status == "all" %}selected{% endif %}>All</option>
+    </select>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+    <a class="btn btn-light" href="?status=active">Reset</a>
+</form>

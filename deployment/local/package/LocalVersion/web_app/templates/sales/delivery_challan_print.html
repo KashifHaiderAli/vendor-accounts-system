@@ -1,0 +1,16 @@
+{% load static %}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ challan.dc_no }}</title><link rel="stylesheet" href="{% static 'css/print.css' %}"></head>
+<body>{% include "partials/print_actions.html" %}<main class="print-page">
+{% include "partials/print_header.html" with document_title="Delivery Challan" document_no=challan.dc_no document_date=challan.dc_date %}
+<h1 class="print-document-title">Delivery Challan</h1>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Customer / Party:</span> <span class="print-value">{{ challan.party_name }}</span></td><td><span class="print-label">DC No:</span> <span class="print-value">{{ challan.dc_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ challan.dc_date }}</span></td></tr>
+<tr><td colspan="2"><span class="print-label">Address:</span> <span class="print-value">{{ challan.party_address }}</span></td><td><span class="print-label">PO No:</span> <span class="print-value">{{ challan.po_number }}</span></td></tr>
+<tr><td><span class="print-label">Delivered By:</span> <span class="print-value">{{ challan.delivered_by }}</span></td><td><span class="print-label">Received By:</span> <span class="print-value">{{ challan.received_by }}</span></td><td><span class="print-label">Status:</span> <span class="print-value">{{ challan.status }}</span></td></tr>
+</table>
+<table class="print-table"><thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td></tr>{% endfor %}</tbody></table>
+{% if challan.remarks %}<section class="print-panel"><strong>Remarks:</strong> {{ challan.remarks|linebreaksbr }}</section>{% endif %}
+<section class="signature-grid"><div class="signature-line">Delivered By</div><div class="signature-line">Receiver Signature / Stamp</div></section>
+{% include "partials/print_footer.html" %}
+</main></body></html>

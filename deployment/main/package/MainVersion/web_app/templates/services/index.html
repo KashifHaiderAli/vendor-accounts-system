@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Services</span><h2>Services</h2><p>Contract and service workflows.</p></div></section>
+<section class="section-grid">{% for card in service_cards %}<a class="app-card module-card" href="{% url card.url_name %}"><div class="app-card-header"><div><h3>{{ card.label }}</h3><p>{{ card.description }}</p></div><i class="bi {{ card.icon }}"></i></div></a>{% empty %}<div class="app-card"><div class="app-card-body text-muted">No service modules are available for your role.</div></div>{% endfor %}</section>
+{% endblock %}

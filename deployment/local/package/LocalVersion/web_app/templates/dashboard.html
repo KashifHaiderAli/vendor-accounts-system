@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header dashboard-hero">
+    <div>
+        <span class="soft-badge">Live branch dashboard</span>
+        <h2>Welcome back, {{ logged_in_user_name }}</h2>
+        <p>{{ current_company_name }} / {{ current_branch_name }} / {{ logged_in_role_name }} / {{ current_date|date:"M d, Y" }}</p>
+    </div>
+    <div class="hero-status-card"><i class="bi bi-speedometer2"></i><div><strong>Real-time Snapshot</strong><span>Current selected branch</span></div></div>
+</section>
+
+<section class="section-grid stat-grid">
+    {% for card in dashboard_cards %}
+    <article class="app-card stat-card stat-{{ card.tone }}"><div class="stat-icon"><i class="bi {{ card.icon }}"></i></div><div class="stat-content"><span>{{ card.label }}</span><strong>{{ card.value }}</strong><small>{{ card.hint }}</small></div></article>
+    {% endfor %}
+</section>
+
+<section class="dashboard-layout mt-4">
+    <div class="app-card">
+        <div class="app-card-header"><div><h3>Quick Actions</h3><p>Permission-aware shortcuts.</p></div></div>
+        <div class="app-card-body quick-action-grid">{% for action in quick_actions %}<a class="quick-action-btn" href="{{ action.url }}"><i class="bi {{ action.icon }}"></i><span>{{ action.label }}</span></a>{% empty %}<p class="text-muted mb-0">No quick actions available for your role.</p>{% endfor %}</div>
+    </div>
+    <div class="app-card">
+        <div class="app-card-header"><div><h3>Alerts</h3><p>Items needing attention.</p></div><span class="soft-badge">{{ alerts|length }}</span></div>
+        <div class="app-card-body system-list">{% for alert in alerts %}<div><span>{{ alert.label }}</span><strong>{{ alert.value }}</strong></div>{% endfor %}</div>
+    </div>
+</section>
+
+<section class="section-grid insight-grid mt-4">
+    <article class="app-card"><div class="app-card-header"><div><h3>Monthly Sales</h3><p>Last 6 months</p></div></div><div class="app-card-body">{% for item in monthly_sales %}<div class="mini-bar-row"><span>{{ item.label }}</span><div class="mini-bar"><i style="width: {{ item.percent }}%"></i></div><strong>{{ item.value|floatformat:0 }}</strong></div>{% endfor %}</div></article>
+    <article class="app-card"><div class="app-card-header"><div><h3>Monthly Receipts</h3><p>Last 6 months</p></div></div><div class="app-card-body">{% for item in monthly_receipts %}<div class="mini-bar-row"><span>{{ item.label }}</span><div class="mini-bar"><i style="width: {{ item.percent }}%"></i></div><strong>{{ item.value|floatformat:0 }}</strong></div>{% endfor %}</div></article>
+</section>
+
+<section class="section-grid mt-4">
+    <article class="app-card"><div class="app-card-header"><div><h3>Recent Invoices</h3></div></div><div class="app-card-body table-responsive"><table class="table app-table"><tbody>{% for row in recent.invoices %}<tr><td><a href="{% url 'sales:invoice_detail' row.id %}">{{ row.invoice_no }}</a></td><td>{{ row.invoice_date }}</td><td class="text-end">{{ row.grand_total|floatformat:2 }}</td><td>{{ row.status }}</td></tr>{% empty %}<tr><td class="text-muted">No invoices.</td></tr>{% endfor %}</tbody></table></div></article>
+    <article class="app-card"><div class="app-card-header"><div><h3>Recent Receipts</h3></div></div><div class="app-card-body table-responsive"><table class="table app-table"><tbody>{% for row in recent.receipts %}<tr><td><a href="{% url 'sales:receipt_detail' row.id %}">{{ row.receipt_no }}</a></td><td>{{ row.receipt_date }}</td><td class="text-end">{{ row.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td class="text-muted">No receipts.</td></tr>{% endfor %}</tbody></table></div></article>
+    <article class="app-card"><div class="app-card-header"><div><h3>Recent Purchases</h3></div></div><div class="app-card-body table-responsive"><table class="table app-table"><tbody>{% for row in recent.purchases %}<tr><td><a href="{% url 'purchases:supplier_purchase_detail' row.id %}">{{ row.purchase_no }}</a></td><td>{{ row.purchase_date }}</td><td class="text-end">{{ row.grand_total|floatformat:2 }}</td><td>{{ row.status }}</td></tr>{% empty %}<tr><td class="text-muted">No purchases.</td></tr>{% endfor %}</tbody></table></div></article>
+    <article class="app-card"><div class="app-card-header"><div><h3>Recent Delivery Challans</h3></div></div><div class="app-card-body table-responsive"><table class="table app-table"><tbody>{% for row in recent.challans %}<tr><td><a href="{% url 'sales:delivery_challan_detail' row.id %}">{{ row.dc_no }}</a></td><td>{{ row.dc_date }}</td><td>{{ row.status }}</td></tr>{% empty %}<tr><td class="text-muted">No delivery challans.</td></tr>{% endfor %}</tbody></table></div></article>
+</section>
+
+<section class="app-card mt-4"><div class="app-card-header"><div><h3>Recent Activity</h3><p>Last 5 logged actions.</p></div></div><div class="app-card-body activity-list">{% for item in recent.activity %}<div class="activity-item"><span class="activity-dot"></span><p><strong>{{ item.module_name }}</strong> / {{ item.action_type }}<br><small>{{ item.description|default:item.activity_datetime }}</small></p></div>{% empty %}<p class="text-muted mb-0">No activity logged yet.</p>{% endfor %}</div></section>
+{% endblock %}

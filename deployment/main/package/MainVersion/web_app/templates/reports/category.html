@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Reports</span>
+        <h2>{{ group.title }}</h2>
+        <p>{{ group.description }}</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-light" href="{% url 'reports:index' %}"><i class="bi bi-arrow-left"></i> Reports</a>
+    </div>
+</section>
+
+<section class="section-grid">
+    {% for label, icon, route_name, permission in links %}
+    <article class="app-card module-card">
+        <div class="app-card-body">
+            <div class="module-card-icon"><i class="bi {{ icon }}"></i></div>
+            <h3>{{ label }}</h3>
+            <p>Open, filter, print, or export this report.</p>
+            <a class="btn btn-primary btn-sm" href="{% url route_name %}">Open</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

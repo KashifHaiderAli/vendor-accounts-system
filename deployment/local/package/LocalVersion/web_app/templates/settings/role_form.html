@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>{{ page_title }}</h2>
+        <p>Create or update a role. Permissions are managed separately.</p>
+    </div>
+</section>
+
+<form method="post" class="app-card settings-form-card">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>Role Details</h3>
+            <p>Role names must be unique within the current company.</p>
+        </div>
+        <i class="bi bi-person-badge"></i>
+    </div>
+    {% include "masters/partials/form_errors.html" %}
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div>
+                <label class="form-label" for="role_name">Role Name</label>
+                <input class="form-control {% if errors.role_name %}is-invalid{% endif %}" id="role_name" name="role_name" maxlength="100" required value="{{ form_data.role_name|default:'' }}">
+                {% if errors.role_name %}<div class="invalid-feedback">{{ errors.role_name }}</div>{% endif %}
+            </div>
+            <div class="settings-switches">
+                <div class="form-check form-switch">
+                    <input class="form-check-input {% if errors.is_active %}is-invalid{% endif %}" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                    {% if errors.is_active %}<div class="invalid-feedback d-block">{{ errors.is_active }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="description">Description</label>
+                <textarea class="form-control {% if errors.description %}is-invalid{% endif %}" id="description" name="description" rows="3">{{ form_data.description|default:'' }}</textarea>
+                {% if errors.description %}<div class="invalid-feedback">{{ errors.description }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'settings_module:role_management' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Role</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

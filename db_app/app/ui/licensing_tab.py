@@ -26,6 +26,7 @@ class LicensingTab(ttk.Frame):
     def _build(self) -> None:
         self.columnconfigure(1, weight=1)
         fields = [
+            ("database_path", "Current Selected Database File"),
             ("hardware_fingerprint", "Hardware Fingerprint"),
             ("license_type", "License Type"),
             ("issue_date", "Issue Date"),
@@ -42,11 +43,15 @@ class LicensingTab(ttk.Frame):
                     values=["Trial", "Annual", "Lifetime"],
                     state="readonly",
                 ).grid(row=row, column=1, sticky="ew", padx=8, pady=5)
+            elif field == "database_path":
+                entry = ttk.Entry(self, textvariable=self.vars.setdefault(field, tk.StringVar()))
+                entry.grid(row=row, column=1, sticky="ew", padx=8, pady=5)
+                entry.state(["readonly"])
             else:
                 ttk.Entry(self, textvariable=self.vars[field]).grid(row=row, column=1, sticky="ew", padx=8, pady=5)
 
         actions = ttk.Frame(self)
-        actions.grid(row=6, column=0, columnspan=2, sticky="w", pady=12)
+        actions.grid(row=7, column=0, columnspan=2, sticky="w", pady=12)
         ttk.Button(actions, text="Get Hardware Fingerprint", command=self.get_fingerprint).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Generate Trial Key", command=lambda: self.generate_key("Trial")).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Generate Annual Key", command=lambda: self.generate_key("Annual")).pack(side="left", padx=(0, 8))
@@ -54,6 +59,7 @@ class LicensingTab(ttk.Frame):
         ttk.Button(actions, text="Save License Record", command=self.save_license).pack(side="left")
 
     def get_fingerprint(self) -> None:
+        self.vars["database_path"].set(str(self.controller.database_path))
         fingerprint = get_hardware_fingerprint()
         self.vars["hardware_fingerprint"].set(fingerprint)
         self.logger.info("Hardware fingerprint generated.")
@@ -81,6 +87,9 @@ class LicensingTab(ttk.Frame):
 
     def save_license(self) -> None:
         try:
+            self.vars["database_path"].set(str(self.controller.database_path))
+            if not messagebox.askyesno("Save License", f"Save license into selected database?\n\n{self.controller.database_path}"):
+                return
             if not self.vars["license_key"].get().strip():
                 self.generate_key()
             company_id, branch_id = self.controller.default_company_and_branch()
@@ -117,4 +126,3 @@ class LicensingTab(ttk.Frame):
         except Exception as exc:
             self.logger.error(str(exc))
             messagebox.showerror("Licensing", str(exc))
-

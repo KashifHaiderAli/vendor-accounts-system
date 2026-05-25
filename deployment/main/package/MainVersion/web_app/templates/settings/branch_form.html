@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>{{ page_title }}</h2>
+        <p>Create or update branch information for the current company.</p>
+    </div>
+</section>
+
+<form method="post" class="app-card settings-form-card">
+    {% csrf_token %}
+    <div class="app-card-header">
+        <div>
+            <h3>Branch Details</h3>
+            <p>Branch code must be unique within the current company.</p>
+        </div>
+        <i class="bi bi-diagram-3"></i>
+    </div>
+    {% include "masters/partials/form_errors.html" %}
+    <div class="app-card-body">
+        <div class="form-grid two-col">
+            <div>
+                <label class="form-label" for="branch_code">Branch Code</label>
+                <input class="form-control {% if errors.branch_code %}is-invalid{% endif %}" id="branch_code" name="branch_code" value="{{ form_data.branch_code|default:'' }}" maxlength="50" required>
+                {% if errors.branch_code %}<div class="invalid-feedback">{{ errors.branch_code }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="branch_name">Branch Name</label>
+                <input class="form-control {% if errors.branch_name %}is-invalid{% endif %}" id="branch_name" name="branch_name" value="{{ form_data.branch_name|default:'' }}" maxlength="150" required>
+                {% if errors.branch_name %}<div class="invalid-feedback">{{ errors.branch_name }}</div>{% endif %}
+            </div>
+            <div class="full-span">
+                <label class="form-label" for="address">Address</label>
+                <textarea class="form-control" id="address" name="address" rows="3">{{ form_data.address|default:'' }}</textarea>
+            </div>
+            <div>
+                <label class="form-label" for="phone">Phone</label>
+                <input class="form-control {% if errors.phone %}is-invalid{% endif %}" id="phone" name="phone" type="tel" pattern="[0-9+\-\s()]{7,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.phone|default:'' }}">
+                {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="mobile">Mobile</label>
+                <input class="form-control {% if errors.mobile %}is-invalid{% endif %}" id="mobile" name="mobile" type="tel" pattern="[0-9+\-\s()]{10,30}" maxlength="30" placeholder="+92 300 1234567" value="{{ form_data.mobile|default:'' }}">
+                {% if errors.mobile %}<div class="invalid-feedback">{{ errors.mobile }}</div>{% endif %}
+            </div>
+            <div>
+                <label class="form-label" for="email">Email</label>
+                <input class="form-control {% if errors.email %}is-invalid{% endif %}" id="email" name="email" type="email" maxlength="254" value="{{ form_data.email|default:'' }}">
+                {% if errors.email %}<div class="invalid-feedback">{{ errors.email }}</div>{% endif %}
+            </div>
+            <div class="settings-switches">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" id="is_head_office" name="is_head_office" type="checkbox" {% if form_data.is_head_office %}checked{% endif %}>
+                    <label class="form-check-label" for="is_head_office">Head Office</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input {% if errors.is_active %}is-invalid{% endif %}" id="is_active" name="is_active" type="checkbox" {% if form_data.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                    {% if errors.is_active %}<div class="invalid-feedback d-block">{{ errors.is_active }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-light" href="{% url 'settings_module:branches' %}">Cancel</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Branch</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

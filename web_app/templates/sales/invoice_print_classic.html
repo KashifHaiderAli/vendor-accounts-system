@@ -1,0 +1,101 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ invoice.invoice_no }} - Classic</title>
+    <link rel="stylesheet" href="{% static 'css/print_classic.css' %}">
+</head>
+<body>
+{% include "partials/print_actions.html" %}
+<main class="classic-page">
+    <section class="classic-top">
+        <div></div>
+        <header class="classic-company-header">
+            {% if show_logo and logo_url %}<img class="classic-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
+            <div class="classic-company-name">{{ classic_company_name|default:"Company" }}</div>
+            {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
+            {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
+            {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
+            {% if classic_company_website %}<div>{{ classic_company_website }}</div>{% endif %}
+            {% if tax_enabled and classic_company_ntn %}<div>NTN: {{ classic_company_ntn }}</div>{% endif %}
+            {% if tax_enabled and classic_company_strn %}<div>STRN: {{ classic_company_strn }}</div>{% endif %}
+        </header>
+    </section>
+
+    <h1 class="classic-title">INVOICE</h1>
+
+    <section class="classic-meta-grid">
+        <table class="classic-meta-table">
+            <tr><td class="classic-label">BILL NO.</td><td class="classic-value">{{ invoice.invoice_no }}</td></tr>
+            <tr><td class="classic-label">BILL DATE</td><td class="classic-value">{{ invoice.invoice_date }}</td></tr>
+            <tr><td class="classic-label">CUST. CODE</td><td class="classic-value">{{ invoice.customer_code|default:"" }}</td></tr>
+            <tr><td class="classic-label">P.O NO.</td><td class="classic-value">{{ invoice.po_number|default:"" }}</td></tr>
+        </table>
+        <table class="classic-meta-table">
+            <tr><td class="classic-label">SOLD TO</td><td class="classic-value">{{ invoice.company_name|default:"" }}</td></tr>
+            <tr><td class="classic-label">CONT PER.</td><td class="classic-value">{{ invoice.contact_person|default:"" }}</td></tr>
+            <tr><td class="classic-label">PHONE</td><td class="classic-value">{{ invoice.customer_phone|default:"" }}</td></tr>
+            <tr><td class="classic-label">D.C NO.</td><td class="classic-value">{{ invoice.dc_no|default:"" }}</td></tr>
+        </table>
+    </section>
+
+    <table class="classic-items-table">
+        <thead>
+            <tr>
+                <th class="col-sno">S. NO.</th>
+                <th class="col-qty">QTY.</th>
+                <th>DESCRIPTION</th>
+                <th class="col-price">UNIT PRICE</th>
+                <th class="col-amount">AMOUNT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="classic-item-row">
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">{{ item.quantity|format_quantity }}</td>
+                <td>{{ item.description }}</td>
+                <td class="text-end">{{ item.rate|floatformat:2 }}</td>
+                <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+    </table>
+
+    <section class="classic-bottom-section">
+        <div class="classic-payment-terms">
+            <p><strong>Payment Terms:</strong></p>
+            <p>Cash / Cheque / Credit Terms {{ invoice.payment_terms_days|default:"____" }} Days</p>
+            <p>After credit terms, 0.5% charges per day.</p>
+            <p class="classic-amount-words">Rupees in words:<br>{{ invoice.grand_total|amount_in_words }}</p>
+            <p>I/We agree with above payment terms.</p>
+            <p class="classic-invoice-received-by">Invoice Received By: ______________________</p>
+            <p class="classic-name-title">Name &amp; Title: _____________________</p>
+        </div>
+        <div class="classic-totals-box">
+            <div class="classic-total-row"><span>Sub Total</span><strong>{{ invoice.subtotal|floatformat:2 }}</strong></div>
+            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ invoice.discount_total|floatformat:2 }}</strong></div>
+            {% if tax_enabled and invoice.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ invoice.tax_total|floatformat:2 }}</strong></div>{% endif %}
+            <div class="classic-total-row classic-total-due"><span>Total Due</span><strong>{{ invoice.grand_total|floatformat:2 }}</strong></div>
+        </div>
+    </section>
+
+    <section class="classic-signature-area">
+        <div></div>
+        <div>
+            <p class="text-center"><strong>FOR {{ classic_company_name|default:"COMPANY" }}</strong></p>
+            <div class="classic-sign-line">Authorized Signature</div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

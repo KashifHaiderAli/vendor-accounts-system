@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Masters</span><h2>Customers</h2><p>Customer records are filtered to the current company and branch.</p></div>
+    {% if can_add %}<div class="page-header-actions"><a class="btn btn-primary" href="{% url 'masters:customer_new' %}"><i class="bi bi-plus-lg"></i> New Customer</a></div>{% endif %}
+</section>
+{% include "masters/partials/filter_table_customers.html" %}
+{% endblock %}

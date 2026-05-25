@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ report_title }}</title>
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+</head>
+<body>
+<div class="print-actions">
+    <button type="button" onclick="window.print()">Print / Save as PDF</button>
+</div>
+<main class="print-page">
+    <header class="print-header">
+        <div>
+            {% if show_logo and logo_url %}<img class="print-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
+            <div class="company-name">{{ current_company_name }}</div>
+            <div class="muted">{{ current_branch_name }}</div>
+        </div>
+        <div class="print-title">
+            <h1>{{ report_title }}</h1>
+            <div class="muted">{{ current_date }}</div>
+        </div>
+    </header>
+    {% include "partials/print_detail_grid.html" %}
+    <table class="print-detail-grid">
+        <tr>
+            <td><span class="print-label">Party:</span> <span class="print-value">{{ print_detail.party|default:"All" }}</span></td>
+            <td><span class="print-label">Period:</span> <span class="print-value">{{ print_detail.period }}</span></td>
+            <td><span class="print-label">Branch:</span> <span class="print-value">{{ print_detail.branch }}</span></td>
+        </tr>
+        <tr>
+            <td><span class="print-label">Opening Balance:</span> <span class="print-value">{{ print_detail.opening_balance }}</span></td>
+            <td><span class="print-label">Closing Balance:</span> <span class="print-value">{{ print_detail.closing_balance }}</span></td>
+            <td><span class="print-label">Print Date:</span> <span class="print-value">{{ current_date }}</span></td>
+        </tr>
+    </table>
+    {% include "reports/report_base.html" %}
+    {% include "partials/print_footer.html" with company=print_company %}
+</main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header"><div><span class="soft-badge">Inventory</span><h2>Stock Adjustments</h2><p>Manual quantity corrections. No accounting journals are posted.</p></div><div class="page-header-actions">{% if can_add %}<a class="btn btn-primary" href="{% url 'inventory:adjustment_new' %}"><i class="bi bi-plus-lg"></i> New Adjustment</a>{% endif %}</div></section>
+<section class="app-card"><div class="app-card-body table-responsive"><table class="table app-table"><thead><tr><th>No</th><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th class="text-end">Actions</th></tr></thead><tbody>{% for row in rows %}<tr><td><a href="{% url 'inventory:adjustment_detail' row.id %}">{{ row.adjustment_no }}</a></td><td>{{ row.adjustment_date }}</td><td>{{ row.adjustment_type }}</td><td>{{ row.reason }}</td><td><span class="soft-badge">{{ row.status }}</span></td><td class="text-end"><a class="btn btn-sm btn-light" href="{% url 'inventory:adjustment_detail' row.id %}"><i class="bi bi-eye"></i></a></td></tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No stock adjustments found.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}
+

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Settings</span>
+        <h2>Branches</h2>
+        <p>Manage company branches, active status, and Head Office assignment.</p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-primary" href="{% url 'settings_module:branch_new' %}">
+            <i class="bi bi-plus-lg"></i> New Branch
+        </a>
+    </div>
+</section>
+
+<section class="app-card">
+    <div class="app-card-header">
+        <div>
+            <h3>Branch List</h3>
+            <p>Search and maintain branch records for the current company.</p>
+        </div>
+    </div>
+    <div class="app-card-body">
+        <form class="filter-bar" method="get">
+            <input class="form-control" name="q" value="{{ search }}" placeholder="Search code, name, phone, email">
+            <select class="form-select" name="status">
+                <option value="">All status</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+            </select>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+            <a class="btn btn-light" href="{% url 'settings_module:branches' %}">Reset</a>
+        </form>
+
+        <div class="table-responsive mt-3">
+            <table class="app-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Branch</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Head Office</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr>
+                        <td><strong>{{ branch.branch_code }}</strong></td>
+                        <td>{{ branch.branch_name }}</td>
+                        <td>{{ branch.phone|default:"-" }}</td>
+                        <td>{{ branch.email|default:"-" }}</td>
+                        <td>{% if branch.is_head_office %}<span class="soft-badge">Yes</span>{% else %}-{% endif %}</td>
+                        <td>{% if branch.is_active %}<span class="status-pill success">Active</span>{% else %}<span class="status-pill muted">Inactive</span>{% endif %}</td>
+                        <td class="text-end table-actions">
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:branch_edit' branch.id %}"><i class="bi bi-pencil"></i></a>
+                            {% if not branch.is_head_office %}
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:branch_make_head_office' branch.id %}"><i class="bi bi-house-check"></i></a>
+                            {% endif %}
+                            <a class="btn btn-sm btn-light" href="{% url 'settings_module:branch_toggle_active' branch.id %}">
+                                {% if branch.is_active %}<i class="bi bi-toggle-on"></i>{% else %}<i class="bi bi-toggle-off"></i>{% endif %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7"><div class="empty-state">No branches found.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <span class="soft-badge">Sales</span>
+        <h2>Sales</h2>
+        <p>Prepare sales documents and customer-facing workflows.</p>
+    </div>
+</section>
+
+<section class="section-grid">
+    {% for card in sales_cards %}
+    <a class="app-card module-card" href="{% url card.url_name %}">
+        <div class="app-card-body">
+            <div class="module-card-icon"><i class="bi {{ card.icon }}"></i></div>
+            <h3>{{ card.label }}</h3>
+            <p>{{ card.description }}</p>
+            <span class="btn btn-sm btn-light mt-2">Open <i class="bi bi-arrow-right"></i></span>
+        </div>
+    </a>
+    {% empty %}
+    <div class="app-card">
+        <div class="app-card-body">
+            <p class="text-muted mb-0">No sales permissions assigned.</p>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

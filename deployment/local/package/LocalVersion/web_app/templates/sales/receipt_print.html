@@ -1,0 +1,15 @@
+{% load static %}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ receipt.receipt_no }}</title><link rel="stylesheet" href="{% static 'css/print.css' %}"></head>
+<body>{% include "partials/print_actions.html" %}<main class="print-page">
+{% include "partials/print_header.html" with document_title="Customer Receipt Voucher" document_no=receipt.receipt_no document_date=receipt.receipt_date %}
+<h1 class="print-document-title">Customer Receipt Voucher</h1>
+{% include "partials/print_detail_grid.html" %}
+<table class="print-detail-grid">
+<tr><td><span class="print-label">Customer:</span> <span class="print-value">{{ receipt.customer_name }}</span></td><td><span class="print-label">Receipt No:</span> <span class="print-value">{{ receipt.receipt_no }}</span></td><td><span class="print-label">Date:</span> <span class="print-value">{{ receipt.receipt_date }}</span></td></tr>
+<tr><td><span class="print-label">Payment Mode:</span> <span class="print-value">{{ receipt.payment_mode }}</span></td><td><span class="print-label">Cash/Bank:</span> <span class="print-value">{{ receipt.cash_bank_name }}</span></td><td><span class="print-label">Reference:</span> <span class="print-value">{{ receipt.cheque_reference_no }}</span></td></tr>
+<tr><td colspan="2"><span class="print-label">Adjusted Invoice:</span> <span class="print-value">{{ receipt.invoice_no|default:"Advance / Unadjusted" }}</span></td><td><span class="print-label">Amount:</span> <span class="print-value">{{ receipt.amount|floatformat:2 }}</span></td></tr>
+</table>
+<section class="print-panel"><strong>Amount in words:</strong> TODO<br><strong>Remarks:</strong> {{ receipt.remarks|default:"-"|linebreaksbr }}</section>
+<section class="signature-grid"><div class="signature-line">Received By</div><div class="signature-line">Prepared / Authorized By</div></section>
+{% include "partials/print_footer.html" %}
+</main></body></html>

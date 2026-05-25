@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div><span class="soft-badge">Masters</span><h2>Items / Services</h2><p>Maintain products and services without inventory or serial tracking.</p></div>
+    {% if can_add %}<div class="page-header-actions"><a class="btn btn-primary" href="{% url 'masters:item_new' %}"><i class="bi bi-plus-lg"></i> New Item / Service</a></div>{% endif %}
+</section>
+{% include "masters/partials/filter_table_items.html" %}
+{% endblock %}
