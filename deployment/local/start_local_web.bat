@@ -9,6 +9,7 @@ set PYTHONPATH=%APP_ROOT%\web_app;%APP_ROOT%\runtime\python\Lib\site-packages
 set VENDOR_ACCOUNTS_DB_PATH=C:\VendorAccounts\LocalVersion\data\vendor_accounts_local.db
 set ENABLE_TAX=False
 set DJANGO_DEBUG=False
+set DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,192.168.0.125
 
 if not exist "%VENDOR_ACCOUNTS_DB_PATH%" (
     echo Database file not found:
@@ -39,14 +40,12 @@ if not exist "%WEB_APP_DIR%\manage.py" (
 
 cd /d "%WEB_APP_DIR%"
 
-if not exist "%WEB_APP_DIR%\staticfiles\css\app.css" (
-    echo Static files not found. Running collectstatic...
-    "%PYTHON_EXE%" manage.py collectstatic --noinput
-    if errorlevel 1 (
-        echo collectstatic failed.
-        pause
-        exit /b 1
-    )
+echo Refreshing static files...
+"%PYTHON_EXE%" manage.py collectstatic --noinput --clear
+if errorlevel 1 (
+    echo Failed to refresh static files.
+    pause
+    exit /b 1
 )
 
 "%PYTHON_EXE%" -m waitress --listen=0.0.0.0:8001 config.wsgi:application

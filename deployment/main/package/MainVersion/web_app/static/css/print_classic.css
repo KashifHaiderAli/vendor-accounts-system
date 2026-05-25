@@ -1,6 +1,6 @@
 @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 7mm;
 }
 
 * {
@@ -35,8 +35,8 @@ body {
 }
 
 .classic-page {
-    width: 190mm;
-    min-height: 277mm;
+    width: 185mm;
+    min-height: auto;
     margin: 0 auto;
     padding: 0;
 }
@@ -99,20 +99,20 @@ body {
 }
 
 .classic-value {
-    border-bottom: 1px solid #444;
+    border-bottom: 0;
     min-height: 14px;
 }
 
 .classic-items-table {
     width: 100%;
     border-collapse: collapse;
+    border-spacing: 0;
     table-layout: fixed;
-    min-height: 128mm;
 }
 
 .classic-items-table th {
     border: 1px solid #333;
-    padding: 3px 4px;
+    padding: 2px 4px;
     vertical-align: top;
 }
 
@@ -126,7 +126,8 @@ body {
     border-bottom: 0;
     border-left: 1px solid #333;
     border-right: 1px solid #333;
-    padding: 3px 4px;
+    padding: 1px 4px;
+    line-height: 1.12;
     vertical-align: top;
 }
 
@@ -147,11 +148,25 @@ body {
     width: 28mm;
 }
 
-.classic-items-table tbody tr {
-    height: 8mm;
+.classic-items-table tbody tr:not(.classic-filler-row) {
+    height: auto !important;
 }
 
-.classic-items-table .blank-row td {
+.classic-items-table tbody tr:not(.classic-filler-row) td {
+    height: auto !important;
+    padding: 1px 4px 1px 4px !important;
+    line-height: 1.1 !important;
+    vertical-align: top;
+}
+
+.classic-items-table tbody tr:not(.classic-filler-row):first-child td {
+    padding-top: 5px !important;
+}
+
+.classic-items-table tbody tr.classic-filler-row td {
+    height: 3.5mm;
+    padding: 0 4px;
+    line-height: 1;
     color: transparent;
 }
 
@@ -167,7 +182,7 @@ body {
     display: grid;
     grid-template-columns: 1fr 64mm;
     gap: 8mm;
-    margin-top: 5mm;
+    margin-top: 4mm;
     align-items: start;
 }
 
@@ -180,8 +195,41 @@ body {
 }
 
 .classic-amount-words {
-    margin-top: 5mm;
+    margin-top: 3mm;
     font-weight: 700;
+}
+
+.classic-terms-box {
+    border: 1px solid #333;
+    padding: 5px 7px;
+    margin-bottom: 4mm;
+}
+
+.classic-terms-box p {
+    margin: 0 0 2px;
+}
+
+.classic-terms-box span {
+    display: inline-block;
+    width: 31mm;
+    font-weight: 700;
+}
+
+.classic-contact-note {
+    margin-top: 4mm;
+}
+
+.classic-thank-you {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.classic-invoice-received-by {
+    margin-bottom: 18px;
+}
+
+.classic-name-title {
+    margin-top: 16px;
 }
 
 .classic-totals-box {
@@ -236,3 +284,39 @@ body {
         min-height: auto;
     }
 }
+
+.classic-items-table tbody tr.classic-item-row,
+.classic-items-table tbody tr.classic-item-row td {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+.classic-items-table tbody tr.classic-item-row td {
+    padding: 3px 4px 2px 4px !important;
+    line-height: 1.18 !important;
+    vertical-align: top !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: 1px solid #333 !important;
+    border-right: 1px solid #333 !important;
+}
+
+.classic-items-table tbody tr.classic-item-row:first-child td {
+    padding-top: 12px !important;
+}
+
+.classic-items-table tbody tr.classic-filler-row td {
+    height: 11mm !important;
+    padding: 0 4px !important;
+    line-height: 1 !important;
+    color: transparent;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: 1px solid #333 !important;
+    border-right: 1px solid #333 !important;
+}
+
+.classic-items-table tbody tr:last-child td {
+    border-bottom: 1px solid #333 !important;
+}
+

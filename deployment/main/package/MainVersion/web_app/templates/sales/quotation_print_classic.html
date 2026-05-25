@@ -13,11 +13,13 @@
         <div></div>
         <header class="classic-company-header">
             {% if show_logo and logo_url %}<img class="classic-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
-            <div class="classic-company-name">{{ company.company_name|default:"Company" }}</div>
-            <div>{{ company.address|default:"" }}</div>
-            <div>{{ company.phone|default:"" }}{% if company.phone and company.mobile %} / {% endif %}{{ company.mobile|default:"" }}</div>
-            {% if company.website %}<div>{{ company.website }}</div>{% endif %}
-            {% if tax_enabled and company.ntn %}<div>NTN: {{ company.ntn }}</div>{% endif %}
+            <div class="classic-company-name">{{ classic_company_name|default:"Company" }}</div>
+            {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
+            {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
+            {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
+            {% if classic_company_website %}<div>{{ classic_company_website }}</div>{% endif %}
+            {% if tax_enabled and classic_company_ntn %}<div>NTN: {{ classic_company_ntn }}</div>{% endif %}
+            {% if tax_enabled and classic_company_strn %}<div>STRN: {{ classic_company_strn }}</div>{% endif %}
         </header>
     </section>
 
@@ -50,7 +52,7 @@
         </thead>
         <tbody>
             {% for item in items %}
-            <tr>
+            <tr class="classic-item-row">
                 <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">{{ item.quantity|format_quantity }}</td>
                 <td>{{ item.description }}</td>
@@ -58,22 +60,39 @@
                 <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
             </tr>
             {% endfor %}
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
         </tbody>
     </table>
 
     <section class="classic-bottom-section">
         <div class="classic-payment-terms">
-            <p><strong>Payment Terms / Terms & Conditions</strong></p>
-            <p>{{ quotation.terms_conditions|default:quotation.payment_terms_name|default:"Cash / Cheque / Credit Terms ____ Days" }}</p>
+            <div class="classic-terms-box">
+                <p><strong>Terms &amp; Conditions / Payment Terms</strong></p>
+                {% if classic_use_saved_terms %}
+                <p>{{ classic_terms_text|linebreaksbr }}</p>
+                {% else %}
+                <p><span>Availability</span><strong>: Ex-Stock</strong></p>
+                <p><span>Payment Terms</span><strong>: 50% Advance with purchase order</strong></p>
+                <p><span>Validity</span><strong>: Quotation validity for one week or subject to US $ rate change.</strong></p>
+                {% if tax_enabled %}
+                <p><span>Tax</span><strong>: Above price quote without. Tax.</strong></p>
+                {% else %}
+                <p><strong>Price quote is final as per listed items.</strong></p>
+                {% endif %}
+                {% endif %}
+            </div>
             <p class="classic-amount-words">Rupees in words:<br>{{ quotation.grand_total|amount_in_words }}</p>
+            <div class="classic-contact-note">
+                <p>If you have any questions about this price quote,<br>please contact {% if classic_contact_person %}{{ classic_contact_person }}{% else %}{{ classic_company_name }}{% endif %}{% if classic_contact_phone %}, Phone # {{ classic_contact_phone }}{% endif %}{% if classic_contact_email %}, E-mail {{ classic_contact_email }}{% endif %}</p>
+                <p class="classic-thank-you">Thank You For Your Business!</p>
+            </div>
         </div>
         <div class="classic-totals-box">
             <div class="classic-total-row"><span>Sub Total</span><strong>{{ quotation.subtotal|floatformat:2 }}</strong></div>
@@ -86,7 +105,7 @@
     <section class="classic-signature-area">
         <div></div>
         <div>
-            <p class="text-center"><strong>FOR {{ company.company_name|default:"COMPANY" }}</strong></p>
+            <p class="text-center"><strong>FOR {{ classic_company_name|default:"COMPANY" }}</strong></p>
             <div class="classic-sign-line">Authorized Signature</div>
         </div>
     </section>

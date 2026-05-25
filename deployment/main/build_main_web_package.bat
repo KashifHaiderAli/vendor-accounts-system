@@ -85,12 +85,39 @@ copy "%~dp0start_main_web.bat" "%MAIN_ROOT%\start_main_web.bat"
 copy "%~dp0open_firewall_port_8000.bat" "%MAIN_ROOT%\open_firewall_port_8000.bat"
 copy "%~dp0test_installed_main_web.bat" "%MAIN_ROOT%\test_installed_main_web.bat"
 
+if not exist "%MAIN_ROOT%\web_app\static\css\app.css" (
+    echo ERROR: Package missing static CSS:
+    echo %MAIN_ROOT%\web_app\static\css\app.css
+    exit /b 1
+)
+
+if not exist "%MAIN_ROOT%\web_app\static\css\print_classic.css" (
+    echo ERROR: Package missing classic print CSS:
+    echo %MAIN_ROOT%\web_app\static\css\print_classic.css
+    exit /b 1
+)
+
+if not exist "%MAIN_ROOT%\web_app\templates\sales\quotation_print_classic.html" (
+    echo ERROR: Package missing classic quotation template:
+    echo %MAIN_ROOT%\web_app\templates\sales\quotation_print_classic.html
+    exit /b 1
+)
+
+if not exist "%MAIN_ROOT%\web_app\templates\sales\invoice_print_classic.html" (
+    echo ERROR: Package missing classic invoice template:
+    echo %MAIN_ROOT%\web_app\templates\sales\invoice_print_classic.html
+    exit /b 1
+)
+
 echo.
 echo MainVersion package build summary
 echo ---------------------------------
 echo Package path:
 echo %MAIN_ROOT%
 echo Web app copied: yes
+echo app.css included: yes
+echo print_classic.css included: yes
+echo classic print templates included: yes
 echo Portable Python runtime copied: yes
 if exist "%RUNTIME_PYTHON%\python.exe" (
     echo python.exe found: yes

@@ -8,6 +8,7 @@ from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core import validators
+from core.edition_utils import is_tax_enabled
 from core.print_utils import build_print_context
 from settings_module.services import log_user_activity
 
@@ -898,6 +899,7 @@ def render_classic_invoice(request, invoice_id, pdf=False):
     invoice_services.mark_printed(request, invoice, digital=pdf)
     context = invoice_services.get_print_context(company_id, branch_id, invoice_id)
     context.update(build_print_context(company_id, request, "Classic Invoice", force_logo=pdf, force_pdf=pdf))
+    context.update(build_classic_print_context(context, request, company_id, terms_source=None))
     return render(request, "sales/invoice_print_classic.html", context)
 
 
@@ -1204,7 +1206,51 @@ def render_classic_quotation(request, quotation_id, action_label, pdf=False):
     services.mark_printed(request, quotation, action_label)
     context = services.get_print_context(company_id, branch_id, quotation_id)
     context.update(build_print_context(company_id, request, "Classic Quotation", force_logo=pdf, force_pdf=pdf))
+    context.update(build_classic_print_context(context, request, company_id, terms_source=quotation.get("terms_conditions")))
     return render(request, "sales/quotation_print_classic.html", context)
+
+
+def first_nonempty(*values):
+    for value in values:
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def build_classic_print_context(context, request, company_id, terms_source=None):
+    company = context.get("company") or {}
+    company_settings = context.get("company_settings") or {}
+    tax_enabled = is_tax_enabled(request=request, company_id=company_id)
+    company_name = first_nonempty(company_settings.get("company_name"), company.get("company_name"), "Company")
+    contact_person = first_nonempty(
+        company_settings.get("authorized_person_name"),
+        company_settings.get("contact_person"),
+        company.get("contact_person"),
+        company_name,
+    )
+    phone_or_mobile = first_nonempty(company_settings.get("mobile"), company_settings.get("phone"), company.get("mobile"), company.get("phone"))
+    email = first_nonempty(company_settings.get("email"), company.get("email"))
+    terms_text = first_nonempty(terms_source)
+    if terms_text and (tax_enabled or "tax" not in terms_text.lower()):
+        use_saved_terms = True
+    else:
+        terms_text = ""
+        use_saved_terms = False
+    return {
+        "tax_enabled": tax_enabled,
+        "classic_company_name": company_name,
+        "classic_company_address": first_nonempty(company_settings.get("address"), company.get("address")),
+        "classic_company_phone": phone_or_mobile,
+        "classic_company_email": email,
+        "classic_company_website": first_nonempty(company_settings.get("website"), company.get("website")),
+        "classic_company_ntn": first_nonempty(company_settings.get("ntn"), company.get("ntn")),
+        "classic_company_strn": first_nonempty(company_settings.get("strn"), company.get("strn")),
+        "classic_contact_person": contact_person,
+        "classic_contact_phone": phone_or_mobile,
+        "classic_contact_email": email,
+        "classic_terms_text": terms_text,
+        "classic_use_saved_terms": use_saved_terms,
+    }
 
 
 def require_scope(request):

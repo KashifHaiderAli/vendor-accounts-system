@@ -9,6 +9,7 @@ set PYTHONPATH=%APP_ROOT%\web_app;%APP_ROOT%\runtime\python\Lib\site-packages
 set VENDOR_ACCOUNTS_DB_PATH=C:\VendorAccounts\MainVersion\data\vendor_accounts_main.db
 set ENABLE_TAX=True
 set DJANGO_DEBUG=False
+set DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,192.168.0.125
 
 if not exist "%PYTHON_EXE%" (
     echo Bundled Python runtime was not found:
@@ -35,6 +36,34 @@ if not exist "%VENDOR_ACCOUNTS_DB_PATH%" (
 
 cd /d "%WEB_APP_DIR%"
 
+if not exist "%WEB_APP_DIR%\static\css\app.css" (
+    echo Source CSS missing:
+    echo %WEB_APP_DIR%\static\css\app.css
+    pause
+    exit /b 1
+)
+
+if not exist "%WEB_APP_DIR%\static\css\print_classic.css" (
+    echo Source classic print CSS missing:
+    echo %WEB_APP_DIR%\static\css\print_classic.css
+    pause
+    exit /b 1
+)
+
+if not exist "%WEB_APP_DIR%\templates\sales\quotation_print_classic.html" (
+    echo Classic quotation template missing:
+    echo %WEB_APP_DIR%\templates\sales\quotation_print_classic.html
+    pause
+    exit /b 1
+)
+
+if not exist "%WEB_APP_DIR%\templates\sales\invoice_print_classic.html" (
+    echo Classic invoice template missing:
+    echo %WEB_APP_DIR%\templates\sales\invoice_print_classic.html
+    pause
+    exit /b 1
+)
+
 "%PYTHON_EXE%" -c "import django; import waitress; import whitenoise; print('runtime ok')"
 if errorlevel 1 (
     echo Runtime import check failed.
@@ -58,7 +87,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-"%PYTHON_EXE%" manage.py collectstatic --noinput
+"%PYTHON_EXE%" manage.py collectstatic --noinput --clear
 if errorlevel 1 (
     echo collectstatic failed.
     pause
@@ -68,6 +97,13 @@ if errorlevel 1 (
 if not exist "%WEB_APP_DIR%\staticfiles\css\app.css" (
     echo Static CSS was not collected:
     echo %WEB_APP_DIR%\staticfiles\css\app.css
+    pause
+    exit /b 1
+)
+
+if not exist "%WEB_APP_DIR%\staticfiles\css\print_classic.css" (
+    echo Classic print CSS was not collected:
+    echo %WEB_APP_DIR%\staticfiles\css\print_classic.css
     pause
     exit /b 1
 )

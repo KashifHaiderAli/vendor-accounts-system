@@ -13,21 +13,17 @@
         <div></div>
         <header class="classic-company-header">
             {% if show_logo and logo_url %}<img class="classic-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
-            <div class="classic-company-name">{{ company.company_name|default:"Company" }}</div>
-            <div>{{ company.address|default:"" }}</div>
-            <div>{{ company.phone|default:"" }}{% if company.phone and company.mobile %} / {% endif %}{{ company.mobile|default:"" }}</div>
-            {% if company.website %}<div>{{ company.website }}</div>{% endif %}
-            {% if tax_enabled and company.ntn %}<div>NTN: {{ company.ntn }}</div>{% endif %}
+            <div class="classic-company-name">{{ classic_company_name|default:"Company" }}</div>
+            {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
+            {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
+            {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
+            {% if classic_company_website %}<div>{{ classic_company_website }}</div>{% endif %}
+            {% if tax_enabled and classic_company_ntn %}<div>NTN: {{ classic_company_ntn }}</div>{% endif %}
+            {% if tax_enabled and classic_company_strn %}<div>STRN: {{ classic_company_strn }}</div>{% endif %}
         </header>
     </section>
 
-    {% if invoice.invoice_type == "cash_memo" %}
-        <h1 class="classic-title">BILL / CASH MEMO</h1>
-    {% elif tax_enabled and invoice.invoice_type == "tax_invoice" %}
-        <h1 class="classic-title">TAX INVOICE</h1>
-    {% else %}
-        <h1 class="classic-title">SALES INVOICE</h1>
-    {% endif %}
+    <h1 class="classic-title">INVOICE</h1>
 
     <section class="classic-meta-grid">
         <table class="classic-meta-table">
@@ -56,7 +52,7 @@
         </thead>
         <tbody>
             {% for item in items %}
-            <tr>
+            <tr class="classic-item-row">
                 <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">{{ item.quantity|format_quantity }}</td>
                 <td>{{ item.description }}</td>
@@ -64,14 +60,14 @@
                 <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
             </tr>
             {% endfor %}
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="blank-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
         </tbody>
     </table>
 
@@ -82,8 +78,8 @@
             <p>After credit terms, 0.5% charges per day.</p>
             <p class="classic-amount-words">Rupees in words:<br>{{ invoice.grand_total|amount_in_words }}</p>
             <p>I/We agree with above payment terms.</p>
-            <p>Received By: ______________________</p>
-            <p>Name &amp; title: _____________________</p>
+            <p class="classic-invoice-received-by">Invoice Received By: ______________________</p>
+            <p class="classic-name-title">Name &amp; Title: _____________________</p>
         </div>
         <div class="classic-totals-box">
             <div class="classic-total-row"><span>Sub Total</span><strong>{{ invoice.subtotal|floatformat:2 }}</strong></div>
@@ -96,7 +92,7 @@
     <section class="classic-signature-area">
         <div></div>
         <div>
-            <p class="text-center"><strong>FOR {{ company.company_name|default:"COMPANY" }}</strong></p>
+            <p class="text-center"><strong>FOR {{ classic_company_name|default:"COMPANY" }}</strong></p>
             <div class="classic-sign-line">Authorized Signature</div>
         </div>
     </section>
