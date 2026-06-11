@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.db import DatabaseError
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
 from accounts_module.accounting_engine import AccountingError
@@ -1130,6 +1131,38 @@ def sales_return_form(request, return_id=None, invoice_id=None):
             else:
                 messages.error(request, "Please correct the highlighted errors.")
     return render(request, "sales/sales_return_form.html", {"page_title": "Edit Sales Return" if is_edit else "New Sales Return", "form_data": form_data, "form_items": form_data.get("items", []), "errors": errors, "error_summary": collect_errors(errors), "is_edit": is_edit, "posted": posted, "customers": return_services.get_customers(company_id, branch_id), "invoices": return_services.get_invoices(company_id, branch_id, form_data.get("customer_id") or None), "items": return_services.get_items(company_id, branch_id)})
+
+
+@login_required_custom
+def sales_return_invoice_items(request, invoice_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return JsonResponse({"ok": False, "error": "Company or branch session is missing."}, status=403)
+    if not user_has_permission(request, "sales_returns", "add"):
+        return JsonResponse({"ok": False, "error": "Permission denied."}, status=403)
+    invoice = return_services.get_invoice(company_id, branch_id, invoice_id)
+    if not invoice:
+        return JsonResponse({"ok": False, "error": "Invoice was not found."}, status=404)
+    data = return_services.default_form_data(company_id, branch_id, invoice)
+    return JsonResponse({
+        "ok": True,
+        "customer_id": invoice.get("customer_id") or "",
+        "items": [
+            {
+                "item_service_id": row.get("item_service_id") or "",
+                "sales_invoice_item_id": row.get("sales_invoice_item_id") or "",
+                "description": row.get("description") or "",
+                "quantity": str(row.get("quantity") or "0"),
+                "max_quantity": str(row.get("max_quantity") or row.get("quantity") or "0"),
+                "rate": str(row.get("rate") or "0"),
+                "discount_percent": str(row.get("discount_percent") or "0"),
+                "discount_amount": str(row.get("discount_amount") or "0"),
+                "tax_percent": str(row.get("tax_percent") or "0"),
+            }
+            for row in data.get("items", [])
+            if row.get("sales_invoice_item_id")
+        ],
+    })
 
 
 @permission_required_custom("sales_returns", "view")

@@ -57,6 +57,7 @@ urlpatterns = [
     path("returns/", views.sales_returns_list, name="returns"),
     path("returns/new/", views.sales_return_form, name="return_new"),
     path("returns/from-invoice/<int:invoice_id>/", views.sales_return_form, name="return_from_invoice"),
+    path("returns/invoice-items/<int:invoice_id>/", views.sales_return_invoice_items, name="return_invoice_items"),
     path("returns/<int:return_id>/", views.sales_return_detail, name="return_detail"),
     path("returns/<int:return_id>/edit/", views.sales_return_form, name="return_edit"),
     path("returns/<int:return_id>/cancel/", views.cancel_sales_return, name="return_cancel"),

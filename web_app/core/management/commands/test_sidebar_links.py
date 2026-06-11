@@ -5,6 +5,7 @@ from django.db import connection
 from django.template.loader import render_to_string
 from django.test import RequestFactory
 from django.urls import reverse
+from pathlib import Path
 
 from authentication.auth_utils import dictfetchone
 from core.context_processors import app_context
@@ -82,6 +83,20 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("FAIL Role Management: Users & Roles is active on Role Management page."))
         else:
             self.stdout.write("PASS Role Management: Users & Roles is not active.")
+
+        sidebar_template = Path("templates/partials/sidebar.html").read_text(encoding="utf-8")
+        if "forloop.counter <= 2" in sidebar_template:
+            failures += 1
+            self.stdout.write(self.style.ERROR("FAIL Sidebar: Masters/Sales are still forced open by loop position."))
+        else:
+            self.stdout.write("PASS Sidebar: parent menus open only from active section state.")
+
+        app_js = Path("static/js/app.js").read_text(encoding="utf-8")
+        if "vendor_sidebar_scroll_top" not in app_js or "sessionStorage.setItem(sidebarScrollKey" not in app_js:
+            failures += 1
+            self.stdout.write(self.style.ERROR("FAIL Sidebar: scroll position persistence was not found in app.js."))
+        else:
+            self.stdout.write("PASS Sidebar: scroll position is persisted in sessionStorage.")
 
         if failures:
             self.stdout.write(self.style.ERROR(f"FAIL: {failures} sidebar link check(s) failed."))

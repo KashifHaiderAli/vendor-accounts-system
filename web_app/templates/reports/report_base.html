@@ -29,7 +29,7 @@
                 <tr>
                     {% for cell in row.cells %}
                     <td class="{% if cell.kind == 'money' %}text-end{% endif %}">
-                        {% if cell.kind == 'money' %}{{ cell.value|floatformat:2 }}{% else %}{{ cell.value|default:"-" }}{% endif %}
+                        {% if cell.kind == 'money' %}{{ cell.value|format_amount }}{% else %}{{ cell.value|default:"-" }}{% endif %}
                     </td>
                     {% endfor %}
                 </tr>

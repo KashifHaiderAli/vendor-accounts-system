@@ -105,10 +105,10 @@ class Command(BaseCommand):
             "display_customer_mobile": "",
             "subject": "Classic quotation",
             "payment_terms_name": "15 Days",
-            "subtotal": Decimal("1000.00"),
-            "discount_total": Decimal("50.00"),
+            "subtotal": Decimal("1250000.50"),
+            "discount_total": Decimal("0.00"),
             "tax_total": Decimal("0.00"),
-            "grand_total": Decimal("950.00"),
+            "grand_total": Decimal("1250000.50"),
         }
         invoice = {
             "invoice_no": "INV-001",
@@ -121,12 +121,12 @@ class Command(BaseCommand):
             "dc_no": "DC-001",
             "po_number": "PO-001",
             "payment_terms_days": 15,
-            "subtotal": Decimal("1000.00"),
+            "subtotal": Decimal("1250000.50"),
             "discount_total": Decimal("50.00"),
             "tax_total": Decimal("0.00"),
-            "grand_total": Decimal("950.00"),
+            "grand_total": Decimal("1250000.50"),
         }
-        items = [{"description": "Classic Item", "quantity": Decimal("1.00"), "rate": Decimal("1000.00"), "line_total": Decimal("950.00")}]
+        items = [{"description": "Classic Item", "quantity": Decimal("1.00"), "rate": Decimal("1250000.50"), "line_total": Decimal("1250000.50")}]
 
         quotation_html = render_to_string(
             "sales/quotation_print_classic.html",
@@ -135,6 +135,11 @@ class Command(BaseCommand):
         invoice_html = render_to_string(
             "sales/invoice_print_classic.html",
             {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        tax_invoice = dict(invoice, tax_total=Decimal("225000.09"), grand_total=Decimal("1475000.59"))
+        tax_invoice_html = render_to_string(
+            "sales/invoice_print_classic.html",
+            {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
         )
 
         quotation_needles = ["QUOTATION", "S. NO.", "QTY.", "DESCRIPTION", "UNIT PRICE", "AMOUNT", "Sub Total", "Less Disc.", "Grand Total", "Rupees in words"]
@@ -162,13 +167,19 @@ class Command(BaseCommand):
                     failures.append(f"{template_name} contains hard-coded value: {hardcoded}")
         if "TAX INVOICE" in invoice_html:
             failures.append("Classic invoice output still contains TAX INVOICE.")
+        if "SALES TAX INVOICE" not in tax_invoice_html:
+            failures.append("Tax-enabled classic invoice does not show SALES TAX INVOICE.")
+        if "SALES TAX INVOICE" in invoice_html:
+            failures.append("Tax-disabled classic invoice should show INVOICE, not SALES TAX INVOICE.")
+        if "1,250,000.50" not in quotation_html or "1,250,000.50" not in invoice_html:
+            failures.append("Classic print amounts are not comma-formatted.")
         for forbidden in ["Tax", "TAX", "NTN", "STRN"]:
             if forbidden in quotation_html:
                 failures.append(f"Classic quotation tax-off output contains: {forbidden}")
             if forbidden in invoice_html:
                 failures.append(f"Classic invoice tax-off output contains: {forbidden}")
 
-        if "Nine Hundred Fifty Rupees Only" not in quotation_html or "Nine Hundred Fifty Rupees Only" not in invoice_html:
+        if "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in quotation_html or "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in invoice_html:
             failures.append("Amount in words did not render as expected.")
 
         if failures:

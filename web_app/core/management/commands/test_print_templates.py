@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.template.loader import get_template
 
-from core.format_utils import format_quantity
+from core.format_utils import format_amount, format_quantity
 
 
 DOCUMENT_PRINT_TEMPLATES = [
@@ -90,6 +90,8 @@ class Command(BaseCommand):
                 failures.append("sales/quotation_print.html does not use format_quantity for item quantity.")
         if format_quantity("1.00") != "1" or format_quantity("2.50") != "2.5":
             failures.append("format_quantity helper is not formatting whole/decimal quantities correctly.")
+        if format_amount("1250000.50") != "1,250,000.50":
+            failures.append("format_amount helper is not adding comma separators correctly.")
         try:
             from core.calculation_utils import calculate_line_total
 

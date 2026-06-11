@@ -1,6 +1,7 @@
 from django import template
 
 from core.format_utils import amount_in_words as amount_in_words_value
+from core.format_utils import format_amount as format_amount_value
 from core.format_utils import format_quantity as format_quantity_value
 
 
@@ -22,6 +23,11 @@ def field_label(value):
 @register.filter
 def format_quantity(value):
     return format_quantity_value(value)
+
+
+@register.filter
+def format_amount(value):
+    return format_amount_value(value)
 
 
 @register.filter

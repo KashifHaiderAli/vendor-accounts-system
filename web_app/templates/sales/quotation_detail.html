@@ -62,9 +62,9 @@
                     <td>{{ forloop.counter }}</td>
                     <td>{{ item.description }}</td>
                     <td class="text-end">{{ item.quantity|format_quantity }}</td>
-                    <td class="text-end">{{ item.rate|floatformat:2 }}</td>
-                    <td class="text-end">{{ item.discount_amount|floatformat:2 }}</td>
-                    <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+                    <td class="text-end">{{ item.rate|format_amount }}</td>
+                    <td class="text-end">{{ item.discount_amount|format_amount }}</td>
+                    <td class="text-end">{{ item.line_total|format_amount }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -72,10 +72,10 @@
     </div>
     <div class="app-card-body border-top">
         <div class="quotation-total-grid">
-            <div><span>Subtotal</span><strong>{{ quotation.subtotal|floatformat:2 }}</strong></div>
-            <div><span>Discount</span><strong>{{ quotation.discount_total|floatformat:2 }}</strong></div>
-            {% if tax_enabled %}<div><span>Tax</span><strong>{{ quotation.tax_total|floatformat:2 }}</strong></div>{% endif %}
-            <div class="grand"><span>Grand Total</span><strong>{{ quotation.grand_total|floatformat:2 }}</strong></div>
+            <div><span>Subtotal</span><strong>{{ quotation.subtotal|format_amount }}</strong></div>
+            <div><span>Discount</span><strong>{{ quotation.discount_total|format_amount }}</strong></div>
+            {% if tax_enabled %}<div><span>Tax</span><strong>{{ quotation.tax_total|format_amount }}</strong></div>{% endif %}
+            <div class="grand"><span>Grand Total</span><strong>{{ quotation.grand_total|format_amount }}</strong></div>
         </div>
     </div>
 </section>

@@ -30,7 +30,7 @@
     </table>
     <table class="print-table">
         <thead><tr><th>Sr</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">Amount</th></tr></thead>
-        <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td><td class="text-end">{{ item.rate|floatformat:2 }}</td><td class="text-end">{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.description }}</td><td class="text-end">{{ item.quantity|format_quantity }}</td><td class="text-end">{{ item.rate|format_amount }}</td><td class="text-end">{{ item.line_total|format_amount }}</td></tr>{% endfor %}</tbody>
     </table>
     {% include "partials/document_totals.html" with subtotal=invoice.subtotal discount_total=invoice.discount_total tax_total=invoice.tax_total grand_total=invoice.grand_total %}
     <section class="signature-grid"><div class="signature-line">Received By</div><div class="signature-line">Authorized Signature</div></section>
