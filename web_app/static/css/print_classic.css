@@ -41,6 +41,10 @@ body {
     padding: 0;
 }
 
+.letterhead-page {
+    padding-top: 38.1mm !important;
+}
+
 .classic-top {
     display: grid;
     grid-template-columns: 1fr 78mm;
@@ -283,6 +287,10 @@ body {
         width: auto;
         min-height: auto;
     }
+
+    .letterhead-page {
+        padding-top: 38.1mm !important;
+    }
 }
 
 .classic-items-table tbody tr.classic-item-row,
@@ -319,4 +327,3 @@ body {
 .classic-items-table tbody tr:last-child td {
     border-bottom: 1px solid #333 !important;
 }
-

@@ -252,6 +252,34 @@ def classic_pdf_quotation(request, quotation_id):
     return response
 
 
+@permission_required_custom("quotations", "view")
+def letterhead_print_quotation(request, quotation_id):
+    return render_classic_quotation(
+        request,
+        quotation_id,
+        "Letterhead printed",
+        pdf=False,
+        template_name="sales/quotation_print_letterhead.html",
+        print_title="Letterhead Quotation",
+        is_letterhead=True,
+    )
+
+
+@permission_required_custom("quotations", "view")
+def letterhead_pdf_quotation(request, quotation_id):
+    response = render_classic_quotation(
+        request,
+        quotation_id,
+        "Letterhead PDF viewed",
+        pdf=True,
+        template_name="sales/quotation_print_letterhead.html",
+        print_title="Letterhead Quotation",
+        is_letterhead=True,
+    )
+    response["Content-Disposition"] = 'inline; filename="quotation-letterhead.html"'
+    return response
+
+
 @permission_required_custom("customer_confirmations", "add")
 def convert_to_confirmation(request, quotation_id):
     company_id, branch_id = require_scope(request)
@@ -874,6 +902,32 @@ def classic_pdf_invoice(request, invoice_id):
     return response
 
 
+@permission_required_custom("sales_invoices", "view")
+def letterhead_print_invoice(request, invoice_id):
+    return render_classic_invoice(
+        request,
+        invoice_id,
+        pdf=False,
+        template_name="sales/invoice_print_letterhead.html",
+        print_title="Letterhead Invoice",
+        is_letterhead=True,
+    )
+
+
+@permission_required_custom("sales_invoices", "view")
+def letterhead_pdf_invoice(request, invoice_id):
+    response = render_classic_invoice(
+        request,
+        invoice_id,
+        pdf=True,
+        template_name="sales/invoice_print_letterhead.html",
+        print_title="Letterhead Invoice",
+        is_letterhead=True,
+    )
+    response["Content-Disposition"] = 'inline; filename="invoice-letterhead.html"'
+    return response
+
+
 def render_invoice_print(request, invoice_id, digital=False):
     company_id, branch_id = require_scope(request)
     if not company_id:
@@ -889,7 +943,7 @@ def render_invoice_print(request, invoice_id, digital=False):
     return render(request, template, context)
 
 
-def render_classic_invoice(request, invoice_id, pdf=False):
+def render_classic_invoice(request, invoice_id, pdf=False, template_name="sales/invoice_print_classic.html", print_title="Classic Invoice", is_letterhead=False):
     company_id, branch_id = require_scope(request)
     if not company_id:
         return redirect("authentication:login")
@@ -899,9 +953,10 @@ def render_classic_invoice(request, invoice_id, pdf=False):
         return redirect("sales:invoices")
     invoice_services.mark_printed(request, invoice, digital=pdf)
     context = invoice_services.get_print_context(company_id, branch_id, invoice_id)
-    context.update(build_print_context(company_id, request, "Classic Invoice", force_logo=pdf, force_pdf=pdf))
+    context.update(build_print_context(company_id, request, print_title, force_logo=pdf and not is_letterhead, force_pdf=pdf))
     context.update(build_classic_print_context(context, request, company_id, terms_source=None))
-    return render(request, "sales/invoice_print_classic.html", context)
+    context["is_letterhead"] = is_letterhead
+    return render(request, template_name, context)
 
 
 @permission_required_custom("customer_receipts", "view")
@@ -1147,20 +1202,51 @@ def sales_return_invoice_items(request, invoice_id):
     return JsonResponse({
         "ok": True,
         "customer_id": invoice.get("customer_id") or "",
+        "customer_name": invoice.get("customer_name") or "",
+        "invoice_no": invoice.get("invoice_no") or "",
         "items": [
             {
+                "invoice_item_id": row.get("sales_invoice_item_id") or "",
+                "item_id": row.get("item_service_id") or "",
+                "item_name": row.get("description") or "",
                 "item_service_id": row.get("item_service_id") or "",
                 "sales_invoice_item_id": row.get("sales_invoice_item_id") or "",
                 "description": row.get("description") or "",
+                "invoiced_qty": str(row.get("invoiced_qty") or "0"),
+                "already_returned_qty": str(row.get("already_returned_qty") or "0"),
+                "max_returnable_qty": str(row.get("max_quantity") or row.get("quantity") or "0"),
                 "quantity": str(row.get("quantity") or "0"),
                 "max_quantity": str(row.get("max_quantity") or row.get("quantity") or "0"),
                 "rate": str(row.get("rate") or "0"),
                 "discount_percent": str(row.get("discount_percent") or "0"),
                 "discount_amount": str(row.get("discount_amount") or "0"),
                 "tax_percent": str(row.get("tax_percent") or "0"),
+                "line_total": str(row.get("line_total") or "0"),
             }
             for row in data.get("items", [])
             if row.get("sales_invoice_item_id")
+        ],
+    })
+
+
+@login_required_custom
+def sales_return_customer_invoices(request, customer_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return JsonResponse({"ok": False, "error": "Company or branch session is missing."}, status=403)
+    if not user_has_permission(request, "sales_returns", "add"):
+        return JsonResponse({"ok": False, "error": "Permission denied."}, status=403)
+    rows = return_services.get_invoices(company_id, branch_id, customer_id)
+    return JsonResponse({
+        "ok": True,
+        "invoices": [
+            {
+                "id": row.get("id"),
+                "invoice_no": row.get("invoice_no") or "",
+                "invoice_date": row.get("invoice_date") or "",
+                "customer_id": row.get("customer_id") or "",
+            }
+            for row in rows
         ],
     })
 
@@ -1228,7 +1314,15 @@ def render_print_response(request, quotation_id, action_label):
     return render(request, "sales/quotation_print.html", context)
 
 
-def render_classic_quotation(request, quotation_id, action_label, pdf=False):
+def render_classic_quotation(
+    request,
+    quotation_id,
+    action_label,
+    pdf=False,
+    template_name="sales/quotation_print_classic.html",
+    print_title="Classic Quotation",
+    is_letterhead=False,
+):
     company_id, branch_id = require_scope(request)
     if not company_id:
         return redirect("authentication:login")
@@ -1238,9 +1332,10 @@ def render_classic_quotation(request, quotation_id, action_label, pdf=False):
         return redirect("sales:quotations")
     services.mark_printed(request, quotation, action_label)
     context = services.get_print_context(company_id, branch_id, quotation_id)
-    context.update(build_print_context(company_id, request, "Classic Quotation", force_logo=pdf, force_pdf=pdf))
+    context.update(build_print_context(company_id, request, print_title, force_logo=pdf and not is_letterhead, force_pdf=pdf))
     context.update(build_classic_print_context(context, request, company_id, terms_source=quotation.get("terms_conditions")))
-    return render(request, "sales/quotation_print_classic.html", context)
+    context["is_letterhead"] = is_letterhead
+    return render(request, template_name, context)
 
 
 def first_nonempty(*values):

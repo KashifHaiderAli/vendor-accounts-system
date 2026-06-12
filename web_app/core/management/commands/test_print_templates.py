@@ -11,9 +11,13 @@ from core.format_utils import format_amount, format_quantity
 
 DOCUMENT_PRINT_TEMPLATES = [
     "sales/quotation_print.html",
+    "sales/quotation_print_classic.html",
+    "sales/quotation_print_letterhead.html",
     "sales/delivery_challan_print.html",
     "sales/invoice_print_preprinted.html",
     "sales/invoice_print_digital.html",
+    "sales/invoice_print_classic.html",
+    "sales/invoice_print_letterhead.html",
     "sales/receipt_print.html",
     "sales/sales_return_print.html",
     "sales/confirmation_print.html",
@@ -64,6 +68,10 @@ class Command(BaseCommand):
                 failures.append(f"{template_name} file is missing.")
                 continue
             content = path.read_text(encoding="utf-8")
+            if template_name.endswith("_classic.html") or template_name.endswith("_letterhead.html"):
+                if "css/print_classic.css" not in content:
+                    failures.append(f"{template_name} does not reference css/print_classic.css.")
+                continue
             if "css/print.css" not in content and template_name != "sales/invoice_print_digital.html":
                 failures.append(f"{template_name} does not reference css/print.css.")
             if template_name != "reports/print_report.html" and "print_footer.html" not in content and template_name != "sales/invoice_print_digital.html":

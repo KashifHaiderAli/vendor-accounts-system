@@ -14,6 +14,8 @@
         <a class="btn btn-light" href="{% url 'sales:quotation_pdf' quotation.id %}?logo=1&pdf=1"><i class="bi bi-filetype-pdf"></i> PDF / Digital Copy</a>
         <a class="btn btn-light" href="{% url 'sales:quotation_classic_print' quotation.id %}"><i class="bi bi-layout-text-window"></i> Classic Print</a>
         <a class="btn btn-light" href="{% url 'sales:quotation_classic_pdf' quotation.id %}"><i class="bi bi-file-earmark-richtext"></i> Classic PDF</a>
+        <a class="btn btn-light" href="{% url 'sales:quotation_letterhead_print' quotation.id %}"><i class="bi bi-printer"></i> Letterhead Print</a>
+        <a class="btn btn-light" href="{% url 'sales:quotation_letterhead_pdf' quotation.id %}"><i class="bi bi-filetype-pdf"></i> Letterhead PDF</a>
         {% if can_duplicate %}<a class="btn btn-light" href="{% url 'sales:quotation_duplicate' quotation.id %}"><i class="bi bi-copy"></i> Duplicate</a>{% endif %}
         {% if can_edit %}<a class="btn btn-primary" href="{% url 'sales:quotation_edit' quotation.id %}"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
     </div>

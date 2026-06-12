@@ -185,12 +185,16 @@ def default_form_data(company_id, branch_id, invoice=None):
     }
     if invoice:
         for item in get_invoice_items(invoice["id"]):
-            available = money(item.get("quantity")) - returned_quantity(item["id"])
+            invoiced_qty = money(item.get("quantity"))
+            already_returned_qty = returned_quantity(item["id"])
+            available = invoiced_qty - already_returned_qty
             if available > 0:
                 data["items"].append({
                     "item_service_id": item.get("item_service_id") or "",
                     "sales_invoice_item_id": item.get("id"),
                     "description": item.get("description") or "",
+                    "invoiced_qty": str(invoiced_qty),
+                    "already_returned_qty": str(already_returned_qty),
                     "quantity": str(available),
                     "rate": item.get("rate") or "0",
                     "discount_percent": item.get("discount_percent") or "0",
