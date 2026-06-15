@@ -16,6 +16,16 @@ def format_quantity(qty, blank_for_none=True):
     return format(normalized, "f").rstrip("0").rstrip(".")
 
 
+def format_amount(value, places=2, blank_for_none=True):
+    if value is None or value == "":
+        return "" if blank_for_none else f"{Decimal('0'):.{places}f}"
+    try:
+        amount = Decimal(str(value)).quantize(Decimal("1").scaleb(-places))
+    except (InvalidOperation, TypeError, ValueError):
+        return str(value)
+    return f"{amount:,.{places}f}"
+
+
 ONES = (
     "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
     "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",

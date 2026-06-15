@@ -229,6 +229,19 @@ body {
     text-align: center;
 }
 
+.signature-line.has-digital-signature {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.digital-signature-img {
+    max-width: 255px !important;
+    max-height: 128px !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 4px auto;
+}
+
 tr {
     page-break-inside: avoid;
 }

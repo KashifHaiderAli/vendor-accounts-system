@@ -46,15 +46,29 @@ class Command(BaseCommand):
         failures = []
         base_dir = Path(settings.BASE_DIR)
         print_css = base_dir / "static" / "css" / "print.css"
+        digital_signature_dir = base_dir / "DigitalSignature"
 
         if not print_css.exists():
             failures.append("static/css/print.css is missing.")
         else:
             css = print_css.read_text(encoding="utf-8")
-            required_css = ["@page", "size: A4", "margin: 8mm", ".print-footer", ".print-table", ".print-detail-grid", ".print-label", ".print-value"]
+            required_css = [
+                "@page",
+                "size: A4",
+                "margin: 8mm",
+                ".print-footer",
+                ".print-table",
+                ".print-detail-grid",
+                ".print-label",
+                ".print-value",
+                ".digital-signature-img",
+                ".signature-line.has-digital-signature",
+            ]
             for marker in required_css:
                 if marker not in css:
                     failures.append(f"print.css is missing `{marker}`.")
+        if not digital_signature_dir.exists():
+            failures.append("DigitalSignature folder is missing.")
 
         for template_name in DOCUMENT_PRINT_TEMPLATES:
             try:
@@ -118,6 +132,14 @@ class Command(BaseCommand):
         for partial in partials:
             if not partial.exists():
                 failures.append(f"{partial.relative_to(base_dir)} is missing.")
+
+        base_template = base_dir / "templates" / "base.html"
+        if base_template.exists():
+            base_content = base_template.read_text(encoding="utf-8")
+            if "{% static 'favicon.ico' %}" not in base_content:
+                failures.append("base.html does not include favicon.ico links.")
+        else:
+            failures.append("templates/base.html is missing.")
 
         if failures:
             for failure in failures:

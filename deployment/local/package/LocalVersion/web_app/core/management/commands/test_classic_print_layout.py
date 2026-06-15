@@ -16,7 +16,9 @@ class Command(BaseCommand):
         failures = []
         template_paths = [
             "sales/quotation_print_classic.html",
+            "sales/quotation_print_letterhead.html",
             "sales/invoice_print_classic.html",
+            "sales/invoice_print_letterhead.html",
             "sales/quotation_print.html",
             "sales/invoice_print_preprinted.html",
             "sales/invoice_print_digital.html",
@@ -44,11 +46,17 @@ class Command(BaseCommand):
                 ".classic-items-table tbody tr.classic-item-row",
                 ".classic-items-table tbody tr.classic-filler-row td",
                 ".classic-invoice-received-by",
+                ".letterhead-page",
             ]:
                 if selector not in css_text:
                     failures.append(f"Classic CSS missing spacing selector: {selector}")
 
-        for template_name in ["sales/quotation_print_classic.html", "sales/invoice_print_classic.html"]:
+        for template_name in [
+            "sales/quotation_print_classic.html",
+            "sales/quotation_print_letterhead.html",
+            "sales/invoice_print_classic.html",
+            "sales/invoice_print_letterhead.html",
+        ]:
             source = (Path(settings.BASE_DIR) / "templates" / template_name).read_text(encoding="utf-8")
             if 'class="classic-item-row"' not in source:
                 failures.append(f"{template_name} missing classic-item-row on real item rows.")
@@ -61,10 +69,14 @@ class Command(BaseCommand):
             ("sales:quotation_print", 1),
             ("sales:quotation_classic_print", 1),
             ("sales:quotation_classic_pdf", 1),
+            ("sales:quotation_letterhead_print", 1),
+            ("sales:quotation_letterhead_pdf", 1),
             ("sales:invoice_print", 1),
             ("sales:invoice_digital_print", 1),
             ("sales:invoice_classic_print", 1),
             ("sales:invoice_classic_pdf", 1),
+            ("sales:invoice_letterhead_print", 1),
+            ("sales:invoice_letterhead_pdf", 1),
         ]:
             try:
                 reverse(route_name, args=[arg])
@@ -105,10 +117,10 @@ class Command(BaseCommand):
             "display_customer_mobile": "",
             "subject": "Classic quotation",
             "payment_terms_name": "15 Days",
-            "subtotal": Decimal("1000.00"),
-            "discount_total": Decimal("50.00"),
+            "subtotal": Decimal("1250000.50"),
+            "discount_total": Decimal("0.00"),
             "tax_total": Decimal("0.00"),
-            "grand_total": Decimal("950.00"),
+            "grand_total": Decimal("1250000.50"),
         }
         invoice = {
             "invoice_no": "INV-001",
@@ -121,12 +133,12 @@ class Command(BaseCommand):
             "dc_no": "DC-001",
             "po_number": "PO-001",
             "payment_terms_days": 15,
-            "subtotal": Decimal("1000.00"),
+            "subtotal": Decimal("1250000.50"),
             "discount_total": Decimal("50.00"),
             "tax_total": Decimal("0.00"),
-            "grand_total": Decimal("950.00"),
+            "grand_total": Decimal("1250000.50"),
         }
-        items = [{"description": "Classic Item", "quantity": Decimal("1.00"), "rate": Decimal("1000.00"), "line_total": Decimal("950.00")}]
+        items = [{"description": "Classic Item", "quantity": Decimal("1.00"), "rate": Decimal("1250000.50"), "line_total": Decimal("1250000.50")}]
 
         quotation_html = render_to_string(
             "sales/quotation_print_classic.html",
@@ -135,6 +147,23 @@ class Command(BaseCommand):
         invoice_html = render_to_string(
             "sales/invoice_print_classic.html",
             {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        tax_invoice = dict(invoice, tax_total=Decimal("225000.09"), grand_total=Decimal("1475000.59"))
+        tax_invoice_html = render_to_string(
+            "sales/invoice_print_classic.html",
+            {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        letterhead_quotation_html = render_to_string(
+            "sales/quotation_print_letterhead.html",
+            {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        letterhead_invoice_html = render_to_string(
+            "sales/invoice_print_letterhead.html",
+            {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        letterhead_tax_invoice_html = render_to_string(
+            "sales/invoice_print_letterhead.html",
+            {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
         )
 
         quotation_needles = ["QUOTATION", "S. NO.", "QTY.", "DESCRIPTION", "UNIT PRICE", "AMOUNT", "Sub Total", "Less Disc.", "Grand Total", "Rupees in words"]
@@ -162,13 +191,35 @@ class Command(BaseCommand):
                     failures.append(f"{template_name} contains hard-coded value: {hardcoded}")
         if "TAX INVOICE" in invoice_html:
             failures.append("Classic invoice output still contains TAX INVOICE.")
+        if "SALES TAX INVOICE" not in tax_invoice_html:
+            failures.append("Tax-enabled classic invoice does not show SALES TAX INVOICE.")
+        if "SALES TAX INVOICE" in invoice_html:
+            failures.append("Tax-disabled classic invoice should show INVOICE, not SALES TAX INVOICE.")
+        if "1,250,000.50" not in quotation_html or "1,250,000.50" not in invoice_html:
+            failures.append("Classic print amounts are not comma-formatted.")
         for forbidden in ["Tax", "TAX", "NTN", "STRN"]:
             if forbidden in quotation_html:
                 failures.append(f"Classic quotation tax-off output contains: {forbidden}")
             if forbidden in invoice_html:
                 failures.append(f"Classic invoice tax-off output contains: {forbidden}")
+            if forbidden in letterhead_quotation_html:
+                failures.append(f"Letterhead quotation tax-off output contains: {forbidden}")
+            if forbidden in letterhead_invoice_html:
+                failures.append(f"Letterhead invoice tax-off output contains: {forbidden}")
 
-        if "Nine Hundred Fifty Rupees Only" not in quotation_html or "Nine Hundred Fifty Rupees Only" not in invoice_html:
+        if "QUOTATION" not in letterhead_quotation_html:
+            failures.append("Letterhead quotation output is missing QUOTATION title.")
+        if "SALES TAX INVOICE" not in letterhead_tax_invoice_html:
+            failures.append("Tax-enabled letterhead invoice does not show SALES TAX INVOICE.")
+        if "INVOICE" not in letterhead_invoice_html or "SALES TAX INVOICE" in letterhead_invoice_html:
+            failures.append("Tax-disabled letterhead invoice title is incorrect.")
+        for forbidden in ["classic-top", "classic-company-header", "classic-logo", "Dynamic Address", "classic@example.com", "dynamic.example.com", "03001111111"]:
+            if forbidden in letterhead_quotation_html:
+                failures.append(f"Letterhead quotation output contains generated header/contact detail: {forbidden}")
+            if forbidden in letterhead_invoice_html:
+                failures.append(f"Letterhead invoice output contains generated header/contact detail: {forbidden}")
+
+        if "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in quotation_html or "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in invoice_html:
             failures.append("Amount in words did not render as expected.")
 
         if failures:

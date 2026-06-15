@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.db import DatabaseError
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
 from accounts_module.accounting_engine import AccountingError
@@ -446,6 +447,70 @@ def purchase_return_form(request, return_id=None, purchase_id=None):
             else:
                 messages.error(request, "Please correct the highlighted errors.")
     return render(request, "purchases/purchase_return_form.html", {"page_title": "Edit Purchase Return" if is_edit else "New Purchase Return", "form_data": form_data, "form_items": form_data.get("items", []), "errors": errors, "error_summary": collect_errors(errors), "is_edit": is_edit, "posted": posted, "suppliers": return_services.get_suppliers(company_id, branch_id), "purchases": return_services.get_purchases(company_id, branch_id, form_data.get("supplier_id") or None), "items": return_services.get_items(company_id, branch_id)})
+
+
+@login_required_custom
+def purchase_return_purchase_items(request, purchase_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return JsonResponse({"ok": False, "error": "Company or branch session is missing."}, status=403)
+    if not user_has_permission(request, "purchase_returns", "add"):
+        return JsonResponse({"ok": False, "error": "Permission denied."}, status=403)
+    purchase = return_services.get_purchase(company_id, branch_id, purchase_id)
+    if not purchase:
+        return JsonResponse({"ok": False, "error": "Supplier purchase was not found."}, status=404)
+    data = return_services.default_form_data(company_id, branch_id, purchase)
+    return JsonResponse({
+        "ok": True,
+        "supplier_id": purchase.get("supplier_id") or "",
+        "supplier_name": purchase.get("supplier_name") or "",
+        "supplier_bill_no": purchase.get("supplier_bill_no") or "",
+        "purchase_no": purchase.get("purchase_no") or "",
+        "items": [
+            {
+                "purchase_item_id": row.get("supplier_purchase_item_id") or "",
+                "item_id": row.get("item_service_id") or "",
+                "item_name": row.get("description") or "",
+                "item_service_id": row.get("item_service_id") or "",
+                "supplier_purchase_item_id": row.get("supplier_purchase_item_id") or "",
+                "description": row.get("description") or "",
+                "purchased_qty": str(row.get("purchased_qty") or "0"),
+                "already_returned_qty": str(row.get("already_returned_qty") or "0"),
+                "max_returnable_qty": str(row.get("max_quantity") or row.get("quantity") or "0"),
+                "quantity": str(row.get("quantity") or "0"),
+                "max_quantity": str(row.get("max_quantity") or row.get("quantity") or "0"),
+                "rate": str(row.get("purchase_rate") or "0"),
+                "purchase_rate": str(row.get("purchase_rate") or "0"),
+                "tax_percent": str(row.get("tax_percent") or "0"),
+                "line_total": str(row.get("line_total") or "0"),
+            }
+            for row in data.get("items", [])
+            if row.get("supplier_purchase_item_id")
+        ],
+    })
+
+
+@login_required_custom
+def purchase_return_supplier_purchases(request, supplier_id):
+    company_id, branch_id = require_scope(request)
+    if not company_id:
+        return JsonResponse({"ok": False, "error": "Company or branch session is missing."}, status=403)
+    if not user_has_permission(request, "purchase_returns", "add"):
+        return JsonResponse({"ok": False, "error": "Permission denied."}, status=403)
+    rows = return_services.get_purchases(company_id, branch_id, supplier_id)
+    return JsonResponse({
+        "ok": True,
+        "purchases": [
+            {
+                "id": row.get("id"),
+                "purchase_no": row.get("purchase_no") or "",
+                "purchase_date": row.get("purchase_date") or "",
+                "supplier_id": row.get("supplier_id") or "",
+                "supplier_bill_no": row.get("supplier_bill_no") or "",
+            }
+            for row in rows
+        ],
+    })
 
 
 @permission_required_custom("purchase_returns", "view")

@@ -170,10 +170,12 @@ def default_form_data(company_id, branch_id, purchase=None):
     data = {"purchase_return_no": generate_return_no(company_id, branch_id), "return_date": today_iso(), "supplier_id": purchase.get("supplier_id") if purchase else "", "supplier_purchase_id": purchase.get("id") if purchase else "", "supplier_bill_no": purchase.get("supplier_bill_no") if purchase else "", "return_reason": "", "remarks": "", "status": "Posted", "subtotal": "0.00", "tax_total": "0.00", "grand_total": "0.00", "refund_amount": "0.00", "items": []}
     if purchase:
         for item in get_purchase_items(purchase["id"]):
-            available = money(item.get("quantity")) - returned_quantity(item["id"])
+            purchased_qty = money(item.get("quantity"))
+            already_returned_qty = returned_quantity(item["id"])
+            available = purchased_qty - already_returned_qty
             if available > 0:
-                data["items"].append({"item_service_id": item.get("item_service_id") or "", "supplier_purchase_item_id": item.get("id"), "description": item.get("description") or "", "quantity": str(available), "purchase_rate": item.get("purchase_rate") or "0", "tax_percent": item.get("tax_percent") or "0", "tax_amount": "0.00", "line_total": "0.00", "max_quantity": str(available), "errors": {}})
-    if not data["items"]:
+                data["items"].append({"item_service_id": item.get("item_service_id") or "", "supplier_purchase_item_id": item.get("id"), "description": item.get("description") or "", "purchased_qty": str(purchased_qty), "already_returned_qty": str(already_returned_qty), "quantity": str(available), "purchase_rate": item.get("purchase_rate") or "0", "tax_percent": item.get("tax_percent") or "0", "tax_amount": "0.00", "line_total": "0.00", "max_quantity": str(available), "errors": {}})
+    if purchase and not data["items"]:
         data["items"] = [empty_item_row()]
     return data
 
@@ -264,7 +266,7 @@ def validate_and_calculate(data, company_id, branch_id, return_id=None):
     grand_total = subtotal + tax_total
     if grand_total <= 0:
         errors["grand_total"] = "Return total must be greater than zero."
-    cleaned.update({"items": data.get("items") or [], "subtotal": subtotal, "tax_total": tax_total, "grand_total": grand_total, "refund_amount": Decimal("0.00"), "status": "Posted"})
+    cleaned.update({"items": data.get("items") or [], "subtotal": subtotal, "tax_total": tax_total, "grand_total": grand_total, "refund_amount": grand_total, "status": "Posted"})
     return {k: v for k, v in errors.items() if v}, cleaned
 
 
@@ -291,7 +293,7 @@ def save_return(company_id, branch_id, user_id, data, return_id=None):
                 )
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NULL,%s,%s,%s,%s,%s)
                 """,
-                [company_id, branch_id, data["purchase_return_no"], data["return_date"], data["supplier_id"], data["supplier_purchase_id"], data.get("supplier_bill_no"), data.get("return_reason"), str(data["subtotal"]), str(data["tax_total"]), str(data["grand_total"]), "0.00", "Posted", data.get("remarks"), user_id, user_id, timestamp, timestamp],
+                [company_id, branch_id, data["purchase_return_no"], data["return_date"], data["supplier_id"], data["supplier_purchase_id"], data.get("supplier_bill_no"), data.get("return_reason"), str(data["subtotal"]), str(data["tax_total"]), str(data["grand_total"]), str(data.get("refund_amount") or data["grand_total"]), "Posted", data.get("remarks"), user_id, user_id, timestamp, timestamp],
             )
             saved_id = cursor.lastrowid
             for item in data["items"]:

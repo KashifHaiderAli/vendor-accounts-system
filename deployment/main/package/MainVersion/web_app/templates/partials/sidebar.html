@@ -16,7 +16,7 @@
         {% endif %}
 
         {% for group in sidebar_groups %}
-        <details class="sidebar-group {% if group.active %}sidebar-group-active{% endif %}" {% if group.active or forloop.counter <= 2 %}open{% endif %}>
+        <details class="sidebar-group {% if group.active %}sidebar-group-active{% endif %}" {% if group.active %}open{% endif %}>
             <summary>
                 {% if group.url %}
                 <a class="sidebar-group-link" href="{{ group.url }}" onclick="event.stopPropagation();">

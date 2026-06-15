@@ -3,6 +3,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sidebarToggle = document.querySelector(".sidebar-mobile-toggle");
     const sidebar = document.querySelector(".app-sidebar");
+    const sidebarScrollKey = "vendor_sidebar_scroll_top";
+
+    if (sidebar) {
+        const savedSidebarTop = sessionStorage.getItem(sidebarScrollKey);
+        if (savedSidebarTop !== null) {
+            sidebar.scrollTop = Number.parseInt(savedSidebarTop, 10) || 0;
+        }
+
+        sidebar.addEventListener("scroll", () => {
+            sessionStorage.setItem(sidebarScrollKey, String(sidebar.scrollTop));
+        }, {passive: true});
+
+        window.addEventListener("beforeunload", () => {
+            sessionStorage.setItem(sidebarScrollKey, String(sidebar.scrollTop));
+        });
+    }
 
     if (sidebarToggle && sidebar) {
         sidebarToggle.addEventListener("click", () => {

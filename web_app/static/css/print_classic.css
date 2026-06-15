@@ -278,6 +278,24 @@ body {
     min-height: 13mm;
 }
 
+.digital-signature-img {
+    max-width: 255px !important;
+    max-height: 128px !important;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 4px auto;
+}
+
+.classic-signature-area .digital-signature-img {
+    max-width: 285px !important;
+    max-height: 135px !important;
+    object-fit: contain;
+}
+
+.classic-sign-caption {
+    text-align: center;
+}
+
 @media print {
     .print-actions {
         display: none;

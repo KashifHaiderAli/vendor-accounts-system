@@ -56,8 +56,8 @@
                 <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">{{ item.quantity|format_quantity }}</td>
                 <td>{{ item.description }}</td>
-                <td class="text-end">{{ item.rate|floatformat:2 }}</td>
-                <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+                <td class="text-end">{{ item.rate|format_amount }}</td>
+                <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
@@ -95,10 +95,10 @@
             </div>
         </div>
         <div class="classic-totals-box">
-            <div class="classic-total-row"><span>Sub Total</span><strong>{{ quotation.subtotal|floatformat:2 }}</strong></div>
-            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ quotation.discount_total|floatformat:2 }}</strong></div>
-            {% if tax_enabled and quotation.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ quotation.tax_total|floatformat:2 }}</strong></div>{% endif %}
-            <div class="classic-total-row classic-total-due"><span>Grand Total</span><strong>{{ quotation.grand_total|floatformat:2 }}</strong></div>
+            <div class="classic-total-row"><span>Sub Total</span><strong>{{ quotation.subtotal|format_amount }}</strong></div>
+            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ quotation.discount_total|format_amount }}</strong></div>
+            {% if tax_enabled and quotation.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ quotation.tax_total|format_amount }}</strong></div>{% endif %}
+            <div class="classic-total-row classic-total-due"><span>Grand Total</span><strong>{{ quotation.grand_total|format_amount }}</strong></div>
         </div>
     </section>
 

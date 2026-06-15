@@ -39,6 +39,8 @@ class LicenseValidationMiddleware:
             "/license/",
             "/license-expired/",
             "/static/",
+            "/favicon.ico",
+            "/digital-signature/",
         )
         return any(path.startswith(prefix) for prefix in exempt_prefixes)
 

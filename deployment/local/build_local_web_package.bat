@@ -36,9 +36,12 @@ mkdir "%RUNTIME_PYTHON%"
 mkdir "%LOCAL_ROOT%\data"
 mkdir "%LOCAL_ROOT%\backups"
 mkdir "%LOCAL_ROOT%\logs"
+mkdir "%WEB_APP_SOURCE%\DigitalSignature" 2>nul
 
-robocopy "%WEB_APP_SOURCE%" "%LOCAL_ROOT%\web_app" /E /XD __pycache__ test_reports /XF *.pyc *.sqlite *.db
+robocopy "%WEB_APP_SOURCE%" "%LOCAL_ROOT%\web_app" /E /XD __pycache__ test_reports /XF *.pyc *.sqlite *.db DigitalSignature.png
 if errorlevel 8 exit /b 1
+
+if not exist "%LOCAL_ROOT%\web_app\DigitalSignature" mkdir "%LOCAL_ROOT%\web_app\DigitalSignature"
 
 robocopy "%PORTABLE_RUNTIME_SOURCE%" "%RUNTIME_PYTHON%" /E /XD __pycache__ /XF *.pyc
 if errorlevel 8 exit /b 1
@@ -71,6 +74,12 @@ if not exist "%LOCAL_ROOT%\web_app\static\css\app.css" (
     exit /b 1
 )
 
+if not exist "%LOCAL_ROOT%\web_app\static\css\print.css" (
+    echo ERROR: Package missing print CSS:
+    echo %LOCAL_ROOT%\web_app\static\css\print.css
+    exit /b 1
+)
+
 if not exist "%LOCAL_ROOT%\web_app\static\css\print_classic.css" (
     echo ERROR: Package missing classic print CSS:
     echo %LOCAL_ROOT%\web_app\static\css\print_classic.css
@@ -89,6 +98,12 @@ if not exist "%LOCAL_ROOT%\web_app\templates\sales\invoice_print_classic.html" (
     exit /b 1
 )
 
+if exist "%WEB_APP_SOURCE%\static\favicon.ico" if not exist "%LOCAL_ROOT%\web_app\static\favicon.ico" (
+    echo ERROR: Source favicon exists but was not copied:
+    echo %LOCAL_ROOT%\web_app\static\favicon.ico
+    exit /b 1
+)
+
 echo.
 echo LocalVersion package build summary
 echo ----------------------------------
@@ -96,7 +111,10 @@ echo Package path:
 echo %LOCAL_ROOT%
 echo Web app copied: yes
 echo app.css included: yes
+echo print.css included: yes
 echo print_classic.css included: yes
+echo DigitalSignature folder included: yes
+if exist "%LOCAL_ROOT%\web_app\static\favicon.ico" (echo favicon.ico included: yes) else (echo favicon.ico included: no source file)
 echo classic print templates included: yes
 echo Portable Python runtime copied: yes
 echo Database included: no, by design

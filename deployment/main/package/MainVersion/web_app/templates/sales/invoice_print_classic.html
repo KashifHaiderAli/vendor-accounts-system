@@ -23,7 +23,7 @@
         </header>
     </section>
 
-    <h1 class="classic-title">INVOICE</h1>
+    <h1 class="classic-title">{% if tax_enabled %}SALES TAX INVOICE{% else %}INVOICE{% endif %}</h1>
 
     <section class="classic-meta-grid">
         <table class="classic-meta-table">
@@ -56,8 +56,8 @@
                 <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">{{ item.quantity|format_quantity }}</td>
                 <td>{{ item.description }}</td>
-                <td class="text-end">{{ item.rate|floatformat:2 }}</td>
-                <td class="text-end">{{ item.line_total|floatformat:2 }}</td>
+                <td class="text-end">{{ item.rate|format_amount }}</td>
+                <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
@@ -82,10 +82,10 @@
             <p class="classic-name-title">Name &amp; Title: _____________________</p>
         </div>
         <div class="classic-totals-box">
-            <div class="classic-total-row"><span>Sub Total</span><strong>{{ invoice.subtotal|floatformat:2 }}</strong></div>
-            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ invoice.discount_total|floatformat:2 }}</strong></div>
-            {% if tax_enabled and invoice.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ invoice.tax_total|floatformat:2 }}</strong></div>{% endif %}
-            <div class="classic-total-row classic-total-due"><span>Total Due</span><strong>{{ invoice.grand_total|floatformat:2 }}</strong></div>
+            <div class="classic-total-row"><span>Sub Total</span><strong>{{ invoice.subtotal|format_amount }}</strong></div>
+            <div class="classic-total-row"><span>Less Disc.</span><strong>{{ invoice.discount_total|format_amount }}</strong></div>
+            {% if tax_enabled and invoice.tax_total > 0 %}<div class="classic-total-row"><span>Tax Total</span><strong>{{ invoice.tax_total|format_amount }}</strong></div>{% endif %}
+            <div class="classic-total-row classic-total-due"><span>Total Due</span><strong>{{ invoice.grand_total|format_amount }}</strong></div>
         </div>
     </section>
 

@@ -37,7 +37,14 @@
     </table>
     {% include "partials/document_totals.html" with subtotal=quotation.subtotal discount_total=quotation.discount_total tax_total=quotation.tax_total grand_total=quotation.grand_total %}
     {% if quotation.terms_conditions %}<section class="print-panel"><strong>Terms:</strong><br>{{ quotation.terms_conditions|linebreaksbr }}</section>{% endif %}
-    <section class="signature-grid"><div class="signature-line">Prepared By</div><div class="signature-line">{{ company_settings.authorized_person_name|default:"Authorized Signature" }}</div></section>
+    <section class="signature-grid">
+        <div class="signature-line">Prepared By</div>
+        {% if digital_signature_url %}
+        <div class="signature-line has-digital-signature"><img src="{{ digital_signature_url }}" class="digital-signature-img" alt="Digital Signature"><span>Authorized Signature</span></div>
+        {% else %}
+        <div class="signature-line">{{ company_settings.authorized_person_name|default:"Authorized Signature" }}</div>
+        {% endif %}
+    </section>
     {% include "partials/print_footer.html" %}
 </main>
 </body>
