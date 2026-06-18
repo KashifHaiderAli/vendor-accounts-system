@@ -8,12 +8,14 @@
 </head>
 <body>
 {% include "partials/print_actions.html" %}
-<main class="classic-page">
+<main class="classic-page classic-header-{{ classic_header_alignment|default:'right' }}">
+    {% if classic_show_watermark_logo and classic_watermark_logo_url %}<img class="classic-watermark" src="{{ classic_watermark_logo_url }}" alt="">{% endif %}
     <section class="classic-top">
-        <div></div>
-        <header class="classic-company-header">
-            {% if show_logo and logo_url %}<img class="classic-logo" src="{{ logo_url }}" alt="Company logo">{% endif %}
-            <div class="classic-company-name">{{ classic_company_name|default:"Company" }}</div>
+        <header class="classic-company-header" style="color: {{ classic_header_color|default:'#111111' }}; font-size: {{ classic_company_address_font_size|default:10 }}px; --classic-company-name-font-size: {{ classic_company_name_font_size|default:18 }}px;">
+            <div class="classic-company-title-row">
+                {% if show_logo and logo_url %}<img class="classic-logo-inline" src="{{ logo_url }}" alt="Company logo">{% endif %}
+                <span class="classic-company-name" style="font-size: {{ classic_company_name_font_size|default:18 }}px;">{{ classic_company_name|default:"Company" }}</span>
+            </div>
             {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
             {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
             {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
@@ -60,14 +62,9 @@
                 <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
+            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
         </tbody>
     </table>
 

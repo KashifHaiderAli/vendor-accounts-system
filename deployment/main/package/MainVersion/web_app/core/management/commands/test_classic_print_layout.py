@@ -4,6 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.conf import settings
+from django.test import Client
 from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse
@@ -47,6 +48,7 @@ class Command(BaseCommand):
                 ".classic-items-table tbody tr.classic-filler-row td",
                 ".classic-invoice-received-by",
                 ".letterhead-page",
+                ".digital-signature-img",
             ]:
                 if selector not in css_text:
                     failures.append(f"Classic CSS missing spacing selector: {selector}")
@@ -165,6 +167,33 @@ class Command(BaseCommand):
             "sales/invoice_print_letterhead.html",
             {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
         )
+        signature_context = {"digital_signature_url": "/digital-signature/"}
+        signature_templates = {
+            "classic quotation": render_to_string(
+                "sales/quotation_print_classic.html",
+                {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context, **signature_context},
+            ),
+            "classic invoice": render_to_string(
+                "sales/invoice_print_classic.html",
+                {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context, **signature_context},
+            ),
+            "letterhead quotation": render_to_string(
+                "sales/quotation_print_letterhead.html",
+                {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context, **signature_context},
+            ),
+            "letterhead invoice": render_to_string(
+                "sales/invoice_print_letterhead.html",
+                {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **classic_context, **signature_context},
+            ),
+            "modern quotation": render_to_string(
+                "sales/quotation_print.html",
+                {"company": company, "company_settings": {}, "quotation": quotation, "items": items, "tax_enabled": False, **signature_context},
+            ),
+            "modern invoice": render_to_string(
+                "sales/invoice_print_preprinted.html",
+                {"company": company, "invoice": invoice, "items": items, "tax_enabled": False, **signature_context},
+            ),
+        }
 
         quotation_needles = ["QUOTATION", "S. NO.", "QTY.", "DESCRIPTION", "UNIT PRICE", "AMOUNT", "Sub Total", "Less Disc.", "Grand Total", "Rupees in words"]
         invoice_needles = ["INVOICE", "S. NO.", "QTY.", "DESCRIPTION", "UNIT PRICE", "AMOUNT", "Sub Total", "Less Disc.", "Total Due", "Rupees in words"]
@@ -207,6 +236,18 @@ class Command(BaseCommand):
             if forbidden in letterhead_invoice_html:
                 failures.append(f"Letterhead invoice tax-off output contains: {forbidden}")
 
+        for label, html in signature_templates.items():
+            if "digital-signature-img" not in html or "/digital-signature/" not in html:
+                failures.append(f"{label} does not render digital signature image when URL is present.")
+        for label, html in {
+            "classic quotation": quotation_html,
+            "classic invoice": invoice_html,
+            "letterhead quotation": letterhead_quotation_html,
+            "letterhead invoice": letterhead_invoice_html,
+        }.items():
+            if "digital-signature-img" in html:
+                failures.append(f"{label} renders digital signature image without URL.")
+
         if "QUOTATION" not in letterhead_quotation_html:
             failures.append("Letterhead quotation output is missing QUOTATION title.")
         if "SALES TAX INVOICE" not in letterhead_tax_invoice_html:
@@ -221,6 +262,28 @@ class Command(BaseCommand):
 
         if "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in quotation_html or "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in invoice_html:
             failures.append("Amount in words did not render as expected.")
+
+        client = Client()
+        favicon_response = client.get("/favicon.ico", HTTP_HOST="127.0.0.1")
+        if favicon_response.status_code == 404:
+            failures.append("/favicon.ico returned 404.")
+        signature_dir = Path(settings.BASE_DIR) / "DigitalSignature"
+        signature_dir.mkdir(exist_ok=True)
+        signature_path = signature_dir / "DigitalSignature.png"
+        created_signature = False
+        if not signature_path.exists():
+            signature_path.write_bytes(
+                b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+                b"\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfeA\xe2!\xbc\x00\x00\x00\x00IEND\xaeB`\x82"
+            )
+            created_signature = True
+        try:
+            signature_response = client.get("/digital-signature/", HTTP_HOST="127.0.0.1")
+            if signature_response.status_code != 200:
+                failures.append(f"/digital-signature/ returned {signature_response.status_code} when DigitalSignature.png exists.")
+        finally:
+            if created_signature:
+                signature_path.unlink(missing_ok=True)
 
         if failures:
             for failure in failures:

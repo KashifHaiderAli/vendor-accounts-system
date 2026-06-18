@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from django.conf import settings
 from django.db import connection
 
 from authentication.auth_utils import dictfetchone
@@ -15,6 +18,15 @@ def should_show_logo(request=None):
 
 def is_pdf_copy(request=None):
     return bool(request and request.GET.get("pdf") == "1")
+
+
+def get_digital_signature_path():
+    signature_path = Path(settings.BASE_DIR) / "DigitalSignature" / "DigitalSignature.png"
+    return signature_path if signature_path.exists() else None
+
+
+def get_digital_signature_url():
+    return "/digital-signature/" if get_digital_signature_path() else ""
 
 
 def build_print_context(company_id, request=None, document_title="", force_logo=False, force_pdf=False):
@@ -36,4 +48,5 @@ def build_print_context(company_id, request=None, document_title="", force_logo=
         "print_mode": "digital" if (force_pdf or is_pdf_copy(request)) else "with_logo" if show_logo else "without_logo",
         "document_title": document_title,
         "preprinted_invoice_settings": PREPRINTED_INVOICE_SETTINGS,
+        "digital_signature_url": get_digital_signature_url(),
     }

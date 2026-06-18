@@ -9,6 +9,14 @@ from django.core.management.base import BaseCommand, CommandError
 from django.template.loader import get_template, render_to_string
 from django.urls import reverse
 
+from core.classic_print_settings import (
+    DEFAULT_CLASSIC_COMPANY_ADDRESS_FONT_SIZE,
+    DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE,
+    normalize_classic_header_alignment,
+    normalize_classic_header_color,
+    normalize_font_size,
+)
+
 
 class Command(BaseCommand):
     help = "Verify classic quotation and invoice print templates/routes."
@@ -49,9 +57,26 @@ class Command(BaseCommand):
                 ".classic-invoice-received-by",
                 ".letterhead-page",
                 ".digital-signature-img",
+                ".classic-header-left .classic-company-header",
+                ".classic-header-center .classic-company-header",
+                ".classic-company-title-row",
+                ".classic-logo-inline",
+                ".classic-watermark",
             ]:
                 if selector not in css_text:
                     failures.append(f"Classic CSS missing spacing selector: {selector}")
+            title_row_block = css_text.split(".classic-company-title-row", 1)[1].split("}", 1)[0] if ".classic-company-title-row" in css_text else ""
+            if "display: inline-flex" not in title_row_block:
+                failures.append("Classic company title row must use inline-flex.")
+            if "gap: 8px" not in title_row_block:
+                failures.append("Classic company title row must keep logo/name gap at 8px.")
+            logo_block = css_text.split("\n.classic-logo-inline {", 1)[1].split("}", 1)[0] if "\n.classic-logo-inline {" in css_text else ""
+            if "--classic-company-name-font-size" not in logo_block:
+                failures.append("Classic inline logo does not scale from --classic-company-name-font-size.")
+            if "max-height: 54px" not in logo_block or "max-width: 120px" not in logo_block:
+                failures.append("Classic inline logo size limits are not updated.")
+            if "height: 3.2mm !important" not in css_text:
+                failures.append("Classic filler row CSS height is not 3.2mm.")
 
         for template_name in [
             "sales/quotation_print_classic.html",
@@ -107,6 +132,21 @@ class Command(BaseCommand):
             "classic_contact_email": "classic@example.com",
             "classic_terms_text": "",
             "classic_use_saved_terms": False,
+            "classic_header_color": "#111111",
+            "classic_header_alignment": "right",
+            "classic_company_name_font_size": DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE,
+            "classic_company_address_font_size": DEFAULT_CLASSIC_COMPANY_ADDRESS_FONT_SIZE,
+            "classic_show_watermark_logo": False,
+            "classic_watermark_logo_url": "",
+        }
+        custom_classic_context = {
+            **classic_context,
+            "classic_header_color": "#003366",
+            "classic_header_alignment": "left",
+            "classic_company_name_font_size": 24,
+            "classic_company_address_font_size": 12,
+            "classic_show_watermark_logo": True,
+            "classic_watermark_logo_url": "/company-logo/",
         }
         quotation = {
             "quotation_no": "Q-001",
@@ -154,6 +194,14 @@ class Command(BaseCommand):
         tax_invoice_html = render_to_string(
             "sales/invoice_print_classic.html",
             {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
+        )
+        custom_classic_quotation_html = render_to_string(
+            "sales/quotation_print_classic.html",
+            {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **custom_classic_context},
+        )
+        custom_classic_quotation_logo_html = render_to_string(
+            "sales/quotation_print_classic.html",
+            {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": True, "logo_url": "/company-logo/", **custom_classic_context},
         )
         letterhead_quotation_html = render_to_string(
             "sales/quotation_print_letterhead.html",
@@ -211,6 +259,38 @@ class Command(BaseCommand):
                 failures.append(f"Classic quotation header/footer missing company setup value: {needle}")
             if needle not in invoice_html:
                 failures.append(f"Classic invoice header missing company setup value: {needle}")
+        if "color: #111111" not in quotation_html:
+            failures.append("Classic print does not use default header color #111111 when setting is missing.")
+        if "font-size: 18px" not in quotation_html:
+            failures.append("Classic print does not use default company name font size 18px.")
+        if "font-size: 10px" not in quotation_html:
+            failures.append("Classic print does not use default company address/details font size 10px.")
+        if "color: #003366" not in custom_classic_quotation_html:
+            failures.append("Classic print does not use saved valid header color.")
+        if "font-size: 24px" not in custom_classic_quotation_html:
+            failures.append("Classic print does not apply saved company name font size.")
+        if "font-size: 12px" not in custom_classic_quotation_html:
+            failures.append("Classic print does not apply saved company address/details font size.")
+        if "classic-header-left" not in custom_classic_quotation_html:
+            failures.append("Classic print does not apply saved header alignment class.")
+        if "classic-company-title-row" not in custom_classic_quotation_logo_html or "classic-logo-inline" not in custom_classic_quotation_logo_html:
+            failures.append("Classic print does not render logo inline with company name.")
+        if 'class="classic-logo"' in custom_classic_quotation_logo_html:
+            failures.append("Classic print still uses old separate classic-logo class.")
+        if custom_classic_quotation_logo_html.find('class="classic-logo-inline"') > custom_classic_quotation_logo_html.find('class="classic-company-name"'):
+            failures.append("Classic logo does not appear before company name in the title row.")
+        if "classic-watermark" not in custom_classic_quotation_html or "/company-logo/" not in custom_classic_quotation_html:
+            failures.append("Classic watermark is missing when logo URL is available.")
+        if normalize_classic_header_color("bad-color") != "#111111":
+            failures.append("Invalid classic header color does not fall back safely.")
+        if normalize_classic_header_alignment("sideways") != "right":
+            failures.append("Invalid classic header alignment does not fall back safely.")
+        if normalize_font_size("bad", DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE, 12, 30) != DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE:
+            failures.append("Invalid company name font size does not fall back safely.")
+        if normalize_font_size("31", DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE, 12, 30) != DEFAULT_CLASSIC_COMPANY_NAME_FONT_SIZE:
+            failures.append("Out-of-range company name font size does not fall back safely.")
+        if normalize_font_size("7", DEFAULT_CLASSIC_COMPANY_ADDRESS_FONT_SIZE, 8, 16) != DEFAULT_CLASSIC_COMPANY_ADDRESS_FONT_SIZE:
+            failures.append("Out-of-range company address font size does not fall back safely.")
         for hardcoded in ["Mohsin Ansari", "0345-2138642", "mohsin@dominantsystems.pk", "Dominant Systems Pakistan"]:
             if hardcoded in quotation_html or hardcoded in invoice_html:
                 failures.append(f"Classic output contains hard-coded value: {hardcoded}")
@@ -236,6 +316,17 @@ class Command(BaseCommand):
             if forbidden in letterhead_invoice_html:
                 failures.append(f"Letterhead invoice tax-off output contains: {forbidden}")
 
+        expected_filler_rows = 32
+        for label, html in {
+            "classic quotation": quotation_html,
+            "classic invoice": invoice_html,
+            "letterhead quotation": letterhead_quotation_html,
+            "letterhead invoice": letterhead_invoice_html,
+        }.items():
+            filler_count = html.count('class="classic-filler-row"')
+            if filler_count < expected_filler_rows:
+                failures.append(f"{label} has {filler_count} filler rows; expected at least {expected_filler_rows}.")
+
         for label, html in signature_templates.items():
             if "digital-signature-img" not in html or "/digital-signature/" not in html:
                 failures.append(f"{label} does not render digital signature image when URL is present.")
@@ -259,6 +350,22 @@ class Command(BaseCommand):
                 failures.append(f"Letterhead quotation output contains generated header/contact detail: {forbidden}")
             if forbidden in letterhead_invoice_html:
                 failures.append(f"Letterhead invoice output contains generated header/contact detail: {forbidden}")
+        for forbidden in [
+            "classic-header-left",
+            "classic-header-right",
+            "classic-header-center",
+            "classic-watermark",
+            "classic-company-title-row",
+            "classic-logo-inline",
+            "#003366",
+            "#111111",
+            "font-size: 24px",
+            "font-size: 12px",
+        ]:
+            if forbidden in letterhead_quotation_html:
+                failures.append(f"Letterhead quotation output contains classic-only header/watermark setting: {forbidden}")
+            if forbidden in letterhead_invoice_html:
+                failures.append(f"Letterhead invoice output contains classic-only header/watermark setting: {forbidden}")
 
         if "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in quotation_html or "One Million Two Hundred Fifty Thousand Rupees and Fifty Paisa Only" not in invoice_html:
             failures.append("Amount in words did not render as expected.")
@@ -282,6 +389,8 @@ class Command(BaseCommand):
             if signature_response.status_code != 200:
                 failures.append(f"/digital-signature/ returned {signature_response.status_code} when DigitalSignature.png exists.")
         finally:
+            if "signature_response" in locals() and hasattr(signature_response, "close"):
+                signature_response.close()
             if created_signature:
                 signature_path.unlink(missing_ok=True)
 

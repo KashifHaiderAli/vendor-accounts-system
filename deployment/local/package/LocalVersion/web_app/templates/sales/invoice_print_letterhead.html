@@ -79,7 +79,12 @@
         <div></div>
         <div>
             <p class="text-center"><strong>FOR {{ classic_company_name|default:"COMPANY" }}</strong></p>
+            {% if digital_signature_url %}
+            <img src="{{ digital_signature_url }}" class="digital-signature-img" alt="Digital Signature">
+            <div class="classic-sign-caption">Authorized Signature</div>
+            {% else %}
             <div class="classic-sign-line">Authorized Signature</div>
+            {% endif %}
         </div>
     </section>
 </main>

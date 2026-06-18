@@ -41,13 +41,18 @@ body {
     padding: 0;
 }
 
+.classic-page > *:not(.classic-watermark) {
+    position: relative;
+    z-index: 1;
+}
+
 .letterhead-page {
     padding-top: 38.1mm !important;
 }
 
 .classic-top {
-    display: grid;
-    grid-template-columns: 1fr 78mm;
+    display: flex;
+    justify-content: flex-end;
     min-height: 31mm;
     align-items: start;
 }
@@ -55,19 +60,111 @@ body {
 .classic-company-header {
     text-align: right;
     font-size: 10px;
+    width: 105mm;
+    max-width: 100%;
+    overflow-wrap: break-word;
 }
 
-.classic-logo {
-    max-height: 28px;
+.classic-header-left .classic-top {
+    justify-content: flex-start;
+}
+
+.classic-header-left .classic-company-header {
+    text-align: left;
+}
+
+.classic-header-center .classic-top {
+    justify-content: center;
+}
+
+.classic-header-center .classic-company-header {
+    text-align: center;
+    width: 125mm;
+    max-width: 100%;
+}
+
+.classic-header-right .classic-top {
+    justify-content: flex-end;
+}
+
+.classic-header-right .classic-company-header {
+    text-align: right;
+    width: 105mm;
+    max-width: 100%;
+}
+
+.classic-watermark {
+    position: fixed;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90mm;
+    max-height: 90mm;
+    opacity: 0.20;
+    z-index: 0;
+    pointer-events: none;
+    object-fit: contain;
+}
+
+.classic-company-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    max-width: 100%;
+    white-space: normal;
+    flex-wrap: nowrap;
+    vertical-align: middle;
+}
+
+.classic-header-left .classic-company-title-row {
+    justify-content: flex-start;
+}
+
+.classic-header-right .classic-company-title-row {
+    justify-content: flex-end;
+    max-width: 100%;
+}
+
+.classic-header-center .classic-company-title-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.classic-header-center .classic-logo-inline {
+    grid-column: 1;
+    justify-self: end;
+}
+
+.classic-header-center .classic-company-name {
+    grid-column: 2;
+    justify-self: center;
+    text-align: center;
+}
+
+.classic-header-right .classic-company-name {
+    max-width: calc(100% - 65px);
+    overflow-wrap: break-word;
+    word-break: normal;
+    text-align: right;
+}
+
+.classic-logo-inline {
+    height: calc(var(--classic-company-name-font-size, 18px) * 1.9);
+    max-height: 54px;
     max-width: 120px;
     object-fit: contain;
-    margin-bottom: 2px;
+    flex: 0 0 auto;
 }
 
 .classic-company-name {
-    font-size: 18px;
     font-weight: 800;
     text-transform: uppercase;
+    line-height: 1.05;
 }
 
 .classic-title {
@@ -168,7 +265,7 @@ body {
 }
 
 .classic-items-table tbody tr.classic-filler-row td {
-    height: 3.5mm;
+    height: 3.2mm !important;
     padding: 0 4px;
     line-height: 1;
     color: transparent;
@@ -318,8 +415,8 @@ body {
 }
 
 .classic-items-table tbody tr.classic-item-row td {
-    padding: 3px 4px 2px 4px !important;
-    line-height: 1.18 !important;
+    padding: 1px 4px 1px 4px !important;
+    line-height: 1.08 !important;
     vertical-align: top !important;
     border-top: none !important;
     border-bottom: none !important;
@@ -328,11 +425,11 @@ body {
 }
 
 .classic-items-table tbody tr.classic-item-row:first-child td {
-    padding-top: 12px !important;
+    padding-top: 6px !important;
 }
 
 .classic-items-table tbody tr.classic-filler-row td {
-    height: 11mm !important;
+    height: 3.2mm !important;
     padding: 0 4px !important;
     line-height: 1 !important;
     color: transparent;
