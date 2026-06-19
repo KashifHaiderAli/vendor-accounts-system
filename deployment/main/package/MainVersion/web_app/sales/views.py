@@ -8,6 +8,7 @@ from django.shortcuts import redirect, render
 from accounts_module.accounting_engine import AccountingError
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core.classic_print_settings import get_classic_print_settings
 from core import validators
 from core.edition_utils import is_tax_enabled
 from core.print_utils import build_print_context
@@ -1364,8 +1365,13 @@ def build_classic_print_context(context, request, company_id, terms_source=None)
     else:
         terms_text = ""
         use_saved_terms = False
+    classic_settings = get_classic_print_settings(company_id, request.session.get("current_branch_id") if request else None)
+    watermark_logo_url = context.get("logo_url") or ""
     return {
         "tax_enabled": tax_enabled,
+        **classic_settings,
+        "classic_show_watermark_logo": bool(watermark_logo_url),
+        "classic_watermark_logo_url": watermark_logo_url,
         "classic_company_name": company_name,
         "classic_company_address": first_nonempty(company_settings.get("address"), company.get("address")),
         "classic_company_phone": phone_or_mobile,

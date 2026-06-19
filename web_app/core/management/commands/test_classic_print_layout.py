@@ -77,6 +77,20 @@ class Command(BaseCommand):
                 failures.append("Classic inline logo size limits are not updated.")
             if "height: 3.2mm !important" not in css_text:
                 failures.append("Classic filler row CSS height is not 3.2mm.")
+            if ".classic-company-address-line" not in css_text or ".classic-company-contact-line" not in css_text:
+                failures.append("Classic invoice company header grouped-line CSS is missing.")
+            if ".classic-title-tax-info" not in css_text:
+                failures.append("Classic invoice title tax info CSS is missing.")
+            if ".classic-items-table .col-sno,\n.classic-items-table .col-qty" not in css_text or "width: 13mm" not in css_text:
+                failures.append("Classic item QTY column is not set to match S. NO. width.")
+            if ".classic-invoice-page .classic-bottom-section" not in css_text or "grid-template-columns: 1fr 56mm" not in css_text:
+                failures.append("Classic invoice totals area is not aligned to Unit Price/Amount columns.")
+            if ".classic-invoice-page .classic-items-table tbody tr.classic-filler-row td" not in css_text or "height: 3.05mm !important" not in css_text:
+                failures.append("Classic invoice filler row height is not 3.05mm.")
+            if ".classic-quotation-page .classic-bottom-section" not in css_text:
+                failures.append("Classic quotation totals alignment CSS is missing.")
+            if ".letterhead-page .classic-bottom-section" not in css_text:
+                failures.append("Letterhead totals alignment CSS is missing.")
 
         for template_name in [
             "sales/quotation_print_classic.html",
@@ -195,6 +209,11 @@ class Command(BaseCommand):
             "sales/invoice_print_classic.html",
             {"company": company, "invoice": tax_invoice, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
         )
+        tax_quotation = dict(quotation, tax_total=Decimal("225000.09"), grand_total=Decimal("1475000.59"))
+        tax_quotation_html = render_to_string(
+            "sales/quotation_print_classic.html",
+            {"company": company, "quotation": tax_quotation, "items": items, "tax_enabled": True, "show_logo": False, "logo_url": "", **classic_context},
+        )
         custom_classic_quotation_html = render_to_string(
             "sales/quotation_print_classic.html",
             {"company": company, "quotation": quotation, "items": items, "tax_enabled": False, "show_logo": False, "logo_url": "", **custom_classic_context},
@@ -302,6 +321,25 @@ class Command(BaseCommand):
             failures.append("Classic invoice output still contains TAX INVOICE.")
         if "SALES TAX INVOICE" not in tax_invoice_html:
             failures.append("Tax-enabled classic invoice does not show SALES TAX INVOICE.")
+        if "classic-title-tax-info" not in tax_invoice_html or "NTN: 123456" not in tax_invoice_html:
+            failures.append("Tax-enabled classic invoice does not show NTN/STRN under the title.")
+        if "classic-title-tax-info" in invoice_html or "NTN:" in invoice_html or "STRN:" in invoice_html:
+            failures.append("Tax-disabled classic invoice shows title tax info.")
+        if "classic-title-tax-info" not in tax_quotation_html or "NTN: 123456" not in tax_quotation_html:
+            failures.append("Tax-enabled classic quotation does not show NTN/STRN under the title.")
+        if "classic-title-tax-info" in quotation_html or "NTN:" in quotation_html or "STRN:" in quotation_html:
+            failures.append("Tax-disabled classic quotation shows title tax info.")
+        for labeled_contact in ["Contact:", "Email:", "Website:"]:
+            if labeled_contact in quotation_html or labeled_contact in invoice_html:
+                failures.append(f"Classic header contact line still contains label: {labeled_contact}")
+        for marker, html in {
+            "classic-quotation-page": quotation_html,
+            "classic-invoice-page": invoice_html,
+            "letterhead-quotation-page": letterhead_quotation_html,
+            "letterhead-invoice-page": letterhead_invoice_html,
+        }.items():
+            if marker not in html:
+                failures.append(f"Print output missing page marker class: {marker}")
         if "SALES TAX INVOICE" in invoice_html:
             failures.append("Tax-disabled classic invoice should show INVOICE, not SALES TAX INVOICE.")
         if "1,250,000.50" not in quotation_html or "1,250,000.50" not in invoice_html:
@@ -319,13 +357,15 @@ class Command(BaseCommand):
         expected_filler_rows = 32
         for label, html in {
             "classic quotation": quotation_html,
-            "classic invoice": invoice_html,
             "letterhead quotation": letterhead_quotation_html,
             "letterhead invoice": letterhead_invoice_html,
         }.items():
             filler_count = html.count('class="classic-filler-row"')
             if filler_count < expected_filler_rows:
                 failures.append(f"{label} has {filler_count} filler rows; expected at least {expected_filler_rows}.")
+        invoice_filler_count = invoice_html.count('class="classic-filler-row"')
+        if invoice_filler_count < 36:
+            failures.append(f"classic invoice has {invoice_filler_count} filler rows; expected at least 36.")
 
         for label, html in signature_templates.items():
             if "digital-signature-img" not in html or "/digital-signature/" not in html:

@@ -6,6 +6,7 @@ from django.shortcuts import redirect, render
 
 from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
+from core.classic_print_settings import get_classic_print_settings, set_classic_print_settings
 from core.logo_utils import get_company_logo_url, save_company_logo
 from core import validators as form_validators
 from core.audit_utils import log_activity
@@ -56,7 +57,8 @@ def company_settings_view(request):
         return redirect("dashboard")
 
     settings = get_company_settings(company_id, branch_id) or {}
-    form_data = {**company, **settings}
+    classic_print_settings = get_classic_print_settings(company_id, branch_id)
+    form_data = {**company, **settings, **classic_print_settings}
     errors = {}
 
     if request.method == "POST":
@@ -82,8 +84,14 @@ def company_settings_view(request):
             field: request.POST.get(field, "").strip()
             for field in COMPANY_SETTINGS_FIELDS
         }
+        classic_settings_data = {
+            "classic_header_color": request.POST.get("classic_header_color", "").strip(),
+            "classic_header_alignment": request.POST.get("classic_header_alignment", "").strip(),
+            "classic_company_name_font_size": request.POST.get("classic_company_name_font_size", "").strip(),
+            "classic_company_address_font_size": request.POST.get("classic_company_address_font_size", "").strip(),
+        }
         errors.update(validate_company_form(company_data, settings_data))
-        form_data = {**company_data, **settings_data}
+        form_data = {**company_data, **settings_data, **classic_settings_data}
 
         if not errors:
             try:
@@ -93,6 +101,15 @@ def company_settings_view(request):
                     company_data,
                     settings_data,
                 )
+                saved_classic_settings = set_classic_print_settings(
+                    company_id,
+                    branch_id,
+                    classic_settings_data.get("classic_header_color"),
+                    classic_settings_data.get("classic_header_alignment"),
+                    classic_settings_data.get("classic_company_name_font_size"),
+                    classic_settings_data.get("classic_company_address_font_size"),
+                )
+                form_data.update(saved_classic_settings)
                 request.session["company_name"] = company_data["company_name"]
                 log_user_activity(
                     request,

@@ -123,6 +123,30 @@
                 <input class="form-control {% if errors.authorized_person_name %}is-invalid{% endif %}" id="authorized_person_name" name="authorized_person_name" maxlength="150" value="{{ form_data.authorized_person_name|default:'' }}">
                 {% if errors.authorized_person_name %}<div class="invalid-feedback">{{ errors.authorized_person_name }}</div>{% endif %}
             </div>
+            <div>
+                <label class="form-label" for="classic_header_color">Classic Print Header Color</label>
+                <input class="form-control" id="classic_header_color" name="classic_header_color" type="color" value="{{ form_data.classic_header_color|default:'#730e1e' }}">
+                <div class="form-text">Applies only to Classic quotation and invoice print formats.</div>
+            </div>
+            <div>
+                <label class="form-label" for="classic_header_alignment">Classic Print Header Alignment</label>
+                <select class="form-select" id="classic_header_alignment" name="classic_header_alignment">
+                    <option value="right" {% if form_data.classic_header_alignment|default:'right' == 'right' %}selected{% endif %}>Top Right</option>
+                    <option value="left" {% if form_data.classic_header_alignment == 'left' %}selected{% endif %}>Top Left</option>
+                    <option value="center" {% if form_data.classic_header_alignment == 'center' %}selected{% endif %}>Top Center</option>
+                </select>
+                <div class="form-text">Applies only to Classic quotation and invoice print formats.</div>
+            </div>
+            <div>
+                <label class="form-label" for="classic_company_name_font_size">Classic Company Name Font Size</label>
+                <input class="form-control" id="classic_company_name_font_size" name="classic_company_name_font_size" type="number" min="12" max="30" step="1" value="{{ form_data.classic_company_name_font_size|default:18 }}">
+                <div class="form-text">12 to 30 px. Applies only to Classic quotation and invoice print formats.</div>
+            </div>
+            <div>
+                <label class="form-label" for="classic_company_address_font_size">Classic Company Address/Details Font Size</label>
+                <input class="form-control" id="classic_company_address_font_size" name="classic_company_address_font_size" type="number" min="8" max="16" step="1" value="{{ form_data.classic_company_address_font_size|default:10 }}">
+                <div class="form-text">8 to 16 px. Applies only to Classic quotation and invoice print formats.</div>
+            </div>
         </div>
         <div class="form-actions">
             <a class="btn btn-light" href="{% url 'dashboard' %}">Cancel</a>

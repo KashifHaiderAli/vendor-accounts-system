@@ -8,7 +8,7 @@
 </head>
 <body>
 {% include "partials/print_actions.html" %}
-<main class="classic-page letterhead-page">
+<main class="classic-page letterhead-page letterhead-invoice-page">
     <h1 class="classic-title">{% if tax_enabled %}SALES TAX INVOICE{% else %}INVOICE{% endif %}</h1>
 
     <section class="classic-meta-grid">
@@ -46,14 +46,9 @@
                 <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
+            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
-            <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
         </tbody>
     </table>
 
@@ -64,7 +59,11 @@
             <p>After credit terms, 0.5% charges per day.</p>
             <p class="classic-amount-words">Rupees in words:<br>{{ invoice.grand_total|amount_in_words }}</p>
             <p>I/We agree with above payment terms.</p>
+	    <BR>
+	    <BR>
             <p class="classic-invoice-received-by">Invoice Received By: ______________________</p>
+	    <BR>
+	    <BR>
             <p class="classic-name-title">Name &amp; Title: _____________________</p>
         </div>
         <div class="classic-totals-box">

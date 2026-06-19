@@ -8,7 +8,7 @@
 </head>
 <body>
 {% include "partials/print_actions.html" %}
-<main class="classic-page classic-header-{{ classic_header_alignment|default:'right' }}">
+<main class="classic-page classic-invoice-page classic-header-{{ classic_header_alignment|default:'right' }}">
     {% if classic_show_watermark_logo and classic_watermark_logo_url %}<img class="classic-watermark" src="{{ classic_watermark_logo_url }}" alt="">{% endif %}
     <section class="classic-top">
         <header class="classic-company-header" style="color: {{ classic_header_color|default:'#111111' }}; font-size: {{ classic_company_address_font_size|default:10 }}px; --classic-company-name-font-size: {{ classic_company_name_font_size|default:18 }}px;">
@@ -16,16 +16,26 @@
                 {% if show_logo and logo_url %}<img class="classic-logo-inline" src="{{ logo_url }}" alt="Company logo">{% endif %}
                 <span class="classic-company-name" style="font-size: {{ classic_company_name_font_size|default:18 }}px;">{{ classic_company_name|default:"Company" }}</span>
             </div>
-            {% if classic_company_address %}<div>{{ classic_company_address }}</div>{% endif %}
-            {% if classic_company_phone %}<div>{{ classic_company_phone }}</div>{% endif %}
-            {% if classic_company_email %}<div>{{ classic_company_email }}</div>{% endif %}
-            {% if classic_company_website %}<div>{{ classic_company_website }}</div>{% endif %}
-            {% if tax_enabled and classic_company_ntn %}<div>NTN: {{ classic_company_ntn }}</div>{% endif %}
-            {% if tax_enabled and classic_company_strn %}<div>STRN: {{ classic_company_strn }}</div>{% endif %}
+            {% if classic_company_address %}<div class="classic-company-address-line">{{ classic_company_address }}</div>{% endif %}
+            {% if classic_company_phone or classic_company_email or classic_company_website %}
+            <div class="classic-company-contact-line">
+                {% if classic_company_phone %}<span>{{ classic_company_phone }}</span>{% endif %}
+                {% if classic_company_email %}<span>{{ classic_company_email }}</span>{% endif %}
+                {% if classic_company_website %}<span>{{ classic_company_website }}</span>{% endif %}
+            </div>
+            {% endif %}
         </header>
     </section>
 
     <h1 class="classic-title">{% if tax_enabled %}SALES TAX INVOICE{% else %}INVOICE{% endif %}</h1>
+    {% if tax_enabled %}
+        {% if classic_company_ntn or classic_company_strn %}
+        <div class="classic-title-tax-info">
+            {% if classic_company_ntn %}<span>NTN: {{ classic_company_ntn }}</span>{% endif %}
+            {% if classic_company_strn %}<span>STRN: {{ classic_company_strn }}</span>{% endif %}
+        </div>
+        {% endif %}
+    {% endif %}
 
     <section class="classic-meta-grid">
         <table class="classic-meta-table">
@@ -62,7 +72,7 @@
                 <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
-            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" %}
+            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
             {% endfor %}
         </tbody>
@@ -75,7 +85,11 @@
             <p>After credit terms, 0.5% charges per day.</p>
             <p class="classic-amount-words">Rupees in words:<br>{{ invoice.grand_total|amount_in_words }}</p>
             <p>I/We agree with above payment terms.</p>
+	    <BR>
+	    <BR>
             <p class="classic-invoice-received-by">Invoice Received By: ______________________</p>
+	    <BR>
+	    <BR>	
             <p class="classic-name-title">Name &amp; Title: _____________________</p>
         </div>
         <div class="classic-totals-box">
