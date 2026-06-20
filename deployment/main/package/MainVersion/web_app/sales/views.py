@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
@@ -12,6 +12,7 @@ from core.classic_print_settings import get_classic_print_settings
 from core import validators
 from core.edition_utils import is_tax_enabled
 from core.print_utils import build_print_context
+from masters import auto_create
 from settings_module.services import log_user_activity
 
 from . import delivery_services, invoice_services, receipt_services, return_services, services
@@ -92,31 +93,52 @@ def quotation_form(request, quotation_id=None):
 
     if request.method == "POST":
         form_data = services.parse_quotation_post(request.POST)
-        errors, form_data = services.validate_and_calculate(form_data, company_id, branch_id, quotation_id)
-        if not errors:
-            try:
-                saved_id = services.save_quotation(
+        try:
+            with transaction.atomic():
+                auto_errors, form_data, auto_created = auto_create.resolve_sales_customer_and_items(
+                    form_data,
                     company_id,
                     branch_id,
                     request.session.get("user_id"),
-                    form_data,
-                    quotation_id=quotation_id,
+                    request.POST,
+                    "quotation save",
                 )
-                log_user_activity(
-                    request,
-                    "UPDATE" if is_edit else "CREATE",
-                    "Quotations",
-                    "quotations",
-                    saved_id,
-                    f"{'Updated' if is_edit else 'Created'} quotation {form_data['quotation_no']}.",
-                )
-                messages.success(request, f"Quotation {'updated' if is_edit else 'created'} successfully.")
-                if int(form_data.get("is_customer_saved") or 0) == 0:
-                    messages.warning(request, "This quotation party is not saved in Customer Master.")
-                return redirect("sales:quotation_detail", quotation_id=saved_id)
-            except DatabaseError:
-                messages.error(request, "Unable to save quotation. Please retry. If the quotation number already exists, generate a new one.")
-        else:
+                errors, form_data = services.validate_and_calculate(form_data, company_id, branch_id, quotation_id)
+                errors.update(auto_errors)
+                if errors:
+                    transaction.set_rollback(True)
+                else:
+                    saved_id = services.save_quotation(
+                        company_id,
+                        branch_id,
+                        request.session.get("user_id"),
+                        form_data,
+                        quotation_id=quotation_id,
+                    )
+                    log_user_activity(
+                        request,
+                        "UPDATE" if is_edit else "CREATE",
+                        "Quotations",
+                        "quotations",
+                        saved_id,
+                        f"{'Updated' if is_edit else 'Created'} quotation {form_data['quotation_no']}.",
+                    )
+                    for record in auto_created:
+                        log_user_activity(
+                            request,
+                            "CREATE",
+                            "Auto Master Create",
+                            f"{record['type']}s",
+                            record["id"],
+                            f"Auto-created {record['type']} '{record['name']}' from quotation {form_data['quotation_no']}.",
+                        )
+                    messages.success(request, f"Quotation {'updated' if is_edit else 'created'} successfully.")
+                    return redirect("sales:quotation_detail", quotation_id=saved_id)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        except DatabaseError:
+            messages.error(request, "Unable to save quotation. Please retry. If the quotation number already exists, generate a new one.")
+        if errors:
             messages.error(request, "Please correct the highlighted errors.")
 
     return render(
@@ -793,22 +815,41 @@ def invoice_form(request, invoice_id=None, dc_id=None, confirmation_id=None, quo
             form_data = invoice_services.parse_post(request.POST)
             if request.POST.get("received_amount") not in {"", None, "0", "0.00"}:
                 messages.warning(request, "Customer Receipt module will handle payments in Phase 12. Received Amount is currently read-only/0.")
-            errors, form_data = invoice_services.validate_and_calculate(form_data, company_id, branch_id, invoice_id)
-            if not errors:
-                try:
-                    saved_id = invoice_services.save_invoice(company_id, branch_id, request.session.get("user_id"), form_data, invoice_id)
-                    log_user_activity(request, "CREATE" if not is_edit else "UPDATE", "Sales Invoices", "sales_invoices", saved_id, f"{'Created' if not is_edit else 'Updated'} invoice {form_data['invoice_no']}.")
-                    messages.success(request, f"Invoice {'created' if not is_edit else 'updated'} successfully.")
-                    return redirect("sales:invoice_detail", invoice_id=saved_id)
-                except ValueError as exc:
-                    messages.error(request, str(exc))
-                except ValueError as exc:
-                    messages.error(request, str(exc))
-                except AccountingError as exc:
-                    messages.error(request, f"Accounting posting failed: {exc}")
-                except DatabaseError:
-                    messages.error(request, "Unable to save invoice. Please retry.")
-            else:
+            try:
+                with transaction.atomic():
+                    auto_errors, form_data, auto_created = auto_create.resolve_sales_customer_only(
+                        form_data,
+                        company_id,
+                        branch_id,
+                        request.session.get("user_id"),
+                        request.POST,
+                        "invoice save",
+                    )
+                    errors, form_data = invoice_services.validate_and_calculate(form_data, company_id, branch_id, invoice_id)
+                    errors.update(auto_errors)
+                    if errors:
+                        transaction.set_rollback(True)
+                    else:
+                        saved_id = invoice_services.save_invoice(company_id, branch_id, request.session.get("user_id"), form_data, invoice_id)
+                        log_user_activity(request, "CREATE" if not is_edit else "UPDATE", "Sales Invoices", "sales_invoices", saved_id, f"{'Created' if not is_edit else 'Updated'} invoice {form_data['invoice_no']}.")
+                        for record in auto_created:
+                            log_user_activity(
+                                request,
+                                "CREATE",
+                                "Auto Master Create",
+                                f"{record['type']}s",
+                                record["id"],
+                                f"Auto-created {record['type']} '{record['name']}' from invoice {form_data['invoice_no']}.",
+                            )
+                        messages.success(request, f"Invoice {'created' if not is_edit else 'updated'} successfully.")
+                        return redirect("sales:invoice_detail", invoice_id=saved_id)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            except AccountingError as exc:
+                messages.error(request, f"Accounting posting failed: {exc}")
+            except DatabaseError:
+                messages.error(request, "Unable to save invoice. Please retry.")
+            if errors:
                 messages.error(request, "Please correct the highlighted errors.")
 
     return render(

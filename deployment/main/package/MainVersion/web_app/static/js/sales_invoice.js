@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const body = document.querySelector("#invoiceItemsBody");
     const addButton = document.querySelector("#addInvoiceRow");
     const template = document.querySelector("#invoiceRowTemplate");
+    const form = body?.closest("form");
     if (!body || !template) return;
     const num = (el) => { const value = Number.parseFloat(el?.value || "0"); return Number.isFinite(value) ? value : 0; };
     const money = (value) => (Math.round(value * 100) / 100).toFixed(2);
@@ -58,5 +59,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     addButton?.addEventListener("click", () => { const clone = template.content.firstElementChild.cloneNode(true); body.appendChild(clone); bindRow(clone); recalcTotals(); });
     body.querySelectorAll(".invoice-item-row").forEach(bindRow);
+    form?.addEventListener("submit", (event) => {
+        const customerId = form.querySelector("[name='customer_id']")?.value || "";
+        const customerName = form.querySelector("[name='customer_name']")?.value.trim() || "";
+        const customerFlag = form.querySelector("[name='auto_create_customer_confirmed']");
+        if (!customerId && customerName && customerFlag?.value !== "1") {
+            if (!window.confirm("This customer is not available in Customer Master. Do you want to add it as a new customer?")) {
+                event.preventDefault();
+                form.querySelector("[name='customer_name']")?.focus();
+                return;
+            }
+            customerFlag.value = "1";
+        }
+    });
     recalcTotals();
 });

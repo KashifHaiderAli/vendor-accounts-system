@@ -255,6 +255,7 @@ def parse_purchase_post(post):
         "purchase_no": post.get("purchase_no", ""),
         "purchase_date": post.get("purchase_date", ""),
         "supplier_id": post.get("supplier_id", ""),
+        "supplier_name": post.get("supplier_name", "").strip(),
         "supplier_bill_no": post.get("supplier_bill_no", ""),
         "supplier_bill_date": post.get("supplier_bill_date", ""),
         "confirmation_id": post.get("confirmation_id", ""),

@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const body = document.querySelector("#purchaseItemsBody");
     const addButton = document.querySelector("#addPurchaseRow");
     const template = document.querySelector("#purchaseRowTemplate");
+    const form = body?.closest("form");
     if (!body || !template) return;
 
     const numberValue = (input) => {
@@ -71,5 +72,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     body.querySelectorAll(".purchase-item-row").forEach(bindRow);
+    form?.addEventListener("submit", (event) => {
+        const supplierId = form.querySelector("[name='supplier_id']")?.value || "";
+        const supplierName = form.querySelector("[name='supplier_name']")?.value.trim() || "";
+        const supplierFlag = form.querySelector("[name='auto_create_supplier_confirmed']");
+        const itemFlag = form.querySelector("[name='auto_create_items_confirmed']");
+        const hasManualItems = Array.from(body.querySelectorAll(".purchase-item-row")).some((row) => {
+            const itemId = row.querySelector("[name='item_service_id[]']")?.value || "";
+            const description = row.querySelector("[name='description[]']")?.value.trim() || "";
+            return !itemId && description;
+        });
+        if (!supplierId && supplierName && supplierFlag?.value !== "1") {
+            if (!window.confirm("This supplier is not available in Supplier Master. Do you want to add it as a new supplier?")) {
+                event.preventDefault();
+                form.querySelector("[name='supplier_name']")?.focus();
+                return;
+            }
+            supplierFlag.value = "1";
+        }
+        if (hasManualItems && itemFlag?.value !== "1") {
+            if (!window.confirm("One or more purchase items are not available in Item Master. Do you want to add them as new items?")) {
+                event.preventDefault();
+                return;
+            }
+            itemFlag.value = "1";
+        }
+    });
     recalcTotals();
 });

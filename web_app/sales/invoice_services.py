@@ -437,6 +437,7 @@ def parse_post(post):
         "invoice_date": post.get("invoice_date", ""),
         "invoice_type": post.get("invoice_type", "tax_invoice"),
         "customer_id": post.get("customer_id", ""),
+        "customer_name": post.get("customer_name", "").strip(),
         "delivery_challan_id": post.get("delivery_challan_id", ""),
         "confirmation_id": post.get("confirmation_id", ""),
         "po_number": post.get("po_number", ""),
@@ -536,7 +537,9 @@ def calculate_items(items, company_id, branch_id):
             continue
         errors = {}
         item_id = raw.get("item_service_id") or ""
-        if item_id and not item_exists(company_id, branch_id, item_id):
+        if not item_id:
+            errors["item_service_id"] = "Invoice item must be selected from Item Master because invoice affects inventory. Please create the item first or select an existing item."
+        elif not item_exists(company_id, branch_id, item_id):
             errors["item_service_id"] = "Selected item/service was not found."
         description, errors["description"] = validators.clean_text(raw.get("description"), required=True, field_name="Description")
         quantity, errors["quantity"] = validators.validate_decimal(raw.get("quantity"), "Quantity", min_value=0, allow_zero=False, required=True)

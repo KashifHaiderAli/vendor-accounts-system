@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
@@ -10,6 +10,7 @@ from authentication.auth_utils import user_has_permission
 from authentication.decorators import login_required_custom, permission_required_custom
 from core import validators
 from core.print_utils import build_print_context
+from masters import auto_create
 from settings_module.services import log_user_activity
 
 from . import payment_services, return_services, services
@@ -112,29 +113,48 @@ def purchase_form(request, purchase_id=None):
             messages.error(request, "Please correct the highlighted errors.")
         else:
             form_data = services.parse_purchase_post(request.POST)
-            errors, form_data = services.validate_and_calculate(form_data, company_id, branch_id, purchase_id)
-            if not errors:
-                try:
-                    saved_id = services.save_purchase(company_id, branch_id, request.session.get("user_id"), form_data, purchase_id)
-                    log_user_activity(
-                        request,
-                        "UPDATE" if is_edit else "CREATE",
-                        "Supplier Purchases",
-                        "supplier_purchases",
-                        saved_id,
-                        f"{'Updated' if is_edit else 'Created'} supplier purchase {form_data['purchase_no']}.",
+            try:
+                with transaction.atomic():
+                    auto_errors, form_data, auto_created = auto_create.resolve_purchase_supplier_and_items(
+                        form_data,
+                        company_id,
+                        branch_id,
+                        request.session.get("user_id"),
+                        request.POST,
+                        "purchase save",
                     )
-                    messages.success(request, f"Supplier purchase {'updated' if is_edit else 'created'} successfully.")
-                    return redirect("purchases:supplier_purchase_detail", purchase_id=saved_id)
-                except ValueError as exc:
-                    messages.error(request, str(exc))
-                except ValueError as exc:
-                    messages.error(request, str(exc))
-                except AccountingError as exc:
-                    messages.error(request, f"Accounting posting failed: {exc}")
-                except DatabaseError:
-                    messages.error(request, "Unable to save supplier purchase. Please retry.")
-            else:
+                    errors, form_data = services.validate_and_calculate(form_data, company_id, branch_id, purchase_id)
+                    errors.update(auto_errors)
+                    if errors:
+                        transaction.set_rollback(True)
+                    else:
+                        saved_id = services.save_purchase(company_id, branch_id, request.session.get("user_id"), form_data, purchase_id)
+                        log_user_activity(
+                            request,
+                            "UPDATE" if is_edit else "CREATE",
+                            "Supplier Purchases",
+                            "supplier_purchases",
+                            saved_id,
+                            f"{'Updated' if is_edit else 'Created'} supplier purchase {form_data['purchase_no']}.",
+                        )
+                        for record in auto_created:
+                            log_user_activity(
+                                request,
+                                "CREATE",
+                                "Auto Master Create",
+                                f"{record['type']}s",
+                                record["id"],
+                                f"Auto-created {record['type']} '{record['name']}' from purchase {form_data['purchase_no']}.",
+                            )
+                        messages.success(request, f"Supplier purchase {'updated' if is_edit else 'created'} successfully.")
+                        return redirect("purchases:supplier_purchase_detail", purchase_id=saved_id)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            except AccountingError as exc:
+                messages.error(request, f"Accounting posting failed: {exc}")
+            except DatabaseError:
+                messages.error(request, "Unable to save supplier purchase. Please retry.")
+            if errors:
                 messages.error(request, "Please correct the highlighted errors.")
 
     return render(
