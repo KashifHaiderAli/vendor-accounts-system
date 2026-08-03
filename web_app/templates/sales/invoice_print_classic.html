@@ -35,6 +35,8 @@
             {% if classic_company_strn %}<span>STRN: {{ classic_company_strn }}</span>{% endif %}
         </div>
         {% endif %}
+    {% else %}
+        <div class="classic-title-tax-info"><span>NTN: 4111935-5</span></div>
     {% endif %}
 
     <section class="classic-meta-grid">
@@ -72,7 +74,7 @@
                 <td class="text-end">{{ item.line_total|format_amount }}</td>
             </tr>
             {% endfor %}
-            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" %}
+            {% for _ in "xxxxxxxxxxxxxxxxxxxxxxxx" %}
             <tr class="classic-filler-row"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>
             {% endfor %}
         </tbody>
@@ -85,11 +87,7 @@
             <p>After credit terms, 0.5% charges per day.</p>
             <p class="classic-amount-words">Rupees in words:<br>{{ invoice.grand_total|amount_in_words }}</p>
             <p>I/We agree with above payment terms.</p>
-	    <BR>
-	    <BR>
             <p class="classic-invoice-received-by">Invoice Received By: ______________________</p>
-	    <BR>
-	    <BR>	
             <p class="classic-name-title">Name &amp; Title: _____________________</p>
         </div>
         <div class="classic-totals-box">

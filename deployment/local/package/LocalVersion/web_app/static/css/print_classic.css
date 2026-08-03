@@ -39,6 +39,13 @@ body {
     min-height: auto;
     margin: 0 auto;
     padding: 0;
+    page-break-after: always;
+    break-after: page;
+}
+
+.classic-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
 }
 
 .classic-page > *:not(.classic-watermark) {
@@ -250,12 +257,15 @@ body {
 
 .classic-items-table .col-sno,
 .classic-items-table .col-qty {
-    width: 13mm;
+    width: 11mm;
 }
 
-.classic-items-table .col-price,
+.classic-items-table .col-price {
+    width: 24mm;
+}
+
 .classic-items-table .col-amount {
-    width: 28mm;
+    width: 25mm;
 }
 
 .classic-items-table tbody tr:not(.classic-filler-row) {
@@ -264,8 +274,8 @@ body {
 
 .classic-items-table tbody tr:not(.classic-filler-row) td {
     height: auto !important;
-    padding: 1px 4px 1px 4px !important;
-    line-height: 1.1 !important;
+    padding: 2px 4px !important;
+    line-height: 1.22 !important;
     vertical-align: top;
 }
 
@@ -294,6 +304,8 @@ body {
     gap: 8mm;
     margin-top: 4mm;
     align-items: start;
+    page-break-inside: avoid;
+    break-inside: avoid;
 }
 
 .classic-payment-terms {
@@ -355,39 +367,39 @@ body {
 }
 
 .classic-invoice-page .classic-invoice-received-by {
-    margin-top: 6mm;
-    margin-bottom: 9mm;
+    margin-top: 4mm;
+    margin-bottom: 7mm;
 }
 
 .classic-invoice-page .classic-name-title {
-    margin-top: 8mm;
+    margin-top: 5mm;
 }
 
 .classic-invoice-page .classic-bottom-section {
     display: grid;
-    grid-template-columns: 1fr 56mm;
+    grid-template-columns: 1fr 49mm;
     gap: 0;
     margin-top: 0.5mm;
     align-items: start;
 }
 
 .classic-invoice-page .classic-totals-box {
-    width: 56mm;
+    width: 49mm;
     justify-self: end;
 }
 
 .classic-invoice-page .classic-total-row {
-    grid-template-columns: 1fr 28mm;
+    grid-template-columns: 1fr 25mm;
 }
 
 .classic-invoice-page .classic-items-table tbody tr.classic-filler-row td {
-    height: 3.05mm !important;
+    height: 2.65mm !important;
 }
 
 .classic-quotation-page .classic-bottom-section,
 .letterhead-page .classic-bottom-section {
     display: grid;
-    grid-template-columns: 1fr 56mm;
+    grid-template-columns: 1fr 49mm;
     gap: 0;
     margin-top: 0.5mm;
     align-items: start;
@@ -395,13 +407,13 @@ body {
 
 .classic-quotation-page .classic-totals-box,
 .letterhead-page .classic-totals-box {
-    width: 56mm;
+    width: 49mm;
     justify-self: end;
 }
 
 .classic-quotation-page .classic-total-row,
 .letterhead-page .classic-total-row {
-    grid-template-columns: 1fr 28mm;
+    grid-template-columns: 1fr 25mm;
 }
 
 .classic-totals-box {
@@ -410,7 +422,7 @@ body {
 
 .classic-total-row {
     display: grid;
-    grid-template-columns: 1fr 28mm;
+    grid-template-columns: 1fr 25mm;
     border-bottom: 1px solid #333;
 }
 
@@ -436,7 +448,9 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20mm;
-    margin-top: 12mm;
+    margin-top: 8mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
 }
 
 .classic-sign-line {
@@ -486,8 +500,8 @@ body {
 }
 
 .classic-items-table tbody tr.classic-item-row td {
-    padding: 1px 4px 1px 4px !important;
-    line-height: 1.08 !important;
+    padding: 2px 4px !important;
+    line-height: 1.22 !important;
     vertical-align: top !important;
     border-top: none !important;
     border-bottom: none !important;
@@ -508,6 +522,16 @@ body {
     border-bottom: none !important;
     border-left: 1px solid #333 !important;
     border-right: 1px solid #333 !important;
+}
+
+.classic-items-table {
+    page-break-inside: auto;
+    break-inside: auto;
+}
+
+.classic-items-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
 }
 
 .classic-items-table tbody tr:last-child td {

@@ -12,6 +12,8 @@
 
 <form method="post" class="settings-stack quotation-form" id="quotationForm">
     {% csrf_token %}
+    <input type="hidden" name="auto_create_customer_confirmed" value="0">
+    <input type="hidden" name="auto_create_items_confirmed" value="0">
     {% include "masters/partials/form_errors.html" %}
 
     <section class="app-card">

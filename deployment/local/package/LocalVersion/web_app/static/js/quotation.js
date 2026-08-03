@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const quotationDate = document.querySelector("input[name='quotation_date']");
     const validityDays = document.querySelector("#validityDays");
     const validTill = document.querySelector("input[name='valid_till']");
+    const form = document.querySelector("#quotationForm");
 
     if (!body || !template) return;
 
@@ -162,5 +163,30 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     quotationDate?.addEventListener("change", updateValidTill);
     validityDays?.addEventListener("input", updateValidTill);
+    form?.addEventListener("submit", (event) => {
+        const customerFlag = form.querySelector("[name='auto_create_customer_confirmed']");
+        const itemFlag = form.querySelector("[name='auto_create_items_confirmed']");
+        const hasNewCustomer = customerMode?.value === "new" && Boolean(document.querySelector("#customerName")?.value.trim());
+        const hasManualItems = Array.from(body.querySelectorAll(".quotation-item-row")).some((row) => {
+            const itemId = row.querySelector("[name='item_service_id[]']")?.value || "";
+            const description = row.querySelector("[name='description[]']")?.value.trim() || "";
+            return !itemId && description;
+        });
+        if (hasNewCustomer && customerFlag?.value !== "1") {
+            if (!window.confirm("This customer is not available in Customer Master. Do you want to add it as a new customer?")) {
+                event.preventDefault();
+                document.querySelector("#customerName")?.focus();
+                return;
+            }
+            customerFlag.value = "1";
+        }
+        if (hasManualItems && itemFlag?.value !== "1") {
+            if (!window.confirm("One or more items are not available in Item Master. Do you want to add them as new items?")) {
+                event.preventDefault();
+                return;
+            }
+            itemFlag.value = "1";
+        }
+    });
     recalcTotals();
 });
